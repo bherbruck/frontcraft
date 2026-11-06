@@ -64,6 +64,9 @@ pub struct VoiceTuning {
     /// fall before frames are thrown away to catch up.
     pub jitter_ms: f32,
     pub most_behind_ms: f32,
+    /// How much of our own talking can wait to be sent, in milliseconds. A machine drawing few frames a
+    /// second sends rarely, and anything more than this waiting is thrown away, oldest first.
+    pub send_buffer_ms: f32,
     /// How a voice fades with distance, and in metres where it fades to nothing. A server sends none
     /// past its own `voice_heard`, so this is best kept inside that.
     pub carry: Carry,
@@ -93,6 +96,7 @@ impl Default for VoiceTuning {
             frame_ms: 40,
             jitter_ms: 60.0,
             most_behind_ms: 300.0,
+            send_buffer_ms: 500.0,
             carry: Carry { loudness: 1.0, reach: 12.0 },
             fades_out: (55.0, 75.0),
             radio_band_hz: (300.0, 3400.0),
@@ -292,8 +296,10 @@ fn push_to_talk(
 }
 
 /// Moves voice between the browser and the connection, and tells the server what this player wants.
+#[allow(clippy::too_many_arguments)]
 fn send_and_receive(
     time: Res<Time<Real>>,
+    tuning: Res<VoiceTuning>,
     settings: Res<VoiceSettings>,
     levels: Res<AudioLevels>,
     game: Res<GameMode>,
@@ -306,6 +312,7 @@ fn send_and_receive(
 ) {
     let Some(mut link) = link else { return };
     let now = time.elapsed_secs();
+    link.buffer_frames = send_buffer_frames(&tuning);
 
     // Once a player is gone, so is their number and any mute on it.
     let players = &game.0.state.players;
@@ -364,6 +371,11 @@ fn send_and_receive(
     }
     // Kept a while so that the player can still find them to mute, once they have stopped.
     voices.talkers.retain(|t| now - t.heard_at < KEPT_FOR_MUTING);
+}
+
+/// Frames enough to hold `send_buffer_ms` of talking.
+fn send_buffer_frames(cfg: &VoiceTuning) -> usize {
+    (cfg.send_buffer_ms / cfg.frame_ms.max(1) as f32).ceil().max(1.0) as usize
 }
 
 /// How long someone stays near the top of the list of who to mute, in seconds.
@@ -470,6 +482,16 @@ mod tests {
         assert_eq!(settings.volume(), 1.0);
         settings.set_volume(-1.0);
         assert_eq!(settings.volume(), 0.0);
+    }
+
+    #[test]
+    fn the_send_buffer_holds_half_a_second_at_any_frame_length() {
+        let mut cfg = VoiceTuning::default();
+        assert_eq!(send_buffer_frames(&cfg), 13);
+        cfg.frame_ms = 20;
+        assert_eq!(send_buffer_frames(&cfg), 25);
+        cfg.send_buffer_ms = 0.0;
+        assert_eq!(send_buffer_frames(&cfg), 1);
     }
 
     #[test]

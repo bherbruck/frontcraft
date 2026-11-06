@@ -16,8 +16,6 @@ use crate::wire::{
     VoiceFrame, VoiceUp, Welcome, WireError,
 };
 
-/// Frames of our own talking to hold for a transport, oldest lost first. Late is worse than missing.
-const VOICE_UP_FRAMES: usize = 4;
 /// Frames held for a host that has stopped collecting them, as nothing else would stop it growing.
 const VOICE_IN_FRAMES: usize = 256;
 
@@ -175,6 +173,8 @@ pub struct ClientSession<G: PredictedGame> {
     voice_allowed: bool,
     /// Waiting for a transport with room, and never for long.
     voice_up: VecDeque<Vec<u8>>,
+    /// Frames of our own talking held for a transport, oldest lost first. Late is worse than missing.
+    voice_up_most: usize,
     voice_in: Vec<VoiceFrame>,
     /// What our own player did, predicted, ready to present.
     predicted_events: Vec<G::Event>,
@@ -214,6 +214,7 @@ impl<G: PredictedGame> ClientSession<G> {
             outgoing: vec![hello.clone()],
             voice_allowed: false,
             voice_up: VecDeque::new(),
+            voice_up_most: 1,
             voice_in: Vec::new(),
             predicted_events: Vec::new(),
             server_events: Vec::new(),
@@ -315,10 +316,16 @@ impl<G: PredictedGame> ClientSession<G> {
         if !self.voice_allowed || self.state != ClientState::Playing {
             return;
         }
-        if self.voice_up.len() >= VOICE_UP_FRAMES {
+        if self.voice_up.len() >= self.voice_up_most.max(1) {
             self.voice_up.pop_front();
         }
         self.voice_up.push_back(ClientMsg::VoiceUp(up).encode());
+    }
+
+    /// How many frames of our own talking can wait for the transport. Enough to cover the time between
+    /// two of [`crate::transport::pump`] on a slow machine, and not so many that it is heard late.
+    pub fn set_voice_buffer(&mut self, frames: usize) {
+        self.voice_up_most = frames.max(1);
     }
 
     /// Tells the server whether to send this client voice, and whose never to.

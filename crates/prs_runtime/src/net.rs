@@ -78,6 +78,8 @@ pub struct VoiceLink {
     pub down: Vec<VoiceFrame>,
     /// Whether to be sent voice, and who not to be sent it from, when that has changed.
     pub set: Option<(bool, Vec<u16>)>,
+    /// How many frames of our own talking can wait to be sent.
+    pub buffer_frames: usize,
 }
 
 const MAX_FRAME_TIME: Duration = Duration::from_secs(2);
@@ -214,6 +216,7 @@ fn tick_online(
     for request in requests.0.drain(..) {
         link.session.send_request(encode_cmd(&request));
     }
+    link.session.set_voice_buffer(voice.buffer_frames);
     for up in voice.up.drain(..) {
         link.session.send_voice(up);
     }
