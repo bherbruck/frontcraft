@@ -1,0 +1,35 @@
+# One good hit puts you down and everything takes longer. Bring a medic.
+
+[health]
+max_health = 55.0
+max_bleed = 14.0
+down_time = 30.0
+bandage_time = 7.0
+medkit_time = 12.0
+revive_time = 15.0
+revive_health = 15.0
+respawn_time = 45.0
+overkill = 25.0
+
+[health.chest]
+bleed = 6.0
+
+[health.abdomen]
+bleed = 5.0
+
+[health.arm]
+bleed = 2.0
+
+[health.leg]
+bleed = 3.0
+
+[inventory.loadout]
+bandages = 1
+
+[suppression]
+per_round = 0.35
+decay = 0.07
+
+[movement]
+sprint_speed = 5.6
+stamina_sprint_drain = 0.11

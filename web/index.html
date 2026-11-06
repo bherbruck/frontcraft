@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FrontCraft</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%2310140f' d='M0 0h32v32H0z'/%3E%3Cpath fill='%23a9b08f' d='M16 4l12 8v8l-12 8-12-8v-8z'/%3E%3Cpath fill='%235f6a4c' d='M16 4l12 8-12 8-12-8z'/%3E%3C/svg%3E">
+<style>
+  html, body { margin: 0; height: 100%; background: #10140f; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; outline: none; }
+  #loading {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: #10140f; color: #a9b08f; font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace;
+  }
+  #panel { width: min(420px, calc(100% - 48px)); }
+  #panel h1 { margin: 0 0 20px; color: #d8dccc; font-size: 20px; font-weight: 600; letter-spacing: 0.3em; }
+  #track { height: 4px; background: #262c20; }
+  #fill { width: 0; height: 100%; background: #a9b08f; }
+  #status { display: flex; justify-content: space-between; gap: 16px; margin-top: 10px; }
+  #loading.waiting #fill { width: 100%; background: #5f6a4c; }
+  #loading.failed #track, #loading.failed #bytes { display: none; }
+  #loading.failed #state { margin: 0; color: #d8dccc; white-space: pre-line; }
+  #retry { display: none; margin-top: 16px; padding: 6px 14px; border: 1px solid #5f6a4c; border-radius: 0; background: none; color: #d8dccc; font: inherit; cursor: pointer; }
+  #retry:hover { background: #262c20; }
+  #loading.failed.can-retry #retry { display: block; }
+  #loading.choosing #track, #loading.choosing #bytes { display: none; }
+  #loading.choosing #state { color: #d8dccc; white-space: pre-line; }
+  #choices { display: flex; gap: 12px; margin-top: 16px; }
+  #choices[hidden], #choices button[hidden] { display: none; }
+  #choices button { flex: 1; padding: 10px 14px; border: 1px solid #5f6a4c; border-radius: 0; background: none; color: #d8dccc; font: inherit; cursor: pointer; }
+  #choices button:hover:not(:disabled) { background: #262c20; }
+  #choices button:disabled { color: #5f6a4c; cursor: default; }
+  #name-row { display: flex; gap: 12px; align-items: center; margin-top: 16px; }
+  #name-row[hidden] { display: none; }
+  #download { display: block; margin-top: 14px; color: #7d8668; font-size: 12px; text-decoration: none; }
+  #download[hidden] { display: none; }
+  #download:hover { color: #a9b08f; text-decoration: underline; }
+  #name { flex: 1; padding: 8px 10px; border: 1px solid #5f6a4c; border-radius: 0; background: none; color: #d8dccc; font: inherit; }
+</style>
+</head>
+<body>
+<div id="loading">
+  <div id="panel" role="status">
+    <h1>FrontCraft</h1>
+    <div id="track"><div id="fill"></div></div>
+    <div id="status"><span id="state">Checking graphics</span><span id="bytes"></span></div>
+    <button id="retry" type="button" onclick="location.reload()">Reload</button>
+    <label id="name-row" hidden>Name <input id="name" type="text" maxlength="32" autocomplete="nickname" spellcheck="false" placeholder="what to call you"></label>
+    <div id="choices" hidden>
+      <button id="play-online" type="button">Play online</button>
+      <button id="play-alone" type="button">Shooting Range</button>
+    </div>
+    <a id="download" hidden download></a>
+  </div>
+</div>
+<canvas id="game" tabindex="0"></canvas>
+<script>
+  // Browsers start audio suspended until the user interacts. The engine makes its AudioContext
+  // before any click, so remember every context and resume them on the first gesture.
+  (function () {
+    const contexts = [];
+    const Native = window.AudioContext || window.webkitAudioContext;
+    if (!Native) return;
+    function Wrapped(...args) {
+      const context = new Native(...args);
+      contexts.push(context);
+      return context;
+    }
+    Wrapped.prototype = Native.prototype;
+    window.AudioContext = Wrapped;
+    const resume = () => contexts.forEach((c) => c.state === "suspended" && c.resume());
+    for (const type of ["pointerdown", "keydown", "touchstart"]) {
+      addEventListener(type, resume, true);
+    }
+  })();
+</script>
+<script>
+  // Ask for raw mouse input. It skips OS acceleration, and with it a class of browser bugs where
+  // pointer lock reports huge bogus jumps. Browsers without it fall back to normal lock.
+  (function () {
+    // Alt is free look. Left alone, browsers move focus to their menu when it is released.
+    addEventListener("keydown", (e) => { if (e.key === "Alt") e.preventDefault(); }, true);
+    addEventListener("keyup", (e) => { if (e.key === "Alt") e.preventDefault(); }, true);
+    // Mouse 4 and 5 talk. Left alone, they are the browser's back and forward and leave the game.
+    for (const type of ["mousedown", "mouseup", "auxclick"]) {
+      addEventListener(type, (e) => { if (e.button === 3 || e.button === 4) e.preventDefault(); }, true);
+    }
+
+    const lock = Element.prototype.requestPointerLock;
+    Element.prototype.requestPointerLock = function () {
+      const result = lock.call(this, { unadjustedMovement: true });
+      if (result && result.catch) {
+        return result.catch((e) => (e.name === "NotSupportedError" ? lock.call(this) : Promise.reject(e)));
+      }
+      return result;
+    };
+  })();
+</script>
+<script type="module">
+  // scripts/build_web.sh fills these in.
+  const WASM_BYTES = Number("__WASM_BYTES__") || 0;
+  const BUILD = "__BUILD_ID__";
+  // A page built with FRONTCRAFT_ONLINE=1 is served by the game server, so the server is right here.
+  const ONLINE = "__ONLINE__" === "1";
+  const DEFAULT_SERVER = ONLINE ? `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}` : "";
+  const REACH_TIMEOUT_MS = 6000;
+
+  const loading = document.getElementById("loading");
+  const fill = document.getElementById("fill");
+  const state = document.getElementById("state");
+  const bytes = document.getElementById("bytes");
+  const canvas = document.getElementById("game");
+
+  function fail(message, canRetry) {
+    if (!loading.isConnected) document.body.append(loading);
+    loading.className = canRetry ? "failed can-retry" : "failed";
+    state.textContent = message;
+  }
+
+  const megabytes = (count) => (count / 1e6).toFixed(1);
+
+  // Counts bytes as the browser reads them. They are the decompressed bytes whatever the server
+  // sends, so they are compared with the size of the wasm and not with Content-Length.
+  function withProgress(response) {
+    const encoded = response.headers.get("Content-Encoding");
+    const total = WASM_BYTES || (encoded ? 0 : Number(response.headers.get("Content-Length")));
+    let received = 0;
+    const report = new TransformStream({
+      transform(chunk, controller) {
+        received += chunk.byteLength;
+        if (total) fill.style.width = `${Math.min(100, (received / total) * 100)}%`;
+        bytes.textContent = total ? `${megabytes(received)} / ${megabytes(total)} MB` : `${megabytes(received)} MB`;
+        controller.enqueue(chunk);
+      },
+      flush() {
+        loading.className = "waiting";
+        state.textContent = "Starting";
+        bytes.textContent = "";
+      },
+    });
+    return new Response(response.body.pipeThrough(report), {
+      headers: { "Content-Type": "application/wasm" },
+    });
+  }
+
+  async function start() {
+    if (!document.createElement("canvas").getContext("webgl2")) {
+      fail("This browser cannot run FrontCraft because WebGL2 is not available.\nTurn on hardware acceleration in the browser settings, or try a current version of Chrome, Firefox, Edge or Safari.");
+      return;
+    }
+
+    // WebGL does not come back on its own after the context is lost, and neither does the engine.
+    canvas.addEventListener("webglcontextlost", () => {
+      fail("The browser lost the graphics context. Reload to carry on.", true);
+    });
+    // A panic reaches the page as a wasm trap, and the details are already in the console.
+    addEventListener("error", (e) => {
+      if (e.error instanceof WebAssembly.RuntimeError) {
+        fail("The game stopped because of an internal error. The browser console has the details.", true);
+      }
+    });
+
+    state.textContent = "Downloading";
+    let response;
+    try {
+      response = await fetch(`./prs_game_bg.wasm?v=${BUILD}`);
+    } catch {
+      fail("The game could not be downloaded. Check your connection and try again.", true);
+      return;
+    }
+    if (!response.ok) {
+      fail(`The game could not be downloaded: the server answered ${response.status}.`, true);
+      return;
+    }
+
+    let init;
+    try {
+      ({ default: init } = await import(`./prs_game.js?v=${BUILD}`));
+      await init({ module_or_path: withProgress(response) });
+    } catch (e) {
+      // winit ends its loop by throwing, which is how it works on the web and not a failure.
+      if (!String(e).includes("Using exceptions for control flow")) {
+        console.error(e);
+        fail(`The game failed to start: ${e}`, true);
+        return;
+      }
+    }
+    loading.remove();
+  }
+
+  // Tries the server before committing to it, so that one that is down costs a message and not a
+  // download and a blank field.
+  function canReach(url) {
+    return new Promise((answer) => {
+      let socket;
+      try {
+        socket = new WebSocket(url);
+      } catch {
+        answer(false);
+        return;
+      }
+      const timer = setTimeout(() => {
+        answer(false);
+        socket.close();
+      }, REACH_TIMEOUT_MS);
+      socket.onopen = () => {
+        clearTimeout(timer);
+        socket.close();
+        answer(true);
+      };
+      socket.onerror = () => {
+        clearTimeout(timer);
+        answer(false);
+      };
+    });
+  }
+
+  function choose(reason) {
+    const choices = document.getElementById("choices");
+    const nameBox = document.getElementById("name");
+    nameBox.value = savedName();
+    // The server cleans up whatever is typed. It is only ever text, here and in the game.
+    const withName = (search) => {
+      const name = nameBox.value.trim();
+      remember(name);
+      return name ? `${search}&name=${encodeURIComponent(name)}` : search;
+    };
+    const go = (search) => { location.search = withName(search); };
+    const online = document.getElementById("play-online");
+    const alone = document.getElementById("play-alone");
+    loading.className = "choosing";
+    state.textContent = reason || "";
+    online.hidden = !DEFAULT_SERVER;
+    online.onclick = async () => {
+      online.disabled = true;
+      state.textContent = "Looking for the server";
+      if (await canReach(DEFAULT_SERVER)) {
+        go(`?server=${encodeURIComponent(DEFAULT_SERVER)}`);
+      } else {
+        online.disabled = false;
+        state.textContent = "The server can't be reached right now. You can still practise on the Shooting Range.";
+      }
+    };
+    alone.onclick = () => go("?solo=1&map=range");
+    document.getElementById("name-row").hidden = !DEFAULT_SERVER;
+    choices.hidden = false;
+    offerDownload();
+  }
+
+  // scripts/build_windows.sh writes downloads/latest.json beside the installer. No file, no link.
+  async function offerDownload() {
+    if (!ONLINE) return;
+    try {
+      const response = await fetch("downloads/latest.json", { cache: "no-cache" });
+      if (!response.ok) return;
+      const latest = await response.json();
+      if (!/^FrontCraft-[0-9.]+\.msi$/.test(latest.file) || !(latest.bytes > 0)) return;
+      const link = document.getElementById("download");
+      link.href = `downloads/${latest.file}`;
+      link.textContent = `Download for Windows (.msi, ${megabytes(latest.bytes)} MB)`;
+      link.title = `FrontCraft ${latest.version} for Windows`;
+      link.hidden = false;
+    } catch {}
+  }
+
+  // Remembered in this browser only. A private window or a full store just means asking again.
+  const NAME_KEY = "frontcraft.name";
+  function savedName() {
+    try { return localStorage.getItem(NAME_KEY) || ""; } catch { return ""; }
+  }
+  function remember(name) {
+    try { localStorage.setItem(NAME_KEY, name); } catch {}
+  }
+
+  // The address can already say what to do, and with nothing to choose between there is no question.
+  const query = new URLSearchParams(location.search);
+  const unreachable = query.get("unreachable");
+  if (unreachable !== null) {
+    choose(`Couldn't join the server. ${unreachable}`);
+  } else if (DEFAULT_SERVER && !query.has("server") && !query.has("solo")) {
+    choose("");
+  } else {
+    // A link to a server straight off still plays under the name this browser remembers.
+    const name = savedName();
+    if (query.has("server") && !query.has("name") && name) {
+      query.set("name", name);
+      history.replaceState(null, "", `?${query}`);
+    }
+    start();
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+[package]
+name = "prs_ai"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+prs_mods.workspace = true
+serde.workspace = true
+glam.workspace = true
+prs_sim.workspace = true
+prs_ballistics.workspace = true
+prs_mode.workspace = true
+
+[dev-dependencies]
+prs_level.workspace = true

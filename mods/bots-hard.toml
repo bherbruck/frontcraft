@@ -1,0 +1,27 @@
+# Veteran bots: quick, patient, hard to keep down, and dangerous at any range. Only the server needs it:
+# PRS_MOD=bots-hard on prs_server.
+
+[ai.troops.fight.skill]
+notice_rate = 7.0
+reaction = [0.22, 0.5]
+spot_range = 200.0
+spot_crouched = 0.65
+spot_prone = 0.35
+spot_still = 0.6
+aim_speed = 3.4
+aim_rate = 10.0
+tracking_noise = 0.005
+tracking_time = [0.35, 1.0]
+sight_lag = 0.16
+sight_correct = 0.65
+lead = 0.9
+range_error = 0.06
+fire_tolerance = 0.9
+patience = 3.5
+burst_close = [3, 6]
+burst_mid = [2, 3]
+burst_far = [1, 1]
+pause_close = [0.25, 0.6]
+pause_far = [0.7, 1.8]
+cover_at = 0.8
+pinned_at = 0.45

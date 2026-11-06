@@ -1,0 +1,8 @@
+[package]
+name = "prs_health"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true

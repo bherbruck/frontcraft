@@ -1,0 +1,24 @@
+[package]
+name = "prs_sim"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+prs_mods.workspace = true
+serde.workspace = true
+glam.workspace = true
+prs_protocol.workspace = true
+prs_collision.workspace = true
+prs_movement.workspace = true
+prs_weapons.workspace = true
+prs_ballistics.workspace = true
+prs_level.workspace = true
+prs_body.workspace = true
+prs_health.workspace = true
+prs_suppression.workspace = true
+prs_inventory.workspace = true
+prs_throwables.workspace = true
+prs_seats.workspace = true
+prs_vehicles.workspace = true
+prs_helicopter.workspace = true

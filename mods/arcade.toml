@@ -1,0 +1,78 @@
+# Instant aim and next to no recoil: guns go where you point them, on the run if you like.
+# PRS_MOD=arcade, or ?mod=arcade on the web. A client has to run the same mod as the server it joins.
+
+[weapons."*"]
+ads_time = 0.01
+raise_time = 0.08
+lower_time = 0.05
+stow_time = 0.12
+draw_time = 0.15
+reload_time = 1.2
+reload_empty_time = 1.5
+dispersion_moa = 2.0
+
+[weapons."*".recoil]
+kick_up = 2.5
+kick_up_spread = 0.3
+kick_side = 1.5
+heat_kick = 0.0
+heat_kick_max = 0.0
+hip_scale = 1.0
+stand_scale = 1.0
+crouch_scale = 1.0
+prone_scale = 1.0
+
+[weapons."*".stability]
+hip_stand = 0.02
+hip_crouch = 0.02
+hip_prone = 0.02
+ads_stand = 0.0
+ads_crouch = 0.0
+ads_prone = 0.0
+moving = 0.0
+raising = 0.0
+airborne = 0.0
+changing_stance = 0.0
+turning = 0.0
+exertion = 0.0
+arm_wound = 0.0
+blood_loss = 0.0
+suppression = 0.0
+shot_shake = 0.0
+
+[weapons."*".sway]
+stand = 0.0
+crouch = 0.0
+prone = 0.0
+
+[movement]
+run_speed = 5.2
+sprint_speed = 7.5
+ads_speed = 3.2
+stamina_sprint_drain = 0.0
+landing_recovery = 0.0
+
+# Hits hurt but nobody bleeds out, and you are back in quickly.
+[health]
+respawn_time = 4.0
+
+[health.head]
+bleed = 0.0
+
+[health.chest]
+bleed = 0.0
+
+[health.abdomen]
+bleed = 0.0
+
+[health.arm]
+bleed = 0.0
+
+[health.leg]
+bleed = 0.0
+
+[suppression]
+enabled = false
+
+[view.camera]
+camera_recoil_share = 0.0

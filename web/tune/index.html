@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sound Tuner</title>
+<link rel="icon" href="data:,">
+<style>
+:root {
+  --bg: #15181a; --panel: #1e2326; --line: #333a3e; --text: #e4e6e3; --dim: #98a19f;
+  --accent: #d9a441; --accent-text: #15181a; --changed: #7fc4a4;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 16px; }
+h1 { font-size: 20px; margin: 0 0 2px; }
+h2 { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; margin: 0 0 10px; color: var(--accent); }
+p { margin: 0; color: var(--dim); }
+button { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; cursor: pointer; }
+button:hover { border-color: var(--dim); }
+button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+button.main { min-width: 120px; font-weight: 600; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.stick { position: sticky; top: 0; z-index: 1; background: var(--bg); padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.gap { flex: 1; }
+label.check { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+canvas { display: block; width: 100%; height: 72px; margin-top: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+#level { margin-top: 6px; font-variant-numeric: tabular-nums; color: var(--dim); }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-top: 12px; }
+.slider { display: grid; grid-template-columns: minmax(150px, 1.1fr) 2fr 76px 26px; gap: 10px; align-items: center; padding: 4px 0; }
+.slider small { display: block; color: var(--dim); font-size: 12px; }
+.slider.changed .name { color: var(--changed); }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+input[type=number] { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 3px 5px; }
+.slider button { padding: 2px 0; visibility: hidden; color: var(--dim); }
+.slider.changed button { visibility: visible; }
+pre { margin: 10px 0 0; padding: 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; max-height: 260px; overflow: auto; font-size: 13px; white-space: pre-wrap; }
+@media (max-width: 560px) {
+  .slider { grid-template-columns: 1fr 76px 26px; }
+  .slider > div:first-child { grid-column: 1 / -1; }
+}
+</style>
+</head>
+<body>
+<main>
+  <div class="stick">
+    <h1>Sound Tuner</h1>
+    <p>This runs the game's own sound code, at the game's own volumes. Moving a slider changes the next sound.</p>
+    <div class="row"><span id="modes" class="row" style="margin:0"></span></div>
+    <div class="row">
+      <span>Sound set</span>
+      <span id="sets" class="row" style="margin:0"></span>
+      <button id="ab" class="main" title="Switches to the other set and plays this sound, at the game's volume for each">A/B</button>
+      <span id="set-hint"></span>
+    </div>
+    <div class="row">
+      <button id="walk" class="main">▶ Walk</button>
+      <button id="one">One step</button>
+      <button id="rifle" title="A rifle at the game's volume, to compare loudness against">Rifle shot</button>
+      <span class="gap"></span>
+      <span id="gaits" class="row" style="margin:0"></span>
+    </div>
+    <div class="row">
+      <span id="surfaces" class="row" style="margin:0"></span>
+      <span class="gap"></span>
+      <label class="check" id="all-label"><input type="checkbox" id="all" checked> Change every surface together</label>
+    </div>
+    <canvas id="wave" width="1600" height="144"></canvas>
+    <div id="level" aria-live="off">&nbsp;</div>
+  </div>
+  <div id="groups"></div>
+  <div id="slide-groups" hidden></div>
+  <div id="smoke-groups" hidden></div>
+  <div id="contact-groups" hidden></div>
+  <div id="vary-groups" hidden></div>
+  <section>
+    <h2>Your settings</h2>
+    <p id="out-hint"></p>
+    <div class="row">
+      <button id="copy" class="main">Copy</button>
+      <button id="reset">Put everything back</button>
+    </div>
+    <pre id="out"></pre>
+  </section>
+</main>
+<script type="module">
+import init, { contact, contact_crash, current_sound, defaults, slide, smoke, step, varied_step } from "./prs_sound_lab.js";
+
+const SURFACES = ["dirt", "grass", "gravel", "wood", "concrete", "metal"];
+const GROUPS = [
+  ["Thump: the heel landing", [
+    ["thud_level", "Loudness", "The biggest control over thump", 0, 1.5, 0.01],
+    ["thud_hz", "Pitch", "Hz. Higher is less boomy", 30, 300, 1],
+    ["thud_rate", "Shortness", "Higher stops sooner", 5, 150, 1],
+    ["thud_sweep", "Pitch drop", "Lower removes the kick-drum “boom”", 0, 4, 0.01],
+    ["thud_sweep_rate", "Pitch drop speed", "Higher is a tighter knock", 5, 200, 1],
+    ["thud_vary", "Step to step variation", "Share of pitch", 0, 0.5, 0.01],
+  ]],
+  ["Grit: the sole on the ground", [
+    ["scuff_level", "Loudness", "", 0, 1.5, 0.01],
+    ["scuff_hz", "Brightness", "Hz. Higher is hissier", 100, 6000, 10],
+    ["scuff_top_hz", "Top end", "Hz. Lower is duller", 500, 14000, 50],
+    ["scuff_rate", "Shortness", "Higher stops sooner", 3, 150, 1],
+    ["roll_delay", "Delay after heel", "Seconds", 0, 0.15, 0.001],
+    ["grains", "Crunches", "0 is a smooth scuff, more is gravel", 0, 24, 1],
+    ["grain_rate", "Crunch shortness", "", 40, 500, 5],
+  ]],
+  ["Floor: boards booming, plates ringing", [
+    ["ring_level", "Loudness", "", 0, 1, 0.01],
+    ["ring_hz", "Pitch", "Hz", 0, 800, 1],
+    ["ring_rate", "Shortness", "Higher stops sooner", 1, 80, 1],
+  ]],
+];
+const VOLUME = [
+  [0, "At a crawl", "How loud the slowest step is", 0, 0.6, 0.005],
+  [1, "Extra at full sprint", "Faster steps add a share of this", 0, 1, 0.005],
+];
+const SLIDES = {
+  stance: "Stance change", climb: "Climbing", sights_up: "Sights up", sights_down: "Sights down",
+  gun_on_wall: "Gun on a wall", gun_change: "Changing gun", handling: "Handling", crawl: "Crawling", gear: "Kit while walking", mag_out: "Magazine out", mag_in: "Magazine in",
+};
+const SLIDE_SLIDERS = [
+  ["volume", "Volume", "", 0, 0.3, 0.001],
+  ["seconds", "Length", "Seconds", 0.05, 1, 0.01],
+  ["swell", "Swell", "How much of it is spent getting louder", 0.02, 0.95, 0.01],
+  ["top_hz_from", "Brightness at the start", "Hz", 200, 8000, 10],
+  ["top_hz_to", "Brightness at the end", "Hz", 200, 8000, 10],
+  ["bottom_hz", "Low cut", "Hz. Higher takes out any thump", 40, 2000, 10],
+  ["drag", "Roughness", "0 is a smooth hiss, 1 catches and lets go", 0, 1, 0.01],
+  ["drag_hz", "Roughness speed", "Catches a second", 5, 200, 1],
+  ["vary", "Variety", "How much each one differs from the last", 0, 1, 0.01],
+];
+const SMOKE_SECONDS = 8;
+const SMOKE_SLIDERS = [
+  ["volume", "Volume", "Right up close. It is half this at 8 m", 0, 0.5, 0.001],
+  ["top_hz", "Brightness", "Hz", 500, 12000, 50],
+  ["bottom_hz", "Low cut", "Hz. Higher takes out any rumble", 40, 3000, 10],
+  ["top_wander", "Brightness wander", "Share of it", 0, 0.9, 0.01],
+  ["level_wander", "Level wander", "Share of it", 0, 0.9, 0.01],
+  ["wander_hz", "Wander speed", "Changes a second", 0.1, 8, 0.1],
+  ["rough", "Roughness", "0 is smooth, 1 sputters", 0, 1, 0.01],
+  ["rough_hz", "Roughness speed", "Changes a second", 2, 200, 1],
+  ["fizz_level", "Fizz at the start", "How much louder it starts", 0, 4, 0.01],
+  ["fizz_top_hz", "Fizz brightness", "Hz", 500, 16000, 50],
+  ["fizz_seconds", "Fizz length", "Seconds", 0.05, 3, 0.01],
+  ["fizz_in_seconds", "Fizz ease in", "Seconds. Shorter is more of a pop", 0.01, 0.5, 0.005],
+  ["stretch_seconds", "Stretch length", "Each new piece of hiss, in seconds", 0.5, 8, 0.1],
+  ["overlap_seconds", "Overlap", "Seconds each fades into the next", 0.05, 3, 0.05],
+];
+const METAL = {
+  selector: "Fire selector", charge: "Charging handle (New only)", dry: "Dry fire", zip: "Medkit zip", tear: "Bandage tear", metal_hit: "Bullet on a vehicle", clink: "Grenade landing", crash_metal: "Vehicle crash",
+  impact_dirt: "Bullet on dirt", impact_grass: "Bullet on grass", impact_gravel: "Bullet on gravel", impact_wood: "Bullet on wood", impact_concrete: "Bullet on concrete", impact_metal: "Bullet on metal",
+};
+const CONTACT_GROUPS = [
+  ["Overall", [
+    ["volume", "Volume", "", 0, 2, 0.001],
+    ["seconds", "Length", "Seconds", 0.03, 1.5, 0.01],
+    ["vary", "Variety", "How much each one differs from the last", 0, 1, 0.01],
+    ["bottom_hz", "Low cut", "Hz. Higher takes out any thump", 20, 2000, 10],
+  ]],
+  ["The object: what is being touched", [
+    ["modes", "Modes", "How many pitches it rings at", 1, 8, 1],
+    ["lowest_hz", "Lowest pitch", "Hz. Bigger things are lower", 40, 4000, 10],
+    ["spacing", "Spacing", "How far each mode is above the last", 1.05, 3, 0.01],
+    ["damping", "Damping", "Higher dies sooner. Metal is low and wood is high", 2, 800, 1],
+    ["damping_rise", "High modes die sooner", "1 is in step with their pitch", 0, 1.5, 0.01],
+    ["top_tilt", "Brightness", "How much each mode is of the one below", 0.1, 1, 0.01],
+  ]],
+  ["The touch: one thing landing on it", [
+    ["touch_level", "Level", "Against the rub. 0 for none", 0, 1.5, 0.01],
+    ["touches", "Landings", "More is a bounce", 0, 8, 1],
+    ["touch_at", "When", "Share of the length", 0, 0.95, 0.01],
+    ["touch_ms", "Softness", "Milliseconds of contact. Longer has less click", 0.1, 12, 0.1],
+    ["touch_gap", "Bounce gap", "Seconds to the first bounce", 0.002, 0.2, 0.001],
+  ]],
+  ["The rub: many tiny touches", [
+    ["rub_level", "Level", "Against the touch. 0 for none", 0, 1.5, 0.01],
+    ["rub_share", "How much of the length", "", 0.02, 1, 0.01],
+    ["swell", "Swell", "How much of it is spent speeding up", 0.02, 0.95, 0.01],
+    ["density", "Density", "Tiny touches a second", 50, 12000, 10],
+    ["grain_ms", "Grain length", "Milliseconds", 0.1, 8, 0.1],
+    ["rough", "Scratchiness", "0 is an even rub, 1 is a scratch", 0, 1, 0.01],
+    ["width", "Airiness", "Wide is airy and narrow is pitched", 0.05, 2, 0.01],
+    ["sweep", "Pitch follows speed", "", 0, 1.5, 0.01],
+    ["drag", "Catching", "0 is smooth, 1 catches and lets go", 0, 1, 0.01],
+    ["drag_hz", "Catching speed", "Catches a second", 2, 200, 1],
+  ]],
+];
+const VARY_SLIDERS = [
+  ["scuff_hz", "Brightness", "Share either way around your tuned value", 0, 0.5, 0.01],
+  ["scuff_rate", "Shortness", "Share either way around your tuned value", 0, 0.5, 0.01],
+  ["scuff_top_hz", "Top end", "Share either way around your tuned value", 0, 0.5, 0.01],
+];
+const SAVE_KEY = "prs-sound-tuner";
+const $ = (id) => document.getElementById(id);
+
+await init();
+const shipped = JSON.parse(defaults());
+const state = { steps: structuredClone(shipped.steps), slides: structuredClone(shipped.slides), smoke: structuredClone(shipped.smoke), contacts: structuredClone(shipped.contacts), step_vary: structuredClone(shipped.step_vary), step_volume: [...shipped.step_volume], sound_set: "New" };
+try {
+  const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
+  for (const surface of SURFACES) Object.assign(state.steps[surface], saved?.steps?.[surface]);
+  if (saved?.step_volume) state.step_volume = saved.step_volume;
+  for (const name of Object.keys(SLIDES)) Object.assign(state.slides[name], saved?.slides?.[name]);
+  Object.assign(state.smoke, saved?.smoke);
+  for (const name of Object.keys(state.contacts)) Object.assign(state.contacts[name], saved?.contacts?.[name]);
+  Object.assign(state.step_vary, saved?.step_vary);
+  if (saved?.sound_set === "Current") state.sound_set = "Current";
+} catch {}
+
+let mode = "Footsteps";
+let surface = "dirt";
+let slideName = "stance";
+let metalName = "selector";
+let gait = shipped.gaits.find((g) => g.name === "Run");
+let seed = 1;
+let walking = null;
+let audio = null;
+let rifle = null;
+const refresh = [];
+
+function ears() {
+  audio ??= new AudioContext();
+  audio.resume();
+  return audio;
+}
+
+function playBuffer(buffer, volume, speed = 1) {
+  const context = ears();
+  const source = context.createBufferSource();
+  const gain = context.createGain();
+  source.buffer = buffer;
+  source.playbackRate.value = speed;
+  gain.gain.value = volume;
+  source.connect(gain).connect(context.destination);
+  source.start();
+}
+
+function stepVolume() {
+  return state.step_volume[0] + gait.intensity * state.step_volume[1];
+}
+
+const isNew = () => state.sound_set === "New";
+
+// The Current sound a name in Metal stands in for, and how loud the game plays it up close.
+function currentMetal(name) {
+  const { current_volumes: volumes, up_close: close } = shipped;
+  if (name === "charge") return [null, 0];
+  if (name in volumes) return [name, volumes[name]];
+  if (name === "metal_hit") return ["metal_hit", close.metal_hit];
+  if (name === "clink") return ["metal_hit", close.clink];
+  if (name === "crash_metal") return ["crash", close.crash];
+  return ["impact", close.impact];
+}
+
+function newMetalVolume(name) {
+  const sound = state.contacts[name];
+  if (name === "crash_metal") return shipped.up_close.crash;
+  if (name === "metal_hit") return shipped.up_close.metal_hit * sound.volume;
+  if (name === "clink") return shipped.up_close.clink * sound.volume;
+  return name.startsWith("impact_") ? shipped.up_close.impact * sound.volume : sound.volume;
+}
+
+function soundVolume() {
+  if (mode === "Smoke") return state.smoke.volume;
+  if (mode === "Footsteps") return stepVolume();
+  if (mode === "Metal") return isNew() ? newMetalVolume(metalName) : currentMetal(metalName)[1];
+  return isNew() ? state.contacts[slideName].volume : state.slides[slideName].volume;
+}
+
+function peak(samples, volume) {
+  return samples.reduce((most, s) => Math.max(most, Math.abs(s)), 0) * volume;
+}
+
+function render() {
+  if (mode === "Smoke") return smoke(seed, JSON.stringify(state.smoke), SMOKE_SECONDS);
+  if (mode === "Footsteps") {
+    const ground = JSON.stringify(state.steps[surface]);
+    return isNew() ? varied_step(seed, ground, JSON.stringify(state.step_vary)) : step(seed, ground);
+  }
+  if (mode === "Metal") {
+    // Current has no charging sound, so there is nothing to hear.
+    if (!isNew()) return currentMetal(metalName)[0] ? current_sound(seed, currentMetal(metalName)[0]) : new Float32Array(4410);
+    const sound = JSON.stringify(state.contacts[metalName]);
+    return metalName === "crash_metal" ? contact_crash(seed, sound) : contact(seed, sound);
+  }
+  return isNew() ? contact(seed, JSON.stringify(state.contacts[slideName])) : slide(seed, JSON.stringify(state.slides[slideName]));
+}
+
+function playStep() {
+  const context = ears();
+  seed = (seed * 131 + 7) >>> 0;
+  const samples = render();
+  const buffer = context.createBuffer(1, samples.length, 44100);
+  buffer.copyToChannel(samples, 0);
+  // The game shifts every sound's pitch by up to 3% either way.
+  playBuffer(buffer, soundVolume(), 0.97 + Math.random() * 0.06);
+  draw(samples);
+}
+
+function draw(samples) {
+  const canvas = $("wave");
+  const pen = canvas.getContext("2d");
+  const { width, height } = canvas;
+  const volume = soundVolume();
+  pen.clearRect(0, 0, width, height);
+  pen.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--accent");
+  for (let x = 0; x < width; x++) {
+    const from = Math.floor((x / width) * samples.length);
+    const to = Math.floor(((x + 1) / width) * samples.length);
+    let most = 0;
+    for (let i = from; i < to; i++) most = Math.max(most, Math.abs(samples[i]));
+    const tall = Math.min(height, Math.max(1, most * volume * height * 2.5));
+    pen.fillRect(x, (height - tall) / 2, 1, tall);
+  }
+  const level = peak(samples, volume);
+  const db = 20 * Math.log10(Math.max(level, 1e-4));
+  const against = rifle ? ` · ${(db - rifle.db).toFixed(0)} dB against the rifle` : "";
+  const what = mode === "Smoke" ? "Smoke grenade" : mode === "Footsteps" ? `${surface}, ${gait.name.toLowerCase()}: ${gait.per_second.toFixed(1)} steps a second` : mode === "Metal" ? METAL[metalName] : SLIDES[slideName];
+  $("level").textContent = `${mode === "Smoke" ? "" : `${state.sound_set}: `}${what}, volume ${volume.toFixed(2)}, peak ${db.toFixed(0)} dB${against}`;
+}
+
+function setWalking(on) {
+  clearTimeout(walking);
+  walking = null;
+  $("walk").textContent = on ? "■ Stop" : mode === "Footsteps" ? "▶ Walk" : "▶ Repeat";
+  if (!on) return;
+  const next = () => {
+    playStep();
+    walking = setTimeout(next, mode === "Smoke" ? SMOKE_SECONDS * 1000 : mode === "Footsteps" ? 1000 / gait.per_second : 900);
+  };
+  next();
+}
+
+function choiceButtons(holder, names, label, isOn, choose) {
+  const buttons = names.map((name) => {
+    const button = document.createElement("button");
+    button.textContent = label(name);
+    button.addEventListener("click", () => {
+      choose(name);
+      paint();
+    });
+    holder.append(button);
+    return button;
+  });
+  const paint = () => buttons.forEach((button, i) => button.setAttribute("aria-pressed", isOn(names[i])));
+  paint();
+  return paint;
+}
+
+function makeSlider(holder, { name, hint, min, max, step: by, read, write, original }) {
+  const row = document.createElement("div");
+  row.className = "slider";
+  row.innerHTML = `<div class="name">${name}<small>${hint}</small></div>`;
+  const range = Object.assign(document.createElement("input"), { type: "range", min, max, step: by, title: name });
+  const box = Object.assign(document.createElement("input"), { type: "number", step: by, title: name });
+  const back = Object.assign(document.createElement("button"), { textContent: "↺", title: "Back to the game's value" });
+  const show = () => {
+    const value = read();
+    range.value = value;
+    box.value = +value.toFixed(3);
+    row.classList.toggle("changed", Math.abs(value - original()) > 1e-6);
+  };
+  const change = (value) => {
+    if (Number.isFinite(value)) write(value);
+    afterChange();
+  };
+  range.addEventListener("input", () => change(+range.value));
+  box.addEventListener("change", () => change(+box.value));
+  back.addEventListener("click", () => {
+    write(original(), true);
+    afterChange();
+  });
+  row.append(range, box, back);
+  holder.append(row);
+  refresh.push(show);
+}
+
+function setOnSurfaces(key, value, exact) {
+  if (exact || !$("all").checked) {
+    if (exact && $("all").checked) for (const s of SURFACES) state.steps[s][key] = shipped.steps[s][key];
+    else state.steps[surface][key] = value;
+    return;
+  }
+  // Keeps surfaces different from each other: each moves by the same share as the one in view.
+  const was = state.steps[surface][key];
+  for (const s of SURFACES) {
+    if (s === surface) continue;
+    const other = state.steps[s][key];
+    state.steps[s][key] = was > 0 && other > 0 ? round(other * (value / was), key) : other;
+  }
+  state.steps[surface][key] = value;
+}
+
+function round(value, key) {
+  return key === "grains" ? Math.round(value) : +value.toFixed(4);
+}
+
+function settingsToml() {
+  const lines = [];
+  if (state.sound_set !== "New") lines.push("[audio]", 'sound_set = "current"', "");
+  const volumeChanged = state.step_volume.some((v, i) => v !== shipped.step_volume[i]);
+  if (volumeChanged) lines.push("[audio]", `step_volume = [${state.step_volume.join(", ")}]`, "");
+  for (const s of SURFACES) {
+    const changed = Object.keys(state.steps[s]).filter((key) => state.steps[s][key] !== shipped.steps[s][key]);
+    if (!changed.length) continue;
+    lines.push(`[audio.steps.${s}]`);
+    for (const key of changed) {
+      const value = state.steps[s][key];
+      lines.push(`${key} = ${key === "grains" || !Number.isInteger(value) ? value : value.toFixed(1)}`);
+    }
+    lines.push("");
+  }
+  for (const name of Object.keys(SLIDES)) {
+    const changed = Object.keys(state.slides[name]).filter((key) => state.slides[name][key] !== shipped.slides[name][key]);
+    if (!changed.length) continue;
+    lines.push(`[audio.slides.${name}]`);
+    for (const key of changed) {
+      const value = state.slides[name][key];
+      lines.push(`${key} = ${Number.isInteger(value) ? value.toFixed(1) : value}`);
+    }
+    lines.push("");
+  }
+  const smokeChanged = Object.keys(state.smoke).filter((key) => state.smoke[key] !== shipped.smoke[key]);
+  if (smokeChanged.length) {
+    lines.push("[audio.smoke]");
+    for (const key of smokeChanged) {
+      const value = state.smoke[key];
+      lines.push(`${key} = ${Number.isInteger(value) ? value.toFixed(1) : value}`);
+    }
+    lines.push("");
+  }
+  const varyChanged = Object.keys(state.step_vary).filter((key) => state.step_vary[key] !== shipped.step_vary[key]);
+  if (varyChanged.length) {
+    lines.push("[audio.step_vary]");
+    for (const key of varyChanged) lines.push(`${key} = ${Number.isInteger(state.step_vary[key]) ? state.step_vary[key].toFixed(1) : state.step_vary[key]}`);
+    lines.push("");
+  }
+  for (const name of Object.keys(state.contacts)) {
+    const changed = Object.keys(state.contacts[name]).filter((key) => state.contacts[name][key] !== shipped.contacts[name][key]);
+    if (!changed.length) continue;
+    lines.push(`[audio.contacts.${name}]`);
+    for (const key of changed) {
+      const value = state.contacts[name][key];
+      lines.push(`${key} = ${key === "modes" || key === "touches" || !Number.isInteger(value) ? value : value.toFixed(1)}`);
+    }
+    lines.push("");
+  }
+  return lines.join("\n").trim();
+}
+
+function afterChange() {
+  refresh.forEach((show) => show());
+  const text = settingsToml();
+  $("out").textContent = text || "Nothing changed yet.";
+  $("out-hint").textContent = text
+    ? "Click Copy and paste this into the chat. It can be tried in the game right away, with no rebuild."
+    : "Move some sliders and your changes appear here.";
+  try {
+    // Only what was moved, so that a new default reaches anyone who has not touched that slider.
+    const moved = Object.fromEntries(Object.keys(state.contacts).map((name) => [name, Object.fromEntries(Object.keys(state.contacts[name]).filter((key) => state.contacts[name][key] !== shipped.contacts[name][key]).map((key) => [key, state.contacts[name][key]]))]));
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...state, contacts: moved }));
+  } catch {}
+  draw(render());
+}
+
+// Each set has its own sliders, so only the ones that change what is playing are shown.
+function showPanels() {
+  const moved = mode === "Slides" || mode === "Metal";
+  $("slide-groups").hidden = mode !== "Slides" || isNew();
+  $("contact-groups").hidden = !moved || !isNew();
+  $("vary-groups").hidden = mode !== "Footsteps" || !isNew();
+  $("set-hint").textContent = mode === "Smoke" ? "Smoke is the same in both." : mode === "Metal" && !isNew() ? "Current has no sliders for these." : "";
+}
+
+function setSoundSet(name) {
+  state.sound_set = name;
+  paintSets();
+  showPanels();
+  afterChange();
+}
+
+function setMode(name) {
+  mode = name;
+  const steps = name === "Footsteps";
+  $("groups").hidden = !steps;
+  $("smoke-groups").hidden = name !== "Smoke";
+  $("metal-names").hidden = name !== "Metal";
+  showPanels();
+  $("gaits").hidden = !steps;
+  $("all-label").hidden = !steps;
+  $("surfaces").hidden = !steps;
+  $("slide-names").hidden = name !== "Slides";
+  $("one").textContent = steps ? "One step" : "Play";
+  setWalking(false);
+  afterChange();
+}
+
+for (const [title, sliders] of GROUPS) {
+  const group = document.createElement("section");
+  group.innerHTML = `<h2>${title}</h2>`;
+  for (const [key, name, hint, min, max, by] of sliders) {
+    makeSlider(group, {
+      name, hint, min, max, step: by,
+      read: () => state.steps[surface][key],
+      write: (value, exact) => setOnSurfaces(key, value, exact),
+      original: () => shipped.steps[surface][key],
+    });
+  }
+  $("groups").append(group);
+}
+const volumes = document.createElement("section");
+volumes.innerHTML = "<h2>Overall volume: every surface</h2>";
+for (const [i, name, hint, min, max, by] of VOLUME) {
+  makeSlider(volumes, {
+    name, hint, min, max, step: by,
+    read: () => state.step_volume[i],
+    write: (value) => { state.step_volume[i] = value; },
+    original: () => shipped.step_volume[i],
+  });
+}
+$("groups").prepend(volumes);
+
+const slideGroup = document.createElement("section");
+slideGroup.innerHTML = "<h2>How it sounds</h2>";
+for (const [key, name, hint, min, max, by] of SLIDE_SLIDERS) {
+  makeSlider(slideGroup, {
+    name, hint, min, max, step: by,
+    read: () => state.slides[slideName][key],
+    write: (value) => { state.slides[slideName][key] = value; },
+    original: () => shipped.slides[slideName][key],
+  });
+}
+$("slide-groups").append(slideGroup);
+const smokeGroup = document.createElement("section");
+smokeGroup.innerHTML = "<h2>How it sounds</h2>";
+for (const [key, name, hint, min, max, by] of SMOKE_SLIDERS) {
+  makeSlider(smokeGroup, {
+    name, hint, min, max, step: by,
+    read: () => state.smoke[key],
+    write: (value) => { state.smoke[key] = value; },
+    original: () => shipped.smoke[key],
+  });
+}
+$("smoke-groups").append(smokeGroup);
+const contactName = () => (mode === "Metal" ? metalName : slideName);
+for (const [title, sliders] of CONTACT_GROUPS) {
+  const group = document.createElement("section");
+  group.innerHTML = `<h2>${title}</h2>`;
+  for (const [key, name, hint, min, max, by] of sliders) {
+    makeSlider(group, {
+      name, hint, min, max, step: by,
+      read: () => state.contacts[contactName()][key],
+      write: (value) => { state.contacts[contactName()][key] = key === "modes" || key === "touches" ? Math.round(value) : value; },
+      original: () => shipped.contacts[contactName()][key],
+    });
+  }
+  $("contact-groups").append(group);
+}
+const varyGroup = document.createElement("section");
+varyGroup.innerHTML = "<h2>Step to step: how much the grit differs</h2>";
+for (const [key, name, hint, min, max, by] of VARY_SLIDERS) {
+  makeSlider(varyGroup, {
+    name, hint, min, max, step: by,
+    read: () => state.step_vary[key],
+    write: (value) => { state.step_vary[key] = value; },
+    original: () => shipped.step_vary[key],
+  });
+}
+$("vary-groups").append(varyGroup);
+const metalNames = Object.assign(document.createElement("span"), { id: "metal-names", className: "row", hidden: true });
+metalNames.style.margin = "0";
+const slideNames = Object.assign(document.createElement("span"), { id: "slide-names", className: "row", hidden: true });
+slideNames.style.margin = "0";
+$("surfaces").after(slideNames);
+slideNames.after(metalNames);
+choiceButtons(metalNames, Object.keys(METAL), (name) => METAL[name], (name) => name === metalName, (name) => {
+  metalName = name;
+  afterChange();
+  if (!walking) playStep();
+});
+const paintSets = choiceButtons($("sets"), ["New", "Current"], (name) => name, (name) => name === state.sound_set, setSoundSet);
+$("ab").addEventListener("click", () => {
+  setSoundSet(isNew() ? "Current" : "New");
+  playStep();
+});
+choiceButtons(slideNames, Object.keys(SLIDES), (name) => SLIDES[name], (name) => name === slideName, (name) => {
+  slideName = name;
+  afterChange();
+  if (!walking) playStep();
+});
+choiceButtons($("modes"), ["Footsteps", "Slides", "Metal", "Smoke"], (name) => (name === "Slides" ? "Stances, crawling, sights, gun on wall, magazines" : name === "Metal" ? "Selector, dry fire, impacts, metal" : name === "Smoke" ? "Smoke grenade" : name), (name) => name === mode, setMode);
+
+choiceButtons($("surfaces"), SURFACES, (s) => s[0].toUpperCase() + s.slice(1), (s) => s === surface, (s) => {
+  surface = s;
+  afterChange();
+  if (!walking) playStep();
+});
+choiceButtons($("gaits"), shipped.gaits, (g) => g.name, (g) => g === gait, (g) => {
+  gait = g;
+  afterChange();
+});
+
+$("walk").addEventListener("click", () => setWalking(!walking));
+$("one").addEventListener("click", playStep);
+$("rifle").addEventListener("click", () => {
+  if (rifle) playBuffer(rifle.buffer, 1);
+});
+$("copy").addEventListener("click", async () => {
+  await navigator.clipboard.writeText(settingsToml());
+  $("copy").textContent = "Copied";
+  setTimeout(() => { $("copy").textContent = "Copy"; }, 1500);
+});
+$("reset").addEventListener("click", () => {
+  state.steps = structuredClone(shipped.steps);
+  state.slides = structuredClone(shipped.slides);
+  state.smoke = structuredClone(shipped.smoke);
+  state.step_volume = [...shipped.step_volume];
+  state.contacts = structuredClone(shipped.contacts);
+  state.step_vary = structuredClone(shipped.step_vary);
+  afterChange();
+});
+
+showPanels();
+afterChange();
+fetch("rifle.wav")
+  .then((response) => response.arrayBuffer())
+  // A context that has not been started by a click can still decode.
+  .then((bytes) => new OfflineAudioContext(1, 1, 44100).decodeAudioData(bytes))
+  .then((buffer) => {
+    const samples = buffer.getChannelData(0);
+    rifle = { buffer, db: 20 * Math.log10(peak(samples, 1)) };
+    afterChange();
+  })
+  .catch(() => { $("rifle").disabled = true; });
+</script>
+</body>
+</html>

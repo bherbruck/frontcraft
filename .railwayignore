@@ -1,0 +1,8 @@
+# Only what building the server needs.
+bin/
+target/
+web/
+scripts/
+graphify-out/
+.playwright-mcp/
+*.md

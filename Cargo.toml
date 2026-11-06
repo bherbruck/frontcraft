@@ -1,0 +1,120 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+default-members = ["crates/prs_game"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+prs_protocol = { path = "crates/prs_protocol" }
+prs_collision = { path = "crates/prs_collision" }
+prs_movement = { path = "crates/prs_movement" }
+prs_weapons = { path = "crates/prs_weapons" }
+prs_ballistics = { path = "crates/prs_ballistics" }
+prs_level = { path = "crates/prs_level" }
+prs_sim = { path = "crates/prs_sim" }
+prs_runtime = { path = "crates/prs_runtime" }
+prs_input = { path = "crates/prs_input" }
+prs_view = { path = "crates/prs_view" }
+prs_scene = { path = "crates/prs_scene" }
+prs_atmosphere = { path = "crates/prs_atmosphere" }
+prs_audio = { path = "crates/prs_audio" }
+prs_voice = { path = "crates/prs_voice" }
+prs_synth = { path = "crates/prs_synth" }
+prs_hud = { path = "crates/prs_hud" }
+prs_models = { path = "crates/prs_models" }
+prs_body = { path = "crates/prs_body" }
+prs_health = { path = "crates/prs_health" }
+prs_suppression = { path = "crates/prs_suppression" }
+prs_mods = { path = "crates/prs_mods" }
+prs_inventory = { path = "crates/prs_inventory" }
+prs_helicopter = { path = "crates/prs_helicopter" }
+prs_net = { path = "crates/prs_net" }
+prs_net_sim = { path = "crates/prs_net_sim" }
+prs_mode = { path = "crates/prs_mode" }
+prs_seats = { path = "crates/prs_seats" }
+prs_vehicles = { path = "crates/prs_vehicles" }
+prs_ai = { path = "crates/prs_ai" }
+prs_throwables = { path = "crates/prs_throwables" }
+
+# Must stay on the glam major that Bevy and parry use, so Vec3 is one type everywhere.
+glam = { version = "0.33", default-features = false, features = ["std", "serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+serde_path_to_error = "0.1"
+toml = { version = "0.9", default-features = false, features = ["parse", "serde", "std"] }
+parry3d = "0.31"
+tungstenite = { version = "0.30", default-features = false, features = ["handshake"] }
+# Already here for WebTransport. The desktop also uses them for wss:// to a public server.
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-native-certs = "0.8"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+wtransport = "0.7.2"
+tokio = { version = "1", default-features = false }
+js-sys = "0.3"
+web-sys = "0.3"
+# Only what the game uses. The bundled feature sets (3d_bevy_render, default_app, default_platform)
+# bring glTF, animation, gamepads and more, which together cost megabytes on the web.
+bevy = { version = "0.20", default-features = false, features = [
+    "std",
+    "async_executor",
+    "multi_threaded",
+    # Selects a registration backend that stays empty unless a build opts in. Without this Bevy's
+    # crates turn on the inventory backend themselves, which links reflection for every type.
+    "reflect_auto_register_static",
+    "bevy_log",
+    "bevy_asset",
+    "bevy_winit",
+    "bevy_window",
+    "webgl2",
+    "x11",
+    "wayland",
+    "bevy_render",
+    "bevy_core_pipeline",
+    "bevy_pbr",
+    "bevy_light",
+    "bevy_camera",
+    "bevy_color",
+    "bevy_image",
+    "bevy_mesh",
+    "bevy_shader",
+    "bevy_material",
+    "bevy_gizmos",
+    "bevy_gizmos_render",
+    "bevy_text",
+    "default_font",
+    "bevy_ui",
+    "bevy_ui_render",
+    "bevy_ui_widgets",
+    "bevy_input_focus",
+    "bevy_picking",
+    "ui_picking",
+    "bevy_audio",
+    "wav",
+    "mouse",
+    "keyboard",
+] }
+
+# Keep our code quick to rebuild but make dependencies fast enough to playtest in dev.
+[profile.dev]
+opt-level = 1
+
+# Debug info for all of Bevy costs tens of gigabytes. Our own crates keep it for breakpoints.
+[profile.dev.package."*"]
+opt-level = 3
+debug = false
+
+[profile.release]
+lto = "thin"
+codegen-units = 4
+
+[profile.wasm-release]
+inherits = "release"
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+strip = "debuginfo"

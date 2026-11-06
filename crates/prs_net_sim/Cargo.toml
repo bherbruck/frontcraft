@@ -1,0 +1,21 @@
+[package]
+name = "prs_net_sim"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+glam.workspace = true
+prs_sim.workspace = true
+prs_net.workspace = true
+prs_mode.workspace = true
+prs_ai.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen.workspace = true
+
+# A real client in a real browser: real `prs_sim` compiled to wasm, the browser's own WebSocket and a
+# real server. Built by hand, see its header.
+[[example]]
+name = "browser_probe"
+crate-type = ["cdylib"]

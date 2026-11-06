@@ -1,0 +1,11 @@
+[package]
+name = "prs_vehicles"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+glam.workspace = true
+prs_collision.workspace = true
+prs_seats.workspace = true

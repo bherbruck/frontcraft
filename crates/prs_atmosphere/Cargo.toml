@@ -1,0 +1,11 @@
+[package]
+name = "prs_atmosphere"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+prs_mods.workspace = true
+serde.workspace = true
+bevy.workspace = true
+prs_models.workspace = true

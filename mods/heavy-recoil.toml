@@ -1,0 +1,10 @@
+# Every gun kicks a lot harder and takes longer to come back down. Aim is the same, keeping it is not.
+
+[weapons."*".recoil]
+kick_up = 60.0
+kick_side = 52.0
+recovery_rate = 6.0
+heat_kick = 0.5
+
+[weapons."*".stability]
+shot_shake = 1.1

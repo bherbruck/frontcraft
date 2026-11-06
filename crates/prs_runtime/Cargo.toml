@@ -1,0 +1,17 @@
+[package]
+name = "prs_runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+bevy.workspace = true
+prs_protocol.workspace = true
+prs_sim.workspace = true
+prs_net.workspace = true
+prs_net_sim.workspace = true
+prs_ai.workspace = true
+prs_mode.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = { version = "0.3", features = ["Window", "Location"] }

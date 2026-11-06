@@ -1,0 +1,12 @@
+[package]
+name = "prs_level"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+glam.workspace = true
+prs_collision.workspace = true
+
+[dev-dependencies]
+prs_movement.workspace = true

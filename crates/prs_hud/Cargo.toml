@@ -1,0 +1,20 @@
+[package]
+name = "prs_hud"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+bevy.workspace = true
+prs_runtime.workspace = true
+prs_input.workspace = true
+prs_view.workspace = true
+prs_audio.workspace = true
+prs_voice.workspace = true
+prs_mods.workspace = true
+serde.workspace = true
+prs_models.workspace = true
+prs_level.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = { workspace = true, features = ["Storage", "Window"] }

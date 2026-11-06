@@ -1,0 +1,10 @@
+[package]
+name = "prs_throwables"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+glam.workspace = true
+serde.workspace = true
+prs_collision.workspace = true
