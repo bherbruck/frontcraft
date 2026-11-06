@@ -142,6 +142,7 @@ impl MapSpec {
             bridges: Vec::new(),
             steps: Vec::new(),
             landmarks: Vec::new(),
+            waters: Vec::new(),
         }
     }
 }
@@ -178,6 +179,7 @@ fn land() -> TerrainSpec {
         ],
         calm: vec![Calm { at: Vec2::new(0.0, 12.0), radius: 115.0, fade: 215.0, keep: 0.3 }],
         rim: Rim { inset: 70.0, height: 22.0, face: 12.0, face_height: 16.0, wander: 12.0 },
+        survey: None,
     }
 }
 

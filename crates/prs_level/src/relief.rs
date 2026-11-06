@@ -35,11 +35,12 @@ struct Nearby {
     pads: Vec<u32>,
     steps: Vec<u32>,
     zones: Vec<u32>,
+    waters: Vec<u32>,
 }
 
 impl Nearby {
     fn len(&self) -> usize {
-        self.roads.len() + self.ditches.len() + self.pads.len() + self.steps.len() + self.zones.len()
+        self.roads.len() + self.ditches.len() + self.pads.len() + self.steps.len() + self.zones.len() + self.waters.len()
     }
 }
 
@@ -110,6 +111,39 @@ impl Pad {
     }
 }
 
+/// A water's outline.
+struct Shore<'a> {
+    points: &'a [Vec2],
+}
+
+impl Shore<'_> {
+    fn bounds(&self) -> (Vec2, Vec2) {
+        self.points.iter().fold((Vec2::splat(f32::MAX), Vec2::splat(f32::MIN)), |(min, max), p| (min.min(*p), max.max(*p)))
+    }
+
+    /// How far inside the outline `p` is, if it is inside.
+    fn inside(&self, p: Vec2) -> Option<f32> {
+        if self.points.len() < 3 {
+            return None;
+        }
+        let mut inside = false;
+        let mut nearest = f32::MAX;
+        for (k, &a) in self.points.iter().enumerate() {
+            let b = self.points[(k + 1) % self.points.len()];
+            if (a.y > p.y) != (b.y > p.y) && p.x < a.x + (p.y - a.y) / (b.y - a.y) * (b.x - a.x) {
+                inside = !inside;
+            }
+            let along = b - a;
+            let t = ((p - a).dot(along) / along.length_squared().max(1e-6)).clamp(0.0, 1.0);
+            nearest = nearest.min((a + along * t).distance_squared(p));
+        }
+        inside.then(|| nearest.sqrt())
+    }
+}
+
+/// What a survey costs to read at a point, against the work a map may take: the sixteen heights round it.
+const SURVEY_COST: usize = 16;
+
 /// How far either side of a flight of steps, and how far below its line, the land is cut away for it.
 const STEP_CUT_MARGIN: f32 = 0.6;
 const STEP_CUT_DEPTH: f32 = 0.3;
@@ -125,6 +159,7 @@ pub(crate) struct Relief<'a> {
     work: std::cell::Cell<u64>,
     limit: u64,
     near: Near,
+    shores: Vec<Shore<'a>>,
     pub pads: Vec<Pad>,
     /// The height of the land at each end of each flight of steps, before the steps are cut into it.
     pub step_ends: Vec<(f32, f32)>,
@@ -141,7 +176,8 @@ impl<'a> Relief<'a> {
     pub fn within(spec: &'a MapSpec, limit: u64) -> Self {
         let work = std::cell::Cell::new(0);
         let near = Near::new(spec.terrain.size);
-        let mut relief = Self { spec, work, limit, near, pads: Vec::new(), step_ends: Vec::new() };
+        let shores = spec.waters.iter().map(|w| Shore { points: &w.points }).collect();
+        let mut relief = Self { spec, work, limit, near, shores, pads: Vec::new(), step_ends: Vec::new() };
         relief.pads = spec.compounds.iter().map(|c| relief.pad(c)).collect();
         relief.near = relief.index();
         relief.step_ends = spec.steps.iter().map(|s| (relief.uncut(s.from), relief.uncut(s.to))).collect();
@@ -188,6 +224,9 @@ impl<'a> Relief<'a> {
         for (i, zone) in spec.zones.iter().enumerate() {
             add(&mut near, turned_bounds(zone.at, Vec2::from_angle(-zone.yaw), zone.half, 0.0), &|cell| cell.zones.push(i as u32));
         }
+        for (i, shore) in self.shores.iter().enumerate() {
+            add(&mut near, shore.bounds(), &|cell| cell.waters.push(i as u32));
+        }
         near
     }
 
@@ -216,13 +255,15 @@ impl<'a> Relief<'a> {
     /// The land before anything is cut into it or levelled on it.
     fn natural(&self, p: Vec2) -> f32 {
         let terrain = &self.spec.terrain;
-        if !self.spend(terrain.calm.len() + terrain.waves.len() + terrain.hills.len()) {
+        let survey = terrain.survey.as_ref().map_or(0, |_| SURVEY_COST);
+        if !self.spend(terrain.calm.len() + terrain.waves.len() + terrain.hills.len() + survey) {
             return 0.0;
         }
         let quiet = terrain.calm.iter().map(|c| c.keep + (1.0 - c.keep) * smoothstep(c.radius, c.fade, c.at.distance(p))).fold(1.0, f32::min);
         let waves: f32 = terrain.waves.iter().map(|w| (w.frequency.dot(p) + w.phase).sin() * w.height).sum();
         let hills: f32 = terrain.hills.iter().map(|h| hill(h, p)).sum();
-        (waves + hills) * quiet + self.rim(p)
+        let survey = terrain.survey.as_ref().map_or(0.0, |s| s.sample(p));
+        (waves + hills + survey) * quiet + self.rim(p)
     }
 
     fn rim(&self, p: Vec2) -> f32 {
@@ -297,6 +338,11 @@ impl<'a> Relief<'a> {
                 h = h.min(natural - cut(ditch, d));
             }
         }
+        // Water after the roads, so a road along a quay stops at the edge and one across needs a bridge.
+        for (water, depth) in self.waters(near, p) {
+            let bed = water.bed + (h - water.bed) * (1.0 - smoothstep(0.0, water.bank, depth));
+            h = h.min(bed);
+        }
         // Nearest pad last, so that a pad is level right up to its edge whatever is next door.
         let fade = spec.style.pad_fade;
         let mut levels: Vec<(f32, f32)> = near.pads.iter().map(|&i| &self.pads[i as usize]).filter_map(|pad| {
@@ -318,6 +364,9 @@ impl<'a> Relief<'a> {
         let spec = self.spec;
         if let Some(pad) = near.pads.iter().map(|&i| &self.pads[i as usize]).find(|pad| pad.outside(p) < 0.5) {
             return pad.ground;
+        }
+        if let Some((water, _)) = self.waters(near, p).next() {
+            return water.ground;
         }
         let within = |points: &[Vec2], run: &[(u32, u32)], width: f32| nearest(points, run, p).is_some_and(|(_, d)| d < width * 0.5);
         let ditches = || by_line(&near.ditches).map(|(i, run)| (&spec.ditches[i], run));
@@ -342,6 +391,22 @@ impl<'a> Relief<'a> {
         Ground::Meadow
     }
 
+    /// The waters `p` is in, and how far in from the shore of each.
+    fn waters(&self, near: &'a Nearby, p: Vec2) -> impl Iterator<Item = (&'a crate::spec::Water, f32)> + use<'a, '_> {
+        near.waters.iter().filter_map(move |&i| {
+            let shore = &self.shores[i as usize];
+            if !self.spend(shore.points.len()) {
+                return None;
+            }
+            shore.inside(p).map(|depth| (&self.spec.waters[i as usize], depth))
+        })
+    }
+
+    /// Whether `p` is in any water.
+    pub fn wet(&self, p: Vec2) -> bool {
+        self.waters(self.near.at(p), p).next().is_some()
+    }
+
     /// Whether something growing at `p` would be in the way of a road, a ditch or a compound.
     pub fn occupied(&self, p: Vec2) -> bool {
         let near = self.near.at(p);
@@ -357,6 +422,7 @@ impl<'a> Relief<'a> {
                 let t = ((p - s.from).dot(along) / along.length_squared().max(1e-6)).clamp(-0.5, 1.5);
                 (s.from + along * t).distance(p) < s.width * 0.5 + STEP_CLEARANCE
             })
+            || self.wet(p)
     }
 
     /// The mesh, unless it would be more than `max_cells` cells or shaping it would take more than allowed.

@@ -955,3 +955,13 @@ fn squads_ride_trucks_to_the_objective_and_get_out_to_fight() {
 }
 
 
+
+#[test]
+fn both_sides_have_as_far_to_walk_up_the_chain_of_muttrah() {
+    both_sides_have_as_far_to_walk_up_the_chain("muttrah");
+}
+
+#[test]
+fn both_sides_have_as_far_to_walk_up_the_chain_of_fallujah() {
+    both_sides_have_as_far_to_walk_up_the_chain("fallujah");
+}

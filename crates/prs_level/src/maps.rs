@@ -6,7 +6,7 @@
 //! The game carries `maps/*.toml` inside it, for playing alone and for tests. A folder of maps beside the
 //! program comes first, so a server can be given a new one without a new build.
 
-use glam::Vec3;
+use glam::{Vec2, Vec3};
 use serde::{Deserialize, Serialize};
 use std::cell::Cell;
 use std::fmt;
@@ -22,6 +22,8 @@ pub const BUILT_IN: &[(&str, &str)] = &[
     ("range", include_str!("../../../maps/range.toml")),
     ("town", include_str!("../../../maps/town.toml")),
     ("claudabad", include_str!("../../../maps/claudabad.toml")),
+    ("muttrah", include_str!("../../../maps/muttrah.toml")),
+    ("fallujah", include_str!("../../../maps/fallujah.toml")),
 ];
 
 /// How big a map may make itself. A map can come from any server, so it is held to these before anything is
@@ -68,6 +70,29 @@ pub struct HeightGrid {
     pub size: f32,
     pub cells: u32,
     pub heights: Vec<f32>,
+}
+
+impl HeightGrid {
+    /// The height at `p`, from the sixteen heights around it by Catmull-Rom, so that the land between
+    /// them is smooth and passes through each. Past the edge the edge carries on, and a grid short of
+    /// heights reads as flat where they are missing.
+    pub fn sample(&self, p: Vec2) -> f32 {
+        let row = self.cells as i64 + 1;
+        let step = self.size / self.cells.max(1) as f32;
+        let at = (p + Vec2::splat(self.size * 0.5)) / step;
+        let (i, j) = (at.x.floor(), at.y.floor());
+        let (u, v) = (at.x - i, at.y - j);
+        let height = |a: i64, b: i64| {
+            let (a, b) = (a.clamp(0, row - 1), b.clamp(0, row - 1));
+            self.heights.get((b * row + a) as usize).copied().unwrap_or(0.0)
+        };
+        let spline = |t: f32, h: [f32; 4]| {
+            0.5 * (2.0 * h[1] + (h[2] - h[0]) * t + (2.0 * h[0] - 5.0 * h[1] + 4.0 * h[2] - h[3]) * t * t + (3.0 * h[1] - h[0] - 3.0 * h[2] + h[3]) * t * t * t)
+        };
+        let (i, j) = (i as i64, j as i64);
+        let across = |b: i64| spline(u, [height(i - 1, b), height(i, b), height(i + 1, b), height(i + 2, b)]);
+        spline(v, [across(j - 1), across(j), across(j + 1), across(j + 2)])
+    }
 }
 
 /// A map file as it is written.
@@ -259,6 +284,16 @@ impl MapFile {
         size(terrain.size)?;
         if let Some(open) = terrain.open_tolerance {
             positive("tolerance", open)?;
+        }
+        if let Some(survey) = &terrain.survey {
+            size(survey.size)?;
+            if survey.cells == 0 || survey.cells > limits.max_cells {
+                return Err(format!("a survey of {} cells", survey.cells));
+            }
+            let row = survey.cells as usize + 1;
+            if survey.heights.len() != row * row {
+                return Err(format!("a survey of {} cells with {} heights", survey.cells, survey.heights.len()));
+            }
         }
         let splits = terrain.max_splits.max(terrain.paint_splits);
         let finest = (terrain.base_cells as u64).checked_shl(splits.min(63)).unwrap_or(u64::MAX);
@@ -525,6 +560,14 @@ mod tests {
         MapFile { format: FORMAT, spec: Some(MapSpec::claudabad()), ..MapFile::default() }
     }
 
+    fn fallujah_file() -> MapFile {
+        MapFile { format: FORMAT, spec: Some(MapSpec::fallujah()), ..MapFile::default() }
+    }
+
+    fn muttrah_file() -> MapFile {
+        MapFile { format: FORMAT, spec: Some(MapSpec::muttrah()), ..MapFile::default() }
+    }
+
     fn same(a: &Level, b: &Level) -> bool {
         format!("{a:?}") == format!("{b:?}")
     }
@@ -537,6 +580,8 @@ mod tests {
             ("range", range_file(), Level::training_range()),
             ("town", town_file(), MapSpec::town().build()),
             ("claudabad", claudabad_file(), MapSpec::claudabad().build()),
+            ("muttrah", muttrah_file(), MapSpec::muttrah().build()),
+            ("fallujah", fallujah_file(), MapSpec::fallujah().build()),
         ];
         if std::env::var("PRS_WRITE_MAPS").is_ok() {
             for (name, file, _) in &maps {

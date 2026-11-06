@@ -1181,6 +1181,30 @@ fn a_jeep_can_drive_from_either_base_over_the_bridge_to_the_island() {
     }
 }
 
+/// On Fallujah, from each base's pool round the fields or the desert into the city, down the middle and out
+/// along the road to the bridge in that half, and over the river to the far bank. The south drive is the north one mirrored.
+#[test]
+fn a_jeep_can_drive_from_either_base_over_the_river_on_fallujah() {
+    let north = [(972.0, -1720.0), (880.0, -1500.0), (780.0, -1250.0), (708.0, -1150.0), (-150.0, -1150.0), (-150.0, -700.0), (-600.0, -700.0), (-880.0, -700.0), (-1020.0, -700.0), (-1300.0, -700.0)];
+    let level = Level::named("fallujah").unwrap();
+    for (mirror, team_z) in [(1.0, -1.0), (-1.0, 1.0)] {
+        let mut sim = Sim::new(level.clone());
+        for _ in 0..90 {
+            sim.step(&[]);
+        }
+        // The first jeep in this side's pool.
+        let carrier = (0..sim.level.vehicles.len()).find(|&v| sim.level.vehicles[v].kind == 2 && sim.level.vehicles[v].pos.z * team_z > 0.0).unwrap() as u32;
+        let id = sim.spawn_soldier(1);
+        sim.sit_in(id, SeatedAt { carrier, seat: 0 });
+        let route: Vec<Vec2> = north.iter().map(|&(x, z)| Vec2::new(x, z * mirror)).collect();
+        let (reached, crashes, tilt) = drive_route(&mut sim, id, &route, 400.0);
+        let at = sim.vehicles[carrier as usize].pos;
+        assert_eq!(reached, route.len(), "from jeep {carrier}: got to point {reached} at {at} with {crashes} crashes");
+        assert!(tilt < 0.6, "leaned {tilt}");
+        assert!(at.y > 0.0, "in the river at {at}");
+    }
+}
+
 /// How much a tick costs with vehicles moving, for keeping an eye on it.
 #[test]
 #[ignore]

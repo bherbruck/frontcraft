@@ -2,6 +2,7 @@
 //! this into a [`Level`](crate::Level). A mod adds a map by filling in one of these.
 
 use crate::Paint;
+use crate::maps::HeightGrid;
 use glam::{Vec2, Vec3};
 use prs_collision::Surface;
 
@@ -35,6 +36,9 @@ pub struct MapSpec {
     pub steps: Vec<Steps>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub landmarks: Vec<Sunburst>,
+    /// Sea, harbours and lakes, cut into the land after the roads.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub waters: Vec<Water>,
 }
 
 /// A deck across a gap, from one end on the ground to the other, at the height of the ground at its ends,
@@ -81,6 +85,19 @@ pub struct Sunburst {
     pub stone: Paint,
 }
 
+/// A body of water: the land inside the outline goes down to a level bed, steeply or gently by `bank`, and
+/// takes the colour of `ground`. There is nothing to swim in yet, so the bed is ground like any other.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct Water {
+    /// The shore, as a closed outline. The last point joins back to the first.
+    pub points: Vec<Vec2>,
+    /// Height of the bed, not relative to the land: a sea has one level whatever the shore does.
+    pub bed: f32,
+    /// How far in from the shore the bed is reached. A metre or two is a quay, tens of metres a beach.
+    pub bank: f32,
+    pub ground: Ground,
+}
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct TerrainSpec {
     pub size: f32,
@@ -106,6 +123,10 @@ pub struct TerrainSpec {
     pub hills: Vec<Hill>,
     pub calm: Vec<Calm>,
     pub rim: Rim,
+    /// Measured heights laid under the waves and hills, such as a survey of a real place. Calms quiet it
+    /// as they do the rest.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub survey: Option<HeightGrid>,
 }
 
 /// A long sine swell across the land.
@@ -254,6 +275,10 @@ pub enum Ground {
     Scrub,
     Shingle,
     Water,
+    /// Loose desert sand.
+    Sand,
+    /// Bare rock, as on a rocky hillside.
+    Rock,
 }
 
 impl Ground {
@@ -261,9 +286,9 @@ impl Ground {
     pub fn surface(self) -> Surface {
         match self {
             Ground::Natural | Ground::Meadow | Ground::Pasture | Ground::Wheat | Ground::Stubble | Ground::Orchard => Surface::Grass,
-            Ground::Road | Ground::Shingle => Surface::Gravel,
+            Ground::Road | Ground::Shingle | Ground::Rock => Surface::Gravel,
             Ground::Paving => Surface::Concrete,
-            Ground::Plough | Ground::Track | Ground::Dirt | Ground::Yard | Ground::DitchBed | Ground::Scrub | Ground::Water => Surface::Dirt,
+            Ground::Plough | Ground::Track | Ground::Dirt | Ground::Yard | Ground::DitchBed | Ground::Scrub | Ground::Water | Ground::Sand => Surface::Dirt,
         }
     }
 

@@ -147,6 +147,7 @@ impl MapSpec {
                 paint: Paint::Terracotta,
                 stone: Paint::Stone,
             }],
+            waters: Vec::new(),
         }
     }
 }
@@ -196,6 +197,7 @@ fn land() -> TerrainSpec {
         // The valley floor the town sits on.
         calm: vec![Calm { at: Vec2::ZERO, radius: 330.0, fade: 600.0, keep: 0.12 }],
         rim: Rim { inset: 70.0, height: 20.0, face: 12.0, face_height: 16.0, wander: 12.0 },
+        survey: None,
     }
 }
 

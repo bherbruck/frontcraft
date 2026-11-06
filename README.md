@@ -529,6 +529,33 @@ through roads, quays (`Ditch.quay`), palms, radio mast and coarser open country 
 bridges and the steps out of the canal, check the whole map joins up on foot from each base, and a jeep
 drives two kilometres from either base over the bridge to the square.
 
+Muttrah (`PRS_MAP=muttrah`) is a harbour town on a bay, two kilometres across, on the real lie of the land
+round Muttrah in Oman. Only the heights are real: everything on them is made up for the game. The sea is to
+the north, with a port at the west end and a dhow harbour at the east, and between them the corniche runs
+round the bay with palms along the sea side and steps down into the water. The souq is packed in behind it,
+blocks of shops and houses back to back with alleys between, and the old quarter's walled houses climb the
+foot of the rocky hills behind, round a wadi and up to a fort on the ridge over the east end of the bay.
+West comes in from the port and East from beyond the dhow harbour, along the shore or round the back street
+through the wadi, and the walks up the chain of seven flags match. The hills behind are bare rock to cross
+on foot. It is written from `muttrah.rs`, with its quarters laid out block by block by `atlas.rs`, and its
+tests, in `atlas_tests.rs`, check every door and stair, climb a sample of yard walls, walk the steps out of
+the sea and both bases to every flag, and drive every vehicle out of its pool.
+
+Fallujah (`PRS_MAP=fallujah`) is a city on a river, four kilometres across, on the real lie of the land round
+Fallujah in Iraq, and again only the heights are real. The river runs down the west side, too wide to cross
+but by its two bridges, one in each half of the map, with date groves along its banks and fields and a village
+on the far side. The city fills the east bank, a grid of walled compounds packed round a central square with a
+market to the north and a bus station to the south, thinning out towards its edges, with a mill and a pump
+house on the river. North comes in from the farms and South from the desert past a depot, and each side's half
+is the other's mirrored across the middle, so the walks up the chain of seven flags match to the metre. Its
+tests are the same as Muttrah's, with both bridges walked, and a jeep drives from each base into the city and
+over the river (`prs_sim`'s `rides_tests.rs`). `DENSITY` in `fallujah.rs` scales how much of the city is built.
+
+The land under a map can be a survey: a grid of measured heights in the spec's `terrain.survey`, which
+waves, hills and calms then work on as on any land, and `waters` cut a sea or harbour into it to a level
+bed. Terrain: NASA SRTM, public domain (1 arc-second, sampled by `scripts/survey.py`; how each survey was
+made is in `crates/prs_level/src/survey/README.md`).
+
 The range looks down lanes with targets at 25, 50, 100, 200 and 300 m, marked by boards either side:
 a white stripe per 25 m, then a red board per 100 m. Along the firing line are sandbags, a bench to rest
 on standing, a box for kneeling and a low bag for lying behind, and a wall with openings to fire through

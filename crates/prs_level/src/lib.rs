@@ -2,9 +2,12 @@
 //! description, so what you see is what you collide with.
 
 mod archetypes;
+mod atlas;
 mod build;
 mod claudabad;
+mod fallujah;
 pub mod maps;
+mod muttrah;
 mod range;
 mod relief;
 pub mod spec;
@@ -598,6 +601,8 @@ impl Scatter {
 
 #[cfg(test)]
 mod claudabad_tests;
+#[cfg(test)]
+mod atlas_tests;
 #[cfg(test)]
 mod range_tests;
 #[cfg(test)]

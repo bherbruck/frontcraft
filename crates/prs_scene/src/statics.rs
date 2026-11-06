@@ -510,6 +510,8 @@ fn ground_color(ground: Ground, at: Vec3, height: f32, steep: f32, grain: f32) -
         Ground::Shingle => Vec3::new(0.62, 0.58, 0.5).lerp(Vec3::new(0.56, 0.52, 0.44), drift) + tint * 0.6,
         Ground::Scrub => Vec3::new(0.56, 0.47, 0.29).lerp(Vec3::new(0.5, 0.45, 0.27), drift) + tint,
         Ground::Water => Vec3::new(0.25, 0.35, 0.33).lerp(Vec3::new(0.22, 0.32, 0.31), drift) + tint * 0.3,
+        Ground::Sand => Vec3::new(0.74, 0.64, 0.46).lerp(Vec3::new(0.68, 0.58, 0.4), drift) + tint * 0.8,
+        Ground::Rock => Vec3::new(0.42, 0.36, 0.3).lerp(Vec3::new(0.36, 0.32, 0.28), drift) + tint * 0.8,
     };
     base.lerp(dirt, steep)
 }
@@ -600,9 +602,10 @@ mod tests {
     /// that spot, must name the surface a bullet coming straight down reports. Where a triangle
     /// blends grounds the colour is a mix, so it is only matched against the grounds being blended.
     fn ground_sounds_as_it_looks(level: &Level, expect: &[Surface]) {
-        const KINDS: [Ground; 16] = [
+        const KINDS: [Ground; 18] = [
             Ground::Natural, Ground::Meadow, Ground::Pasture, Ground::Wheat, Ground::Stubble, Ground::Plough, Ground::Orchard, Ground::Road,
             Ground::Track, Ground::Dirt, Ground::Yard, Ground::Paving, Ground::DitchBed, Ground::Scrub, Ground::Shingle, Ground::Water,
+            Ground::Sand, Ground::Rock,
         ];
         let terrain = &level.terrain;
         let world = level.collision();
@@ -667,7 +670,7 @@ mod tests {
     #[test]
     #[ignore]
     fn draw_report() {
-        for (name, level) in [("range", Level::training_range()), ("town", Level::named("town").unwrap()), ("claudabad", Level::named("claudabad").unwrap())] {
+        for (name, level) in [("range", Level::training_range()), ("town", Level::named("town").unwrap()), ("claudabad", Level::named("claudabad").unwrap()), ("muttrah", Level::named("muttrah").unwrap()), ("fallujah", Level::named("fallujah").unwrap())] {
             let start = std::time::Instant::now();
             let meshes = static_meshes(&level, Bake::default());
             let elapsed = start.elapsed();

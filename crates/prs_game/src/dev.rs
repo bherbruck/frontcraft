@@ -55,6 +55,9 @@
 //!
 //! `armbands:<metres>:<front|side|back>` stands one soldier of each side in front of you.
 //!
+//! `sky:<x>:<y>:<z>:<yaw>:<pitch>` looks from that place in the world, in degrees, with the fog pushed out to
+//! `PRS_FOG=<metres>` (6000 unless told), for looking over a whole map from above.
+//!
 //! `PRS_END=<seconds>` moves the moment of the shot, to catch another point of a walk cycle, and
 //! `PRS_AT=x,y,z[,yaw]` starts your soldier somewhere else.
 
@@ -89,6 +92,9 @@ impl Plugin for DevPlugin {
                 crate::dev_mode::drive_mode.in_set(RunFixedMainLoopSystems::BeforeFixedMainLoop).after(drive),
             );
         }
+        if scene.starts_with("sky:") {
+            app.add_systems(PreStartup, clear_the_air).add_systems(Update, look_from_the_sky.after(prs_runtime::GunDrawn));
+        }
         app.insert_resource(Script { path, scene, saved: false }).add_systems(
             RunFixedMainLoop,
             drive.in_set(RunFixedMainLoopSystems::BeforeFixedMainLoop).after(prs_input::ReadInput),
@@ -99,6 +105,24 @@ impl Plugin for DevPlugin {
 #[cfg(target_arch = "wasm32")]
 impl Plugin for DevPlugin {
     fn build(&self, _app: &mut App) {}
+}
+
+/// Lets a `sky:` scene see the whole map: the air clears and the view reaches out to `PRS_FOG`.
+#[cfg(not(target_arch = "wasm32"))]
+fn clear_the_air(mut atmosphere: ResMut<prs_atmosphere::Atmosphere>, mut reach: ResMut<prs_atmosphere::ViewReach>) {
+    let fog: f32 = std::env::var("PRS_FOG").ok().and_then(|v| v.parse().ok()).unwrap_or(6000.0);
+    atmosphere.fog_visibility = fog;
+    reach.0 = fog / atmosphere.fog_within_view;
+}
+
+/// Puts the camera wherever a `sky:` scene says, after the view has put it at the soldier's eye.
+#[cfg(not(target_arch = "wasm32"))]
+fn look_from_the_sky(script: Res<Script>, mut cameras: Query<&mut Transform, With<prs_view::WorldCamera>>) {
+    let numbers: Vec<f32> = script.scene.trim_start_matches("sky:").split(':').filter_map(|v| v.parse().ok()).collect();
+    let [x, y, z, yaw, pitch, ..] = numbers[..] else { return };
+    for mut transform in &mut cameras {
+        *transform = Transform::from_xyz(x, y, z).with_rotation(Quat::from_euler(EulerRot::YXZ, yaw.to_radians(), pitch.to_radians(), 0.0));
+    }
 }
 
 /// Scripts one of the `body:` scenes, for looking at a stance from a given angle.
