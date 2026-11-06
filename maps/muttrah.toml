@@ -45172,34 +45172,46 @@ half = [1024.0, 1024.0]
 yaw = 0.0
 
 [[spec.zones]]
-at = [0.0, -640.0]
+at = [0.0, -660.0]
 ground = "Sand"
-half = [1024.0, 400.0]
+half = [1100.0, 380.0]
+ragged = 90.0
 yaw = 0.0
 
 [[spec.zones]]
-at = [-890.0, 0.0]
+at = [-880.0, -20.0]
 ground = "Sand"
-half = [140.0, 260.0]
+half = [150.0, 280.0]
+ragged = 70.0
 yaw = 0.0
 
 [[spec.zones]]
 at = [330.0, -60.0]
 ground = "Sand"
 half = [110.0, 230.0]
+ragged = 60.0
 yaw = 0.3
 
 [[spec.zones]]
 at = [560.0, 120.0]
 ground = "Sand"
 half = [90.0, 60.0]
+ragged = 40.0
 yaw = -0.2
 
 [[spec.zones]]
 at = [830.0, -120.0]
 ground = "Sand"
 half = [60.0, 220.0]
+ragged = 50.0
 yaw = 0.0
+
+[[spec.zones]]
+at = [-420.0, -200.0]
+ground = "Sand"
+half = [160.0, 90.0]
+ragged = 60.0
+yaw = 0.1
 
 [[spec.zones]]
 at = [-780.0, -700.0]

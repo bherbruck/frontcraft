@@ -346,6 +346,35 @@ pub struct Zone {
     pub half: Vec2,
     pub yaw: f32,
     pub ground: Ground,
+    /// How far its edge wanders in and out, so that from the air it reads as a patch of ground and not a box.
+    /// The corners round off by as much.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub ragged: f32,
+}
+
+fn is_zero(v: &f32) -> bool {
+    *v == 0.0
+}
+
+impl Zone {
+    /// Whether `p` is in it, its edge wandering by up to `ragged` either way.
+    pub fn contains(&self, p: Vec2) -> bool {
+        let axis = Vec2::from_angle(-self.yaw);
+        let d = p - self.at;
+        let local = Vec2::new(d.dot(axis), d.dot(axis.perp()));
+        if self.ragged <= 0.0 {
+            return local.x.abs() < self.half.x && local.y.abs() < self.half.y;
+        }
+        // How far outside the box, or inside it as a negative number, against an edge that wanders in sines of a
+        // few lengths, each zone its own way round.
+        let q = local.abs() - self.half;
+        let outside = q.max(Vec2::ZERO).length() + q.x.max(q.y).min(0.0);
+        let f = 1.0 / (self.ragged * 3.0);
+        let (x, z) = (p.x * f, p.y * f);
+        let phase = (self.at.x * 0.37 + self.at.y * 0.61).fract() * std::f32::consts::TAU;
+        let wander = 0.5 * (x + z * 0.7 + phase).sin() + 0.3 * (z * 1.9 - x * 2.3 + phase * 2.0).sin() + 0.2 * (x * 4.1 - z * 3.7 + phase * 3.0).sin();
+        outside < self.ragged * (wander - 0.3)
+    }
 }
 
 /// Walls and buildings on one level pad of ground. Everything inside is in its local frame, with

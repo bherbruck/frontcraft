@@ -20,14 +20,14 @@ const MOST_OVER_BED: f32 = 10.0;
 /// What a file says it is written for. A file for a later one is refused, not misread.
 pub const FORMAT: u32 = 1;
 
-/// The maps the game is built with, as their files.
-pub const BUILT_IN: &[(&str, &str)] = &[
-    ("range", include_str!("../../../maps/range.toml")),
-    ("town", include_str!("../../../maps/town.toml")),
-    ("claudabad", include_str!("../../../maps/claudabad.toml")),
-    ("muttrah", include_str!("../../../maps/muttrah.toml")),
-    ("fallujah", include_str!("../../../maps/fallujah.toml")),
-];
+/// The maps the game is built with, as their files: only what playing alone needs. Every other map comes from
+/// the maps folder, or from the server that plays it, so a big map costs nothing to anyone not playing it.
+pub const BUILT_IN: &[(&str, &str)] = &[("range", include_str!("../../../maps/range.toml")), ("town", include_str!("../../../maps/town.toml"))];
+
+/// The maps folder of the source tree this was built from, so a program run from a checkout, and every test,
+/// finds the maps that are not built in.
+#[cfg(not(target_arch = "wasm32"))]
+const SOURCE_MAPS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../maps");
 
 /// How big a map may make itself. A map can come from any server, so it is held to these before anything is
 /// built from it: nothing in it may ask for more memory or time than a real map would.
@@ -208,7 +208,8 @@ impl MapData {
     }
 
     /// A map by name from the maps folder, `PRS_MAPS_DIR` or `maps` where the program runs, or else one built
-    /// in. Only ever a plain name, so whatever a server says, nothing outside that folder is read.
+    /// in, or else from the source tree's. Only ever a plain name, so whatever a server says, nothing outside
+    /// those folders is read.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn find(name: &str) -> Result<Self, MapError> {
         if !valid_name(name) {
@@ -217,7 +218,9 @@ impl MapData {
         let folder = std::env::var("PRS_MAPS_DIR").unwrap_or_else(|_| "maps".into());
         match std::fs::read_to_string(std::path::Path::new(&folder).join(format!("{name}.toml"))) {
             Ok(text) => Ok(Self::new(name, text)),
-            Err(_) => Self::built_in(name).ok_or_else(|| MapError::NotFound(name.to_owned())),
+            Err(_) => Self::built_in(name)
+                .or_else(|| std::fs::read_to_string(std::path::Path::new(SOURCE_MAPS).join(format!("{name}.toml"))).ok().map(|text| Self::new(name, text)))
+                .ok_or_else(|| MapError::NotFound(name.to_owned())),
         }
     }
 
@@ -618,16 +621,25 @@ mod tests {
             let written = MapData::new(name, text).level().unwrap();
             assert!(same(&written, &Level { source: written.source, ..built.clone() }), "{name} does not come back the same from what is written");
             if std::env::var("PRS_WRITE_MAPS").is_ok() {
-                // What is built in is the file from before it was just written.
                 continue;
             }
-            let shipped = MapData::built_in(name).unwrap();
+            let shipped = MapData::find(name).unwrap();
             let from_file = shipped.level().unwrap();
             assert_eq!(from_file.source, shipped.hash);
             assert!(
                 same(&from_file, &Level { source: shipped.hash, ..built }),
                 "maps/{name}.toml is not what the code builds. Run PRS_WRITE_MAPS=1 cargo test -p prs_level maps"
             );
+        }
+    }
+
+    /// Only what playing alone needs is in the program; the big maps are files.
+    #[test]
+    fn only_the_town_and_the_range_are_built_in() {
+        assert_eq!(BUILT_IN.iter().map(|(name, _)| *name).collect::<Vec<_>>(), ["range", "town"]);
+        for name in ["claudabad", "muttrah", "fallujah"] {
+            assert!(MapData::built_in(name).is_none());
+            assert!(MapData::find(name).is_ok(), "{name} is found in the maps folder");
         }
     }
 
@@ -725,7 +737,7 @@ mod tests {
         let tight = MapLimits { max_terrain_work: 1_000, ..MapLimits::default() };
         assert!(matches!(town.level_within(&tight), Err(MapError::TooBig { .. })));
         for name in ["town", "claudabad", "range"] {
-            assert!(MapData::built_in(name).unwrap().level().is_ok(), "{name} fits");
+            assert!(MapData::find(name).unwrap().level().is_ok(), "{name} fits");
         }
     }
 
@@ -743,14 +755,14 @@ mod tests {
 
     #[test]
     fn a_water_must_have_a_shore_and_a_bank() {
-        let muttrah = MapData::built_in("muttrah").unwrap().text;
+        let muttrah = MapData::find("muttrah").unwrap().text;
         let bank = muttrah.find("\nbank = ").map(|at| muttrah[at..at + 1 + muttrah[at + 1..].find('\n').unwrap()].to_owned()).unwrap();
         for bad in ["\nbank = 0.0", "\nbank = -2.0"] {
             let refused = MapData::new("muttrah", muttrah.replacen(&bank, bad, 1)).level();
             assert!(matches!(refused, Err(MapError::TooBig { .. })), "{bad}: {refused:?}");
         }
         let tight = MapLimits { max_shore_points: 3, ..MapLimits::default() };
-        assert!(matches!(MapData::built_in("muttrah").unwrap().level_within(&tight), Err(MapError::TooBig { .. })));
+        assert!(matches!(MapData::find("muttrah").unwrap().level_within(&tight), Err(MapError::TooBig { .. })));
     }
 
     #[test]

@@ -237,7 +237,7 @@ impl<'a> Relief<'a> {
             add(&mut near, (steps.from.min(steps.to) - reach, steps.from.max(steps.to) + reach), &|cell| cell.steps.push(i as u32));
         }
         for (i, zone) in spec.zones.iter().enumerate() {
-            add(&mut near, turned_bounds(zone.at, Vec2::from_angle(-zone.yaw), zone.half, 0.0), &|cell| cell.zones.push(i as u32));
+            add(&mut near, turned_bounds(zone.at, Vec2::from_angle(-zone.yaw), zone.half, zone.ragged.max(0.0)), &|cell| cell.zones.push(i as u32));
         }
         for (i, shore) in self.shores.iter().enumerate() {
             add(&mut near, shore.bounds(), &|cell| cell.waters.push(i as u32));
@@ -396,10 +396,7 @@ impl<'a> Relief<'a> {
         }
         for &i in near.zones.iter().rev() {
             let zone = &spec.zones[i as usize];
-            let axis = Vec2::from_angle(-zone.yaw);
-            let d = p - zone.at;
-            let local = Vec2::new(d.dot(axis), d.dot(axis.perp()));
-            if local.x.abs() < zone.half.x && local.y.abs() < zone.half.y {
+            if zone.contains(p) {
                 return zone.ground;
             }
         }

@@ -21,7 +21,7 @@ pub(crate) fn ditch(points: &[(f32, f32)]) -> Ditch {
 }
 
 pub(crate) fn zone(at: (f32, f32), half: (f32, f32), yaw: f32, ground: Ground) -> Zone {
-    Zone { at: at.into(), half: half.into(), yaw, ground }
+    Zone { at: at.into(), half: half.into(), yaw, ground, ragged: 0.0 }
 }
 
 pub(crate) fn hill(at: (f32, f32), radius: (f32, f32), yaw: f32, height: f32) -> Hill {

@@ -497,7 +497,9 @@ placed by hand on top, one to a line (`MapFile` in `crates/prs_level/src/maps.rs
 chooses the map by name or path, `PRS_MAPS_DIR` is where names are looked for, `maps` by default, and
 `DEFAULT_MAP` in `crates/prs_runtime/src/lib.rs` says which one you get without it.
 
-The game carries `maps/*.toml` inside it, for playing alone and for tests. A server sends the name of its map
+The game carries only the town and the range inside it, for playing alone. The bigger maps stay files in
+`maps/`: a server plays them from its maps folder (`PRS_MAPS_DIR`, or `maps` beside it), and a program run
+from a checkout, and every test, finds them in the source tree's `maps/`. A server sends the name of its map
 with the hash and length of its file, and serves the file at `/map/<name>.toml` under its own address, so
 `wss://host/range` serves `https://host/range/map/range.toml`. A client with a different copy, or none,
 fetches it from there, checks the hash and keeps it in `prs/maps` in its cache folder, or the browser's

@@ -24,8 +24,12 @@ const NORTH_BASE: (f32, f32) = (900.0, -1800.0);
 /// Where each bridge crosses, in the north half. The south one is its mirror.
 const BRIDGE_Z: f32 = -700.0;
 
+/// Where the city is thickest, and how far out from there it has thinned to its outskirts.
+const HEART: (f32, f32) = (-100.0, 0.0);
+const HEART_REACH: f32 = 560.0;
+
 /// How much of each quarter is built, all together. The city's size against what the web build draws.
-const DENSITY: f32 = 0.5;
+const DENSITY: f32 = 1.0;
 
 /// Mirrors a point across the middle of the map, north for south.
 fn south(p: (f32, f32)) -> (f32, f32) {
@@ -183,27 +187,42 @@ fn ditches() -> Vec<Ditch> {
 }
 
 fn zones() -> Vec<Zone> {
-    let zone = |at: (f32, f32), half: (f32, f32), yaw: f32, ground| Zone { at: at.into(), half: half.into(), yaw, ground };
+    let zone = |at: (f32, f32), half: (f32, f32), yaw: f32, ground, ragged| Zone { at: at.into(), half: half.into(), yaw, ground, ragged };
     let mut all = vec![
-        // Desert everywhere, then fields along the river and across the north and south.
-        zone((0.0, 0.0), (2048.0, 2048.0), 0.0, Ground::Sand),
-        zone((-1600.0, 0.0), (450.0, 2048.0), 0.0, Ground::Pasture),
+        // Desert everywhere, then grazing along the west bank.
+        zone((0.0, 0.0), (2048.0, 2048.0), 0.0, Ground::Sand, 0.0),
+        zone((-1600.0, 0.0), (420.0, 2048.0), 0.0, Ground::Pasture, 50.0),
     ];
-    for (at, half, ground) in [
-        ((-1600.0, -1500.0), (300.0, 250.0), Ground::Wheat),
-        ((-1600.0, -600.0), (280.0, 300.0), Ground::Plough),
-        ((-1650.0, 150.0), (240.0, 140.0), Ground::Stubble),
-        ((-400.0, -1600.0), (450.0, 200.0), Ground::Wheat),
-        ((300.0, -1700.0), (250.0, 150.0), Ground::Plough),
-        ((1200.0, -1600.0), (300.0, 250.0), Ground::Stubble),
+    // Farmland as a patchwork of fields, each its own crop or left fallow, a little crooked, with worn edges.
+    let mut dice = Dice::new(41);
+    let crops = [Ground::Wheat, Ground::Plough, Ground::Stubble, Ground::Wheat, Ground::Pasture, Ground::Plough];
+    for (at, half) in [
+        ((-1600.0, -1500.0), (300.0, 250.0)),
+        ((-1600.0, -600.0), (280.0, 300.0)),
+        ((-1650.0, 150.0), (240.0, 140.0)),
+        ((-400.0, -1600.0), (450.0, 200.0)),
+        ((300.0, -1700.0), (250.0, 150.0)),
+        ((1200.0, -1600.0), (300.0, 250.0)),
     ] {
-        all.push(zone(at, half, 0.0, ground));
-        all.push(zone(south(at), half, 0.0, ground));
+        let (nx, nz) = ((half.0 / 90.0) as i32, (half.1 / 70.0) as i32);
+        let field = (half.0 * 2.0 / nx as f32, half.1 * 2.0 / nz as f32);
+        for j in 0..nz {
+            for i in 0..nx {
+                if dice.chance(0.15) {
+                    continue;
+                }
+                let centre = (at.0 - half.0 + field.0 * (i as f32 + 0.5), at.1 - half.1 + field.1 * (j as f32 + 0.5));
+                let size = (field.0 * 0.5 - dice.range(2.0, 6.0), field.1 * 0.5 - dice.range(2.0, 6.0));
+                let (ground, yaw) = (dice.pick(&crops), dice.range(-0.06, 0.06));
+                all.push(zone(centre, size, yaw, ground, 6.0));
+                all.push(zone(south(centre), size, -yaw, ground, 6.0));
+            }
+        }
     }
     // Orchard ground under the date groves.
     for (at, half) in [((-1280.0, -1300.0), (80.0, 170.0)), ((-1270.0, -150.0), (80.0, 170.0)), ((-860.0, -1500.0), (80.0, 170.0))] {
-        all.push(zone(at, half, 0.05, Ground::Orchard));
-        all.push(zone(south(at), half, 0.05, Ground::Orchard));
+        all.push(zone(at, half, 0.05, Ground::Orchard, 15.0));
+        all.push(zone(south(at), half, 0.05, Ground::Orchard, 15.0));
     }
     all
 }
@@ -317,15 +336,15 @@ fn city(spec: &MapSpec) -> Vec<Compound> {
         density: (density * DENSITY).min(1.0),
         drop: 3.0,
         paints,
+        heart: None,
     };
+    let city = |q: Quarter| Quarter { heart: Some((HEART.into(), HEART_REACH)), ..q };
     // Each north quarter beside its southern mirror. The heart of the city round the square is packed, the
     // quarters out from it thin out towards the edge, and the farms to the north answer the depot to the south.
     let pairs = [
-        (quarter((300.0, -560.0), (130.0, 90.0), Kind::Souq, 0.9, homes), None),
-        (quarter((-250.0, -200.0), (500.0, 150.0), Kind::Courtyard, 0.7, homes), None),
-        (quarter((-560.0, -640.0), (300.0, 230.0), Kind::Courtyard, 0.4, homes), None),
-        (quarter((560.0, -200.0), (200.0, 150.0), Kind::Courtyard, 0.35, homes), None),
-        (quarter((480.0, -820.0), (320.0, 180.0), Kind::Courtyard, 0.2, homes), None),
+        (quarter((300.0, -560.0), (130.0, 90.0), Kind::Souq, 0.95, homes), None),
+        // The city's half, packed round the square and along its roads, thinning out towards the fields.
+        (city(quarter((0.0, -590.0), (900.0, 560.0), Kind::Courtyard, 1.0, homes)), None),
         (quarter((-600.0, -1060.0), (230.0, 80.0), Kind::Works, 0.9, works), None),
         (
             quarter((900.0, -1220.0), (220.0, 120.0), Kind::Courtyard, 0.3, homes),

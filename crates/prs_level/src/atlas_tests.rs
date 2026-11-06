@@ -182,7 +182,7 @@ fn flat(p: Vec3) -> Vec2 {
 pub(crate) fn report(map: &Map) {
     let l = &map.level;
     let buildings: usize = map.spec.compounds.iter().map(|c| c.buildings.len()).sum();
-    let text = MapData::built_in(map.name).unwrap().text;
+    let text = MapData::find(map.name).unwrap().text;
     println!(
         "{}: file {} KB, compounds {}, buildings {buildings}, solids {}, trees {}, rooms {}, doors {}, windows {}, stairs {}, terrain tris {}, verts {}",
         map.name,
@@ -198,7 +198,7 @@ pub(crate) fn report(map: &Map) {
         l.terrain.vertices.len()
     );
     let start = Instant::now();
-    let _ = MapData::built_in(map.name).unwrap().level().unwrap();
+    let _ = MapData::find(map.name).unwrap().level().unwrap();
     println!("load and build from the file: {:?}", start.elapsed());
     let start = Instant::now();
     let _ = l.collision();

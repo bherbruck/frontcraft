@@ -150,6 +150,11 @@ impl<'a> Site<'a> {
         high - low <= drop
     }
 
+    /// Whether a road passes within `reach` of `p`.
+    pub fn by_a_road(&self, p: Vec2, reach: f32) -> bool {
+        self.spec.roads.iter().any(|road| to_line(p, &road.points) < reach + road.width * 0.5)
+    }
+
     pub fn take(&mut self, compound: &Compound) {
         self.taken.push(corners(compound.at, compound.yaw, compound.half + self.spec.style.yard_margin));
     }
@@ -185,7 +190,15 @@ pub(crate) struct Quarter {
     /// Most the ground may fall across a block.
     pub drop: f32,
     pub paints: &'static [Paint],
+    /// Where the town is thickest and how far out it thins to almost nothing, so that it clusters there
+    /// rather than scattering evenly. Blocks on a road are built before blocks off one, as a town grows.
+    pub heart: Option<(Vec2, f32)>,
 }
+
+/// How much more likely a block on a road is to be built, and the least share of the density a block far
+/// from the heart keeps.
+const ON_A_ROAD: f32 = 1.4;
+const OUTSKIRTS: f32 = 0.04;
 
 impl Quarter {
     pub fn fill(&self, s: &BuildStyle, dice: &mut Dice, site: &mut Site) -> Vec<Compound> {
@@ -195,11 +208,19 @@ impl Quarter {
         let mut built = Vec::new();
         for j in 0..nz {
             for i in 0..nx {
-                if !dice.chance(self.density) {
-                    continue;
-                }
                 let local = Vec2::new((i as f32 + 0.5) * pitch.x - nx as f32 * pitch.x * 0.5, (j as f32 + 0.5) * pitch.y - nz as f32 * pitch.y * 0.5);
                 let at = self.at + axis.rotate(local);
+                let odds = match self.heart {
+                    Some((heart, reach)) => {
+                        let thinning = 1.0 - crate::smoothstep(reach * 0.25, reach, heart.distance(at));
+                        let street = if site.by_a_road(at, pitch.max_element()) { ON_A_ROAD } else { 1.0 };
+                        self.density * (OUTSKIRTS + (1.0 - OUTSKIRTS) * thinning) * street
+                    }
+                    None => self.density,
+                };
+                if !dice.chance(odds) {
+                    continue;
+                }
                 let yaw = self.yaw + dice.range(-0.03, 0.03);
                 let half = self.block * 0.5 - Vec2::new(dice.range(0.0, 1.5), dice.range(0.0, 1.0));
                 if !site.fits(at, yaw, half, self.street * 0.5 - s.yard_margin + 0.5, self.drop) {

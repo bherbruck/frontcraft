@@ -259,7 +259,7 @@ fn the_whole_map_joins_up_on_foot() {
 fn it_fits_the_map_limits_with_room_to_spare() {
     let limits = crate::maps::MapLimits::default();
     assert!(spec().build_within(limits.max_build_steps / 4).is_ok());
-    let data = crate::MapData::built_in("claudabad").expect("built in");
+    let data = crate::MapData::find("claudabad").expect("in the maps folder");
     assert!(data.level_within(&limits).is_ok());
 }
 
