@@ -37,6 +37,11 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
   CARGO_PROFILE_RELEASE_STRIP: symbols
+  # Thin LTO across crates cost about 7 of the Windows build's 9 warm minutes, for an exe no smaller. Without
+  # it, and in 16 units, a warm build takes 2 to 3 minutes. Still opt-level 3. (rust-lld and sccache were
+  # measured too and saved under 10 seconds.)
+  CARGO_PROFILE_RELEASE_LTO: "false"
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
   CARGO_ABOUT_VERSION: 0.9.3
 
 jobs:
