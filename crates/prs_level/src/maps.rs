@@ -43,13 +43,16 @@ pub struct MapLimits {
     pub max_pieces: u64,
     /// Turns of the builder's loops in all. However a spec gets past the rest, building stops here.
     pub max_build_steps: u64,
+    /// Work in shaping the ground: the points of the finest grid times the hills, roads, ditches and the rest
+    /// that every height has to look at.
+    pub max_terrain_work: u64,
     pub max_storeys: u32,
 }
 
 impl Default for MapLimits {
     /// Several times the town in each, which is itself a kilometre across.
     fn default() -> Self {
-        Self { max_size: 4096.0, max_cells: 2048, max_splits: 6, max_items: 200_000, max_trees: 50_000, max_rubble: 20_000, max_pieces: 100_000, max_build_steps: 1_000_000, max_storeys: 16 }
+        Self { max_size: 4096.0, max_cells: 2048, max_splits: 6, max_items: 200_000, max_trees: 50_000, max_rubble: 20_000, max_pieces: 100_000, max_build_steps: 1_000_000, max_terrain_work: 400_000_000, max_storeys: 16 }
     }
 }
 
@@ -253,6 +256,21 @@ impl MapFile {
         let finest = (terrain.base_cells as u64).checked_shl(splits.min(63)).unwrap_or(u64::MAX);
         if terrain.base_cells == 0 || splits > limits.max_splits || finest > limits.max_cells as u64 {
             return Err(format!("{} cells split {splits} times", terrain.base_cells));
+        }
+        // Every height asked for goes through each of these, and roads twice.
+        let lines = |n: usize| n as u64;
+        let features = terrain.waves.len() as u64
+            + terrain.hills.len() as u64
+            + terrain.calm.len() as u64
+            + spec.steps.len() as u64
+            + spec.zones.len() as u64
+            + spec.compounds.len() as u64
+            + spec.roads.iter().map(|r| lines(r.points.len()) * 2).sum::<u64>()
+            + spec.ditches.iter().map(|d| lines(d.points.len()) * 2).sum::<u64>()
+            + 1;
+        let points = (finest + 1) * (finest + 1);
+        if points.saturating_mul(features) > limits.max_terrain_work {
+            return Err(format!("ground of {points} points shaped by {features} things"));
         }
         let length = |points: &[glam::Vec2]| points.windows(2).map(|p| p[0].distance(p[1]) as f64).sum::<f64>();
         let mut trees = 0.0_f64;
@@ -616,6 +634,18 @@ mod tests {
         let many = format!("format = 1\ntargets = [{}]\n", vec!["[0.0, 0.0, 0.0]"; 200_001].join(", "));
         assert!(matches!(level(&many), Err(MapError::TooBig { .. })));
         assert!(MapData::built_in("town").unwrap().level().is_ok() && MapData::built_in("range").unwrap().level().is_ok(), "the real maps fit");
+    }
+
+    /// Ground that every height of a fine grid must work out through thousands of roads is refused before it
+    /// is shaped, however small the file.
+    #[test]
+    fn ground_shaped_by_too_much_is_refused() {
+        let town = MapData::built_in("town").unwrap();
+        let tight = MapLimits { max_terrain_work: 1_000, ..MapLimits::default() };
+        assert!(matches!(town.level_within(&tight), Err(MapError::TooBig { .. })));
+        for name in ["town", "claudabad", "range"] {
+            assert!(MapData::built_in(name).unwrap().level().is_ok(), "{name} fits");
+        }
     }
 
     /// Whatever a spec gets past the checks with, the builder itself stops at its budget.

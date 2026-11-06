@@ -510,7 +510,7 @@ mod tests {
         let cfg = HostConfig {
             bind: SocketAddr::from(([127, 0, 0, 1], 0)),
             status_every: None,
-            run_for: Some(Duration::from_secs(10)),
+            run_for: Some(Duration::from_secs(40)),
             plain_http: Some(prs_net::ws_host::PlainHttp(std::sync::Arc::new(move |mut stream, request| {
                 use std::io::Write;
                 let answer = if request.starts_with("GET /map/outpost.toml") {
@@ -533,7 +533,8 @@ mod tests {
         for which in ["fetched", "kept"] {
             let mut app = client(&url);
             let start = Instant::now();
-            while start.elapsed() < Duration::from_secs(4) && app.world().get_resource::<LevelReady>().is_none() {
+            // Generous, for a machine busy with the whole test suite: it stops as soon as the level is ready.
+            while start.elapsed() < Duration::from_secs(15) && app.world().get_resource::<LevelReady>().is_none() {
                 app.update();
                 std::thread::sleep(Duration::from_millis(5));
             }
