@@ -332,8 +332,11 @@ impl MapFile {
         }
         for bridge in &spec.bridges {
             positive("bridge span", bridge.span)?;
-            // Deck, two parapets and a pier for each span.
-            pieces += (bridge.from.distance(bridge.to) / bridge.span) as f64 * 4.0 + 4.0;
+            // A deck and two parapets for every length, as short as the builder makes them on a steep bridge, and
+            // a pier for each span.
+            let length = bridge.from.distance(bridge.to) as f64;
+            let lengths = (length / (bridge.span as f64).min(crate::build::DECK_LENGTH as f64)).ceil() + 1.0;
+            pieces += lengths * 3.0 + length / bridge.span as f64 + 4.0;
         }
         for steps in &spec.steps {
             positive("stair run", style.stair_run)?;
@@ -674,6 +677,10 @@ mod tests {
         let one = "\n[[spec.steps]]\nfrom = [0.0, 0.0]\nto = [1.0, 0.0]\nwidth = 1.0\npaint = \"Concrete\"\n";
         let many = format!("{town}{}", one.repeat(MapLimits::default().max_cuts + 1));
         let refused = MapData::new("steps", many).level();
+        assert!(matches!(refused, Err(MapError::TooBig { .. })), "{refused:?}");
+        // A long bridge of few spans may still be built in many short lengths, if its ends are far apart in height.
+        let long = "\n[[spec.bridges]]\nfrom = [-1500.0, 0.0]\nto = [1500.0, 0.0]\nwidth = 4.0\nthickness = 0.5\nparapet = 1.0\nspan = 3000.0\npaint = \"Cement\"\n";
+        let refused = MapData::new("bridges", format!("{town}{}", long.repeat(20))).level();
         assert!(matches!(refused, Err(MapError::TooBig { .. })), "{refused:?}");
         // Every cell of the mesh looks through the places kept detailed, so they are capped too.
         let mut spec = MapSpec::town();

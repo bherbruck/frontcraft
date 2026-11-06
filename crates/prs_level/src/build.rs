@@ -74,8 +74,10 @@ fn near_segment(p: Vec2, a: Vec2, b: Vec2) -> f32 {
     (a + along * t).distance(p)
 }
 
-/// The most one flat length of a bridge's deck stands above or below the next.
+/// The most one flat length of a bridge's deck stands above or below the next, and the shortest a length may
+/// be, which bounds how many lengths a bridge takes whatever the ground under its ends.
 const DECK_STEP: f32 = 0.15;
+pub(crate) const DECK_LENGTH: f32 = 0.5;
 
 /// How much building is left: one step for every turn of every loop the builder takes. A map that would take
 /// more stops being built, whatever its spec says, and is refused.
@@ -324,8 +326,13 @@ impl Builder<'_> {
             let rotation = Quat::from_rotation_y((-dir.y).atan2(dir.x));
             // Each span in as many flat lengths as keep the step between them small enough to walk and drive.
             let spans = (length / bridge.span).ceil().max(1.0) as u32;
-            let per_span = ((end - start).abs() / spans as f32 / DECK_STEP).ceil().max(1.0) as u32;
-            let pieces = spans * per_span;
+            // However steep, no length shorter than DECK_LENGTH: past that the steps grow instead.
+            let fit = (length / spans as f32 / DECK_LENGTH).floor().max(1.0);
+            let per_span = ((end - start).abs() / spans as f32 / DECK_STEP).ceil().clamp(1.0, fit) as u32;
+            let Some(pieces) = spans.checked_mul(per_span) else {
+                self.mason.budget.spent = true;
+                return;
+            };
             let piece = length / pieces as f32;
             let (t, side) = (bridge.thickness, bridge.width * 0.5);
             let rail = self.mason.style.partition;
