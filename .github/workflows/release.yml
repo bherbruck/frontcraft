@@ -232,14 +232,19 @@ jobs:
           notes="FrontCraft $VERSION for Windows (x86_64 .msi), macOS (Apple Silicon .dmg) and Linux (x86_64 .tar.gz).
 
           The macOS app is not notarised: the first time, right click FrontCraft and choose Open."
+          # A tag with a suffix (v0.1.2-test) is a pre-release, and never becomes the latest the page offers.
+          if [[ "$TAG" == *-* ]]; then flags=(--prerelease --latest=false); else flags=(--latest); fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             # Replace the whole asset set, so nothing from an earlier build of this tag is left behind.
             gh release view "$TAG" --json assets --jq '.assets[].name' | while IFS= read -r asset; do
               [ -n "$asset" ] && gh release delete-asset "$TAG" "$asset" --yes
             done
             gh release upload "$TAG" --clobber -- *
-            gh release edit "$TAG" --title "FrontCraft $VERSION" --latest --draft=false
+            gh release edit "$TAG" --title "FrontCraft $VERSION" --draft=false "${flags[@]}"
+          elif gh api "repos/$GH_REPO/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            # A pushed tag: release it as it is. With --target as well, v0.1.26310 got a 403 from the API.
+            gh release create "$TAG" --verify-tag --title "FrontCraft $VERSION" --notes "$notes" "${flags[@]}" -- *
           else
-            gh release create "$TAG" --target "$GITHUB_SHA" --title "FrontCraft $VERSION" --latest --notes "$notes" -- *
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "FrontCraft $VERSION" --notes "$notes" "${flags[@]}" -- *
           fi
           echo "Published https://github.com/$GH_REPO/releases/tag/$TAG" >>"$GITHUB_STEP_SUMMARY"
