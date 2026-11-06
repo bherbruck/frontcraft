@@ -8,16 +8,39 @@ use prs_runtime::prs_sim::Surface;
 use prs_synth::{ContactSound, ContactSounds, SlideSound, SlideSounds, SmokeSound, SoundSet, STEP_VOLUME, StepSound, StepSounds, StepVary};
 
 /// How a sound fades with distance. `loudness` is its volume up close, and it is half as loud at
-/// `reach` metres. Well beyond that it halves each time the distance doubles, as sound does outdoors.
+/// `reach` metres. Well beyond that it halves each time the distance doubles, as sound does outdoors,
+/// unless it is `far` reaching.
 #[derive(Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct Carry {
     pub loudness: f32,
     pub reach: f32,
+    pub far: Option<FarFade>,
+}
+
+/// How a loud sound fades once it is a long way off: past `from` metres, only this many dB each time the
+/// distance doubles. In life a shot is so much louder than anything near you that it is plain across a
+/// valley, and a game that kept its true fall off from close up would bury it under your own footsteps.
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+pub struct FarFade {
+    pub from: f32,
+    pub db_per_doubling: f32,
 }
 
 impl Carry {
+    pub const fn new(loudness: f32, reach: f32) -> Self {
+        Self { loudness, reach, far: None }
+    }
+
+    pub const fn reaching(self, from: f32, db_per_doubling: f32) -> Self {
+        Self { far: Some(FarFade { from, db_per_doubling }), ..self }
+    }
+
     pub fn volume(self, distance: f32) -> f32 {
-        self.loudness * self.reach / (self.reach + distance)
+        let near = |d: f32| self.loudness * self.reach / (self.reach + d);
+        match self.far {
+            Some(far) if distance > far.from && far.from > 0.0 => near(far.from) * 10f32.powf(-far.db_per_doubling * (distance / far.from).log2() / 20.0),
+            _ => near(distance),
+        }
     }
 }
 
@@ -190,30 +213,30 @@ impl Default for Acoustics {
             reload_settle: 0.7,
             gun_on_wall_speed: 0.15,
             gun_on_wall_wait: 0.35,
-            other_steps: Carry { loudness: 0.5, reach: 5.0 },
+            other_steps: Carry::new(0.5, 5.0),
             other_steps_within: 40.0,
-            shot: Carry { loudness: 1.0, reach: 10.0 },
-            impact: Carry { loudness: prs_synth::IMPACT_LOUDNESS, reach: 8.0 },
-            body_hit: Carry { loudness: 1.0, reach: 15.0 },
+            shot: Carry::new(1.0, 10.0).reaching(30.0, 1.7),
+            impact: Carry::new(prs_synth::IMPACT_LOUDNESS, 8.0),
+            body_hit: Carry::new(1.0, 15.0),
             behind_barrel_loudness: 0.45,
-            metal_hit: Carry { loudness: prs_synth::METAL_HIT_LOUDNESS, reach: 12.0 },
-            crash: Carry { loudness: prs_synth::CRASH_LOUDNESS, reach: 22.0 },
+            metal_hit: Carry::new(prs_synth::METAL_HIT_LOUDNESS, 12.0),
+            crash: Carry::new(prs_synth::CRASH_LOUDNESS, 22.0).reaching(40.0, 3.0),
             landed_speed: 9.0,
             crash_full_speed: 16.0,
-            blast: Carry { loudness: 1.0, reach: 45.0 },
-            grenade: Carry { loudness: 0.9, reach: 30.0 },
-            clink: Carry { loudness: prs_synth::CLINK_LOUDNESS, reach: 5.0 },
+            blast: Carry::new(1.0, 45.0).reaching(60.0, 1.5),
+            grenade: Carry::new(0.9, 30.0).reaching(50.0, 1.5),
+            clink: Carry::new(prs_synth::CLINK_LOUDNESS, 5.0),
             clink_full_speed: 10.0,
             smoke: SmokeSound::default(),
-            smoke_hearing: SmokeHearing { carry: Carry { loudness: 1.0, reach: 8.0 }, fades_out: (14.0, 30.0), ease_rate: 6.0 },
+            smoke_hearing: SmokeHearing { carry: Carry::new(1.0, 8.0), fades_out: (14.0, 30.0), ease_rate: 6.0 },
             engine: EngineSound::default(),
             source_clearance: 0.3,
             propagation: Propagation::default(),
             bullet_passing_volume: (0.3, 0.95),
             bullet_passing_reach: 6.0,
             suppressed: SuppressedHearing { from_level: 0.55, cutoff_hz: (7000.0, 1100.0), gain: 0.55 },
-            rotor_thump: Carry { loudness: 0.9, reach: 130.0 },
-            rotor_whine: Carry { loudness: 0.5, reach: 25.0 },
+            rotor_thump: Carry::new(0.9, 130.0).reaching(200.0, 3.0),
+            rotor_whine: Carry::new(0.5, 25.0),
             rotor_slap_reach: 220.0,
             rotor_inside: 0.55,
             rotor_idle_share: 0.55,
@@ -253,7 +276,7 @@ impl Default for EngineSound {
             base_rpm: 1800.0,
             min_speed: 0.4,
             max_speed: 2.8,
-            carry: Carry { loudness: 0.8, reach: 28.0 },
+            carry: Carry::new(0.8, 28.0).reaching(40.0, 3.0),
             inside: 0.42,
             idle_share: 0.45,
             clear_idle: 0.2,
@@ -261,7 +284,7 @@ impl Default for EngineSound {
             high_rpm: 4200.0,
             occlusion_every: 0.25,
             mix_rate: 8.0,
-            out_of_earshot: 450.0,
+            out_of_earshot: 900.0,
         }
     }
 }
@@ -368,12 +391,27 @@ mod tests {
     #[test]
     fn sounds_keep_getting_quieter_the_further_away_they_are() {
         let a = Acoustics::default();
-        for carry in [a.shot, a.impact, a.body_hit] {
-            for distance in [1.0, 5.0, 25.0, 100.0, 300.0] {
+        for carry in [a.shot, a.impact, a.body_hit, a.blast, a.engine.carry, a.other_steps] {
+            for distance in [1.0, 5.0, 25.0, 100.0, 300.0, 1000.0] {
                 assert!(carry.volume(distance * 2.0) < carry.volume(distance));
             }
+        }
+        for carry in [a.impact, a.body_hit, a.other_steps] {
             assert!(carry.volume(400.0) < carry.volume(200.0) * 0.55, "far off, double the distance is half as loud");
         }
+    }
+
+    /// A firefight across the map is plain to hear, a blast further still, and footsteps stay close.
+    #[test]
+    fn loud_things_carry_far_and_quiet_ones_do_not() {
+        let a = Acoustics::default();
+        let db = |v: f32| 20.0 * v.log10();
+        let shot = db(a.shot.volume(600.0));
+        assert!((-22.0..-18.0).contains(&shot), "a shot at 600 m: {shot}");
+        assert!(db(a.blast.volume(1200.0)) > shot, "a blast twice as far is louder still");
+        assert!(db(a.other_steps.volume(40.0)) < db(a.other_steps.loudness) - 15.0, "footsteps fade fast");
+        // Nothing changes close in, where a firefight is loud already.
+        assert!((a.shot.volume(20.0) - Carry::new(1.0, 10.0).volume(20.0)).abs() < 1e-6);
     }
 
     #[test]

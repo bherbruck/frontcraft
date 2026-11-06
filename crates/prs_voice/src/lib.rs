@@ -97,7 +97,7 @@ impl Default for VoiceTuning {
             jitter_ms: 60.0,
             most_behind_ms: 300.0,
             send_buffer_ms: 500.0,
-            carry: Carry { loudness: 1.0, reach: 12.0 },
+            carry: Carry::new(1.0, 12.0),
             fades_out: (55.0, 75.0),
             radio_band_hz: (300.0, 3400.0),
             radio_gain: 0.9,

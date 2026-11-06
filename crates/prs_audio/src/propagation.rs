@@ -37,6 +37,9 @@ pub struct Propagation {
     /// more an octave up: in life scattering stops the loss growing, but the top end still goes first.
     pub edge_cap_db: f32,
     pub total_cap_db: f32,
+    /// The same for the edge of a door or window a sound has to turn round to get in or out of a room.
+    pub opening_strength: f32,
+    pub opening_cap_db: f32,
     pub cap_db_per_octave: f32,
     /// How much each edge after the worst adds, as a share of what it would on its own.
     pub other_edges_share: f32,
@@ -54,9 +57,11 @@ pub struct Propagation {
     pub top_step: f32,
     /// Most rays for one sound, after which what is left of the way counts as open.
     pub rays: usize,
-    /// Ways round the side, in a town down a street or round a corner: how far off the straight line, each
-    /// side, at its middle, in metres, and the most rays each may take before it is given up as too costly.
+    /// Ways round the side, in a town down a street or round a corner: how far out to each side of what
+    /// stands highest to look for its end, in metres, how far past that end to go round, and the most rays
+    /// each way may take before it is given up as too costly.
     pub around_offsets: Vec<f32>,
+    pub around_margin: f32,
     pub around_rays: usize,
     /// However much is in the way, two places out of doors never lose more than this at 125 Hz, nor more
     /// than `cap_db_per_octave` more each octave up: in a town some of a sound always finds its way round.
@@ -93,9 +98,11 @@ impl Default for Propagation {
             cutoff_excess_db: 8.0,
             cutoff_range_hz: (180.0, 16_000.0),
             speed_of_sound: 343.0,
-            edge_strength: 0.7,
+            edge_strength: 0.5,
             edge_cap_db: 14.0,
             total_cap_db: 18.0,
+            opening_strength: 1.0,
+            opening_cap_db: 20.0,
             cap_db_per_octave: 3.0,
             other_edges_share: 0.3,
             rise_counts_from: 0.1,
@@ -105,9 +112,10 @@ impl Default for Propagation {
             land_looks: 64,
             top_step: 0.6,
             rays: 160,
-            around_offsets: vec![8.0, 20.0, 40.0],
+            around_offsets: vec![2.0, 4.0, 7.0, 11.0, 16.0, 24.0, 35.0],
+            around_margin: 1.5,
             around_rays: 80,
-            outdoor_cap_db: 10.0,
+            outdoor_cap_db: 6.0,
             wall_db_at_125: 22.0,
             wall_db_per_octave: 5.0,
             wall_cap_db: 45.0,
@@ -173,6 +181,8 @@ struct Edge {
     longer: f32,
     rise: f32,
     minor: bool,
+    /// The edge of a door or window, which takes its full loss: that is what being indoors is.
+    opening: bool,
 }
 
 fn smoothstep(x: f32) -> f32 {
@@ -186,7 +196,8 @@ impl Propagation {
         let counts = smoothstep((edge.rise - self.rise_counts_from) / (self.rise_counts_fully - self.rise_counts_from).max(1e-3));
         self.bands_hz.map(|hz| {
             let fresnel = 2.0 * edge.longer.max(0.0) * hz / self.speed_of_sound;
-            (10.0 * (3.0 + 20.0 * fresnel).log10() * self.edge_strength).min(self.edge_cap_db + self.octaves(hz) * self.cap_db_per_octave) * counts
+            let (strength, cap) = if edge.opening { (self.opening_strength, self.opening_cap_db) } else { (self.edge_strength, self.edge_cap_db) };
+            (10.0 * (3.0 + 20.0 * fresnel).log10() * strength).min(cap + self.octaves(hz) * self.cap_db_per_octave) * counts
         })
     }
 
@@ -265,19 +276,28 @@ impl Propagation {
     /// side if that is better, added as sound adds, and never past `outdoor_cap_db`.
     fn outdoor_loss(&self, ground: &impl Ground, a: Vec3, b: Vec3, rays: &mut usize) -> Bands {
         let mut edges = Vec::new();
-        self.outdoor_edges(ground, a, b, rays, &mut edges);
+        let highest = self.outdoor_edges(ground, a, b, rays, &mut edges);
         let over = self.edges_loss(&edges);
         let cap = self.bands_hz.map(|hz| self.outdoor_cap_db + self.octaves(hz) * self.cap_db_per_octave);
-        if over[0] < 1.0 {
+        let Some(highest) = highest.filter(|_| over[0] >= 1.0) else {
             return std::array::from_fn(|band| over[band].min(cap[band]));
-        }
+        };
         let mut ways = vec![over];
         let straight = a.distance(b);
-        let middle = (a + b) * 0.5;
+        // Round the ends of whatever stands highest: out along each side until it no longer stands above
+        // the line, and a little past that corner.
+        let at_it = a + (b - a) * highest;
+        let ceiling = at_it.y + 80.0;
         let side = (b - a).cross(Vec3::Y).normalize_or(Vec3::X);
-        for &offset in &self.around_offsets {
-            for turn in [side * offset, -side * offset] {
-                let at = middle + turn;
+        for side in [side, -side] {
+            let corner = self.around_offsets.iter().find_map(|&offset| {
+                let p = at_it + side * offset;
+                *rays += 1;
+                let top = ground.ray(Vec3::new(p.x, ceiling, p.z), Vec3::NEG_Y, ceiling + 1000.0).map_or(f32::MIN, |down| ceiling - down);
+                (top < at_it.y + self.rise_counts_from).then_some(offset + self.around_margin)
+            });
+            if let Some(offset) = corner {
+                let at = at_it + side * offset;
                 let at = Vec3::new(at.x, ground.land(at.x, at.z).map_or(at.y, |land| at.y.max(land + 1.6)), at.z);
                 let mut spent = 0;
                 let mut legs = Vec::new();
@@ -285,12 +305,12 @@ impl Propagation {
                 self.outdoor_edges(ground, at, b, &mut spent, &mut legs);
                 // Only a way that really goes round counts: one still over the same top is the same way.
                 let round = self.edges_loss(&legs);
-                if spent >= self.around_rays || round[0] > over[0] - 3.0 {
+                if spent >= self.around_rays || round[0] > over[0] - 1.0 {
                     continue;
                 }
                 *rays += spent;
                 let longer = a.distance(at) + at.distance(b) - straight;
-                legs.push(Edge { longer, rise: offset, minor: false });
+                legs.push(Edge { longer, rise: offset, minor: false, opening: false });
                 let bent = self.edges_loss(&legs);
                 let air = self.air(longer);
                 ways.push(std::array::from_fn(|band| bent[band] + air[band]));
@@ -301,12 +321,13 @@ impl Propagation {
     }
 
     /// What lies between `a` and `b` out of doors: the corners of a band stretched over the ground and
-    /// over anything built on it, each an edge the sound bends over.
-    fn outdoor_edges(&self, ground: &impl Ground, a: Vec3, b: Vec3, rays: &mut usize, edges: &mut Vec<Edge>) {
+    /// over anything built on it, each an edge the sound bends over. Gives how far along the way, as a
+    /// share of it, what stands highest above the straight line is.
+    fn outdoor_edges(&self, ground: &impl Ground, a: Vec3, b: Vec3, rays: &mut usize, edges: &mut Vec<Edge>) -> Option<f32> {
         let flat = Vec2::new(b.x - a.x, b.z - a.z);
         let across = flat.length();
         if across < self.ends_clear * 2.0 {
-            return;
+            return None;
         }
         let length = a.distance(b);
         let line = |s: f32| a.y + (b.y - a.y) * s / across;
@@ -376,9 +397,7 @@ impl Propagation {
 
         // The band over the top: the upper hull of the ends and whatever stands above the line between them.
         profile.retain(|&(s, height)| height > line(s));
-        if profile.is_empty() {
-            return;
-        }
+        let highest_at = profile.iter().max_by(|p, q| (p.1 - line(p.0)).total_cmp(&(q.1 - line(q.0))))?.0 / across;
         profile.sort_by(|p, q| p.0.total_cmp(&q.0));
         let mut hull: Vec<(f32, f32)> = vec![(0.0, a.y)];
         for point in profile.into_iter().chain(std::iter::once((across, b.y))) {
@@ -396,13 +415,14 @@ impl Propagation {
         let far = |p: (f32, f32), q: (f32, f32)| ((q.0 - p.0).powi(2) + (q.1 - p.1).powi(2)).sqrt();
         let over: f32 = hull.windows(2).map(|w| far(w[0], w[1])).sum();
         let highest = hull.iter().map(|&(s, height)| height - line(s)).fold(0.0, f32::max);
-        edges.push(Edge { longer: over - far(hull[0], hull[hull.len() - 1]), rise: highest, minor: false });
+        edges.push(Edge { longer: over - far(hull[0], hull[hull.len() - 1]), rise: highest, minor: false, opening: false });
         for w in hull.windows(3) {
             let (before, corner, after) = (w[0], w[1], w[2]);
             let longer = far(before, corner) + far(corner, after) - far(before, after);
             let under = before.1 + (after.1 - before.1) * (corner.0 - before.0) / (after.0 - before.0).max(1e-3);
-            edges.push(Edge { longer, rise: corner.1 - under, minor: true });
+            edges.push(Edge { longer, rise: corner.1 - under, minor: true, opening: false });
         }
+        Some(highest_at)
     }
 }
 
@@ -603,7 +623,7 @@ pub fn loss(cfg: &Propagation, spaces: &Spaces, ground: &impl Ground, source: Ve
         let mut edges: Vec<Edge> = (0..gaps.len())
             .map(|i| {
                 let (before, at, after) = (points[i], points[i + 1], points[i + 2]);
-                Edge { longer: before.distance(at) + at.distance(after) - before.distance(after), rise: rises[i], minor: false }
+                Edge { longer: before.distance(at) + at.distance(after) - before.distance(after), rise: rises[i], minor: false, opening: true }
             })
             .collect();
         // Whatever stands between the openings and ends that are out of doors.
@@ -787,8 +807,8 @@ mod tests {
     #[test]
     fn more_ridges_take_more_but_less_than_each_alone_added() {
         let cfg = Propagation::default();
-        let one = cfg.edges_loss(&[Edge { longer: 0.5, rise: 3.0, minor: false }]);
-        let three = cfg.edges_loss(&[Edge { longer: 0.5, rise: 3.0, minor: false }; 3]);
+        let one = cfg.edges_loss(&[Edge { longer: 0.5, rise: 3.0, minor: false, opening: false }]);
+        let three = cfg.edges_loss(&[Edge { longer: 0.5, rise: 3.0, minor: false, opening: false }; 3]);
         assert!(three[2] > one[2] && three[2] < one[2] * 3.0);
     }
 
@@ -900,7 +920,7 @@ mod tests {
             let started = std::time::Instant::now();
             let new = cfg.heard(&loss(&cfg, &self.spaces, &self.world, source, ear));
             let took = started.elapsed().as_secs_f32() * 1000.0;
-            let shot = |gain: f32| 20.0 * (10.0 / (10.0 + source.distance(ear)) * gain).log10();
+            let shot = |gain: f32| 20.0 * (crate::hearing::Acoustics::default().shot.volume(source.distance(ear)) * gain).log10();
             println!(
                 "{:9} {:34} {:5.0} m | before {:6.1} dB {:6.0} Hz  shot {:6.1} dB | after {:6.1} dB {:6.0} Hz  shot {:6.1} dB {took:5.2} ms | {expect}",
                 self.name, what, source.distance(ear), 20.0 * old_gain.log10(), old_cut, shot(old_gain), 20.0 * new.gain.log10(), new.cutoff_hz, shot(new.gain)
@@ -928,7 +948,7 @@ mod tests {
                     cfg.outdoor_edges(&map.world, a, b, &mut 0, &mut edges);
                     edges.iter().all(|e| e.rise < cfg.rise_counts_from)
                 }) {
-                    Some((ear, source)) => map.row("open ground", source, ear, "nothing in the way: highs fade with range only"),
+                    Some((ear, source)) => map.row("open ground", source, ear, if across > 500.0 { "target: shot -18 to -22 dB, highs fade with range" } else { "target: clear, highs fade with range" }),
                     None => println!("{name:9} open ground {across} m: no clear line found"),
                 }
             }
@@ -945,7 +965,7 @@ mod tests {
                 })
             });
             match crest {
-                Some((ear, source)) => map.row("over a crest of the land", source, ear, "a few dB to about -10 dB, dull, never silent"),
+                Some((ear, source)) => map.row("over a crest of the land", source, ear, "target: -3 to -6 dB"),
                 None => println!("{name:9} no crest 1 to 4 m above the line found at 100 m"),
             }
             let behind = map.level.rooms.iter().find_map(|room| {
@@ -959,11 +979,11 @@ mod tests {
                 })
             });
             match behind {
-                Some((ear, source)) => map.row("behind one building", source, ear, "a few dB to about -10 dB, edge gone"),
+                Some((ear, source)) => map.row("behind one building", source, ear, "target: about -3 dB, cut 2 to 3 kHz"),
                 None => println!("{name:9} no building with open ground both sides"),
             }
             match map.pair(120.0, |a, b| (3..=8).contains(&map.things_between(a, b))) {
-                Some((ear, source)) => map.row("three streets over", source, ear, "clearly audible, a bit dull: no worse than -10 dB"),
+                Some((ear, source)) => map.row("three streets over", source, ear, "target: -4 to -6 dB, cut 1 to 1.5 kHz"),
                 None => println!("{name:9} no line with 3 to 8 things between"),
             }
             let door = map.level.doorways.iter().find(|d| {
@@ -977,15 +997,15 @@ mod tests {
                 let room = map.spaces.space_of(door.at + Vec3::Y - out * 0.4).unwrap();
                 let inside = door.at - out * 1.5 + Vec3::Y * 1.6;
                 let in_front = map.stand(door.at.x + out.x * 15.0, door.at.z + out.z * 15.0).unwrap();
-                map.row("you indoors, it out by the door", in_front, inside, "near open air through the doorway");
+                map.row("you indoors, it out by the door", in_front, inside, "target: near clear through the doorway");
                 let space = map.spaces.rooms[room as usize];
                 let behind = (1..40).map(|m| inside - out * m as f32).find(|p| !space.contains(*p)).map(|p| p - out * 14.0);
                 match behind.and_then(|p| map.stand(p.x, p.z)) {
-                    Some(behind) => map.row("you indoors, it behind a wall", behind, inside, "lows only, by the door and over the roof or through the wall"),
+                    Some(behind) => map.row("you indoors, it behind a wall", behind, inside, "target: strongly muffled, lows through"),
                     None => println!("{name:9} nothing open behind that room"),
                 }
                 let across = out.cross(Vec3::Y) * 0.8;
-                map.row("both in the same room", inside + across - out, inside - across - out, "as if in the open");
+                map.row("both in the same room", inside + across - out, inside - across - out, "target: clear");
             } else {
                 println!("{name:9} no door out of a room with ground in front of it");
             }

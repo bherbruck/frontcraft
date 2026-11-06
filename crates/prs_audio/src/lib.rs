@@ -29,7 +29,7 @@ use std::sync::Arc;
 const EMITTER_RADIUS: f32 = 0.5;
 const EAR_GAP: f32 = 0.3;
 
-pub use hearing::{Acoustics, Carry};
+pub use hearing::{Acoustics, Carry, FarFade};
 pub use propagation::{Heard, Propagation, Propagator};
 pub use prs_synth::SoundSet;
 pub use rotor::RotorLoop;
