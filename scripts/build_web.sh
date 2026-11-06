@@ -58,6 +58,9 @@ wasm-bindgen "${CARGO_TARGET_DIR:-bin}/wasm32-unknown-unknown/wasm-release/prs_s
 # Fetched by the game itself with ?mod=name.
 cp -r mods "$staging/mods"
 
+# The servers the page lists under More maps.
+cp web/servers.json "$staging/servers.json"
+
 # Linked from the page: every crate the game is built from, with its licence.
 scripts/third_party_licenses.sh "$staging/THIRD_PARTY_LICENSES.html"
 

@@ -108,6 +108,15 @@ fn a_host_can_check_health_over_plain_http_on_the_same_port() {
     assert!(answer.starts_with("HTTP/1.1 200"), "{answer}");
 }
 
+#[test]
+fn a_page_listing_servers_can_ask_how_many_are_playing() {
+    let addr = start_host(Vec::new());
+    let answer = plain_request(addr, "GET /status HTTP/1.1\r\nHost: x\r\n\r\n");
+    assert!(answer.starts_with("HTTP/1.1 200"), "{answer}");
+    assert!(answer.contains("Access-Control-Allow-Origin: *"), "{answer}");
+    assert!(answer.ends_with(&format!(r#"{{"players":0,"max":{}}}"#, ServerConfig::default().max_players)), "{answer}");
+}
+
 fn websocket_request(addr: SocketAddr, origin: &str) -> String {
     plain_request(
         addr,

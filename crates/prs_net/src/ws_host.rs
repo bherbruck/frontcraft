@@ -93,6 +93,17 @@ enum Link {
 /// How to reach WebTransport, for anyone who asks over HTTP. Changes when a new certificate is made.
 type SharedWtInfo = Option<Arc<RwLock<WtInfo>>>;
 
+/// Where `GET /status` is answered: how many are playing, for a page listing servers.
+pub const STATUS_PATH: &str = "/status";
+
+/// What the threads answering HTTP may tell anyone who asks. The game thread keeps it up to date.
+#[derive(Clone)]
+struct Shared {
+    wt: SharedWtInfo,
+    players: Arc<AtomicUsize>,
+    max_players: usize,
+}
+
 /// What a run of the server did, for its caller to report.
 #[derive(Clone, Debug, Default)]
 pub struct HostStats {
@@ -193,7 +204,7 @@ fn answer_plain_http(
     mut stream: TcpStream,
     request: &str,
     cfg: &HostConfig,
-    wt: &SharedWtInfo,
+    shared: &Shared,
     handshaking: &AtomicUsize,
 ) -> io::Result<()> {
     // Taken off the connection now that it has been looked at: closing with it unread can lose the answer.
@@ -201,8 +212,18 @@ fn answer_plain_http(
     stream.read_exact(&mut unread)?;
     let lower = request.to_ascii_lowercase();
     let healthy = lower.starts_with("get /health ") || lower.starts_with("head /health ");
+    if lower.starts_with(&format!("get {STATUS_PATH} ")) {
+        let body = format!(r#"{{"players":{},"max":{}}}"#, shared.players.load(Ordering::Relaxed), shared.max_players);
+        // As public as the scoreboard of anyone who joins.
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nCache-Control: no-store\r\n\
+             Access-Control-Allow-Origin: *\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            body.len(),
+        );
+        return stream.write_all(response.as_bytes());
+    }
     if lower.starts_with(&format!("get {INFO_PATH} ")) {
-        let info = wt.as_ref().and_then(|info| info.read().ok().map(|info| info.to_json()));
+        let info = shared.wt.as_ref().and_then(|info| info.read().ok().map(|info| info.to_json()));
         // Any page may ask: it says nothing that trying to connect wouldn't.
         let response = match info {
             Some(body) => format!(
@@ -233,7 +254,7 @@ fn answer_plain_http(
 fn handshake(
     stream: TcpStream,
     cfg: &HostConfig,
-    wt: &SharedWtInfo,
+    shared: &Shared,
     done: &Sender<WebSocket<TcpStream>>,
     handshaking: &AtomicUsize,
 ) -> io::Result<()> {
@@ -242,7 +263,7 @@ fn handshake(
     stream.set_write_timeout(Some(cfg.handshake_timeout))?;
     let request = peek_request(&stream)?;
     if !request.to_ascii_lowercase().contains("upgrade: websocket") {
-        return answer_plain_http(stream, &request, cfg, wt, handshaking);
+        return answer_plain_http(stream, &request, cfg, shared, handshaking);
     }
     let ws_config = WebSocketConfig::default()
         .max_message_size(Some(MAX_FRAME_BYTES))
@@ -267,7 +288,7 @@ fn handshake(
 fn accept_new(
     listener: &TcpListener,
     cfg: &HostConfig,
-    wt: &SharedWtInfo,
+    shared: &Shared,
     done: &Sender<WebSocket<TcpStream>>,
     handshaking: &Arc<AtomicUsize>,
 ) {
@@ -277,9 +298,9 @@ fn accept_new(
         }
         handshaking.fetch_add(1, Ordering::Relaxed);
         // Handshakes can dawdle, and this thread must not. Each gets a short thread of its own.
-        let (cfg, wt, done, handshaking) = (cfg.clone(), wt.clone(), done.clone(), handshaking.clone());
+        let (cfg, shared, done, handshaking) = (cfg.clone(), shared.clone(), done.clone(), handshaking.clone());
         std::thread::spawn(move || {
-            let _ = handshake(stream, &cfg, &wt, &done, &handshaking);
+            let _ = handshake(stream, &cfg, &shared, &done, &handshaking);
             handshaking.fetch_sub(1, Ordering::Relaxed);
         });
     }
@@ -331,7 +352,11 @@ fn run<G: ServerGame>(
     wt: Option<WtListener>,
     mut game: GameServer<G>,
 ) -> (GameServer<G>, HostStats) {
-    let wt_info: SharedWtInfo = wt.as_ref().map(|wt| wt.info.clone());
+    let shared = Shared {
+        wt: wt.as_ref().map(|wt| wt.info.clone()),
+        players: Arc::new(AtomicUsize::new(0)),
+        max_players: game.config().max_players,
+    };
     let (ready_tx, ready_rx): (_, Receiver<WebSocket<TcpStream>>) = channel();
     let mut connections: HashMap<ClientId, Connection> = HashMap::new();
 
@@ -355,7 +380,8 @@ fn run<G: ServerGame>(
         }
         let began = now;
 
-        accept_new(&listener, &cfg, &wt_info, &ready_tx, &handshaking);
+        accept_new(&listener, &cfg, &shared, &ready_tx, &handshaking);
+        shared.players.store(game.player_count(), Ordering::Relaxed);
         while let Ok(ws) = ready_rx.try_recv() {
             let id = game.connect(true);
             connections.insert(id, Connection { link: Link::Ws(ws), backlogged_since: None });

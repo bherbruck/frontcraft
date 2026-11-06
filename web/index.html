@@ -25,6 +25,8 @@
   #loading.failed.can-retry #retry { display: block; }
   #loading.choosing #track, #loading.choosing #bytes { display: none; }
   #loading.choosing #state { color: #d8dccc; white-space: pre-line; }
+  /* A short phone may not fit the whole menu. It scrolls, from the top rather than cut off at it. */
+  #loading.choosing { overflow-y: auto; align-items: safe center; }
   #choices { display: flex; gap: 12px; margin-top: 16px; }
   #choices[hidden], #choices button[hidden] { display: none; }
   #choices button { flex: 1; padding: 10px 14px; border: 1px solid #5f6a4c; border-radius: 0; background: none; color: #d8dccc; font: inherit; cursor: pointer; }
@@ -41,6 +43,17 @@
   #other-downloads a:hover { color: #a9b08f; text-decoration: underline; }
   #licences { position: fixed; right: 12px; bottom: 8px; color: #5f6a4c; font-size: 11px; text-decoration: none; }
   #licences:hover { color: #a9b08f; text-decoration: underline; }
+  #more { margin-top: 16px; }
+  #more[hidden] { display: none; }
+  #more h2 { margin: 0 0 8px; color: #7d8668; font-size: 12px; font-weight: normal; letter-spacing: 0.1em; text-transform: uppercase; }
+  #more button { display: flex; width: 100%; gap: 12px; align-items: baseline; margin-top: 6px; padding: 8px 12px; border: 1px solid #5f6a4c; border-radius: 0; background: none; color: #d8dccc; font: inherit; text-align: left; cursor: pointer; }
+  #more button:hover:not(:disabled) { background: #262c20; }
+  #more button:disabled { color: #5f6a4c; cursor: default; }
+  #more .map { flex: 1; min-width: 0; }
+  #more .blurb { display: block; color: #7d8668; font-size: 12px; }
+  #more button:disabled .blurb { color: #5f6a4c; }
+  #more .players { flex: none; color: #a9b08f; font-size: 12px; }
+  #more button:disabled .players { color: #5f6a4c; }
   #name { flex: 1; padding: 8px 10px; border: 1px solid #5f6a4c; border-radius: 0; background: none; color: #d8dccc; font: inherit; }
 </style>
 </head>
@@ -56,6 +69,7 @@
       <button id="play-online" type="button">Play online</button>
       <button id="play-alone" type="button">Shooting Range</button>
     </div>
+    <div id="more" hidden><h2>More maps</h2><div id="more-list"></div></div>
     <a id="download" hidden></a>
     <div id="other-downloads" hidden></div>
   </div>
@@ -252,6 +266,7 @@
       }
     };
     // The range is played with everyone else on it when the server has one, and alone when it doesn't.
+    listServers(go);
     alone.onclick = async () => {
       if (DEFAULT_SERVER) {
         alone.disabled = true;
@@ -308,6 +323,67 @@
     const ok = /^FrontCraft-[0-9.]+\.msi$/.test(latest.file) && latest.bytes > 0;
     return { version: latest.version, listed: ok ? { windows: { url: `downloads/${latest.file}`, bytes: latest.bytes } } : {} };
   }
+  // The servers behind this address, each under its own path, listed in servers.json beside the page so
+  // that adding one is a line there. Each is tried, and says how many are on it if it can.
+  const SERVERS_URL = "servers.json";
+  const FALLBACK_SERVERS = [
+    { name: "Town", path: "", blurb: "" },
+    { name: "Shooting Range", path: "/range", blurb: "" },
+  ];
+
+  async function knownServers() {
+    try {
+      const response = await fetch(SERVERS_URL, { cache: "no-store" });
+      const list = response.ok ? await response.json() : null;
+      if (Array.isArray(list) && list.length) return list.filter((s) => typeof s.name === "string" && typeof s.path === "string");
+    } catch {}
+    return FALLBACK_SERVERS;
+  }
+
+  // How many are playing, from the server's /status, or null if it doesn't say.
+  async function playersOn(path) {
+    try {
+      const response = await fetch(`${location.origin}${path}/status`, { cache: "no-store" });
+      const status = response.ok ? await response.json() : null;
+      return Number.isInteger(status?.players) ? status : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function listServers(go) {
+    if (!DEFAULT_SERVER) return;
+    const more = document.getElementById("more");
+    const list = document.getElementById("more-list");
+    list.replaceChildren();
+    for (const server of await knownServers()) {
+      const url = `${DEFAULT_SERVER}${server.path}`;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.disabled = true;
+      const map = document.createElement("span");
+      map.className = "map";
+      map.textContent = server.name;
+      if (server.blurb) {
+        const blurb = document.createElement("span");
+        blurb.className = "blurb";
+        blurb.textContent = server.blurb;
+        map.append(blurb);
+      }
+      const players = document.createElement("span");
+      players.className = "players";
+      players.textContent = "looking";
+      button.append(map, players);
+      button.onclick = () => go(`?server=${encodeURIComponent(url)}`);
+      list.append(button);
+      Promise.all([canReach(url), playersOn(server.path)]).then(([reached, status]) => {
+        button.disabled = !reached;
+        players.textContent = !reached ? "offline" : status ? `${status.players}/${status.max}` : "";
+      });
+    }
+    more.hidden = false;
+  }
+
   async function offerDownload() {
     if (!ONLINE) return;
     try {
