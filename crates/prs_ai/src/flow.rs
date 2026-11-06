@@ -11,6 +11,9 @@ use prs_sim::{Level, Solid};
 use std::collections::VecDeque;
 
 const UNREACHED: u16 = u16::MAX;
+const WALL_X: u8 = 1 << 0;
+const WALL_Z: u8 = 1 << 1;
+const BLOCKED: u8 = 1 << 2;
 /// A soldier off in a marked cell looks this many cells around for the way.
 const SEARCH: i32 = 3;
 /// Goes for a spot this many cells down the way, so as not to zigzag from cell to cell.
@@ -39,23 +42,26 @@ pub struct FlowGrid {
     pub rules: FlowRules,
     half: f32,
     width: i32,
-    blocked: Vec<bool>,
-    /// For each cell, whether a solid stands in the way of the step to +x (bit 0) or +z (bit 1).
-    walls: Vec<u8>,
+    /// For each cell, whether a solid stands in the way of the step to +x ([`WALL_X`]) or +z
+    /// ([`WALL_Z`]), and whether it can't be stood in at all ([`BLOCKED`]). One byte a cell, which on a
+    /// map four kilometres across is still millions of them.
+    cells: Vec<u8>,
 }
 
 impl FlowGrid {
     pub fn new(level: &Level, rules: FlowRules) -> Self {
         let half = level.terrain.size * 0.5;
         let width = (level.terrain.size / rules.cell).ceil() as i32;
-        let mut grid = Self { rules, half, width, blocked: vec![false; (width * width) as usize], walls: vec![0; (width * width) as usize] };
+        let mut grid = Self { rules, half, width, cells: vec![0; (width * width) as usize] };
         let ground = grid.ground_heights(level);
         let height = |i: i32, j: i32| ground[(j * width + i) as usize];
         for j in 0..width {
             for i in 0..width {
                 let edge = i == 0 || j == 0 || i == width - 1 || j == width - 1;
                 let steep = !edge && ((height(i + 1, j) - height(i - 1, j)).abs() > rules.max_rise * 2.0 || (height(i, j + 1) - height(i, j - 1)).abs() > rules.max_rise * 2.0);
-                grid.blocked[(j * width + i) as usize] = edge || steep;
+                if edge || steep {
+                    grid.cells[(j * width + i) as usize] |= BLOCKED;
+                }
             }
         }
         // A dip counts for a cell around it as well, as anything that has a wheel on the edge of one is going in.
@@ -67,7 +73,7 @@ impl FlowGrid {
                     if dip(height(i + 1, j), height(i - 1, j), here) || dip(height(i, j + 1), height(i, j - 1), here) {
                         for b in j - 1..=j + 1 {
                             for a in i - 1..=i + 1 {
-                                grid.blocked[(b * width + a) as usize] = true;
+                                grid.cells[(b * width + a) as usize] |= BLOCKED;
                             }
                         }
                     }
@@ -87,7 +93,7 @@ impl FlowGrid {
 
     /// The height of the ground at the middle of every cell, from the terrain's triangles.
     fn ground_heights(&self, level: &Level) -> Vec<f32> {
-        let mut ground = vec![0.0; self.blocked.len()];
+        let mut ground = vec![0.0; self.cells.len()];
         let vertices = &level.terrain.vertices;
         for [a, b, c] in &level.terrain.indices {
             let (a, b, c) = (vertices[*a as usize], vertices[*b as usize], vertices[*c as usize]);
@@ -109,6 +115,10 @@ impl FlowGrid {
             }
         }
         ground
+    }
+
+    fn bytes(&self) -> usize {
+        self.cells.len()
     }
 
     fn center(&self, i: i32, j: i32) -> Vec2 {
@@ -149,13 +159,13 @@ impl FlowGrid {
                 let local = local_of(p);
                 let at = (j * self.width + i) as usize;
                 if local.x.abs() <= room.x && local.y.abs() <= room.y {
-                    self.blocked[at] = true;
+                    self.cells[at] |= BLOCKED;
                 }
                 if crosses_box(local, local_of(p + Vec2::X * r.cell), room) {
-                    self.walls[at] |= 1;
+                    self.cells[at] |= WALL_X;
                 }
                 if crosses_box(local, local_of(p + Vec2::Y * r.cell), room) {
-                    self.walls[at] |= 2;
+                    self.cells[at] |= WALL_Z;
                 }
             }
         }
@@ -170,7 +180,7 @@ impl FlowGrid {
             for i in i0..=i1 {
                 if self.center(i, j).distance(center) <= radius {
                     let at = (j * self.width + i) as usize;
-                    self.blocked[at] = true;
+                    self.cells[at] |= BLOCKED;
                 }
             }
         }
@@ -178,14 +188,19 @@ impl FlowGrid {
 
     /// How far every cell is from a place, in cells.
     pub fn field_to(&self, center: Vec2, radius: f32) -> FlowField {
-        let mut distance = vec![UNREACHED; self.blocked.len()];
+        FlowField::pack(&self.distances_to(center, radius), self.width)
+    }
+
+    /// The same as plain numbers, a cell at a time.
+    fn distances_to(&self, center: Vec2, radius: f32) -> Vec<u16> {
+        let mut distance = vec![UNREACHED; self.cells.len()];
         let mut queue = VecDeque::new();
         let (ci, cj) = self.cell_of(center);
         let cells = (radius / self.rules.cell).ceil() as i32;
         for j in cj - cells..=cj + cells {
             for i in ci - cells..=ci + cells {
                 if let Some(at) = self.index(i, j)
-                    && !self.blocked[at]
+                    && self.cells[at] & BLOCKED == 0
                     && self.center(i, j).distance(center) <= radius
                 {
                     distance[at] = 0;
@@ -197,7 +212,7 @@ impl FlowGrid {
             let here = distance[self.index(i, j).expect("was queued")];
             for (a, b) in [(i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)] {
                 if let Some(at) = self.index(a, b)
-                    && !self.blocked[at]
+                    && self.cells[at] & BLOCKED == 0
                     && distance[at] == UNREACHED
                     && self.step_open((i, j), (a, b))
                 {
@@ -206,7 +221,7 @@ impl FlowGrid {
                 }
             }
         }
-        FlowField { distance }
+        distance
     }
 
     /// Whether a step to a cell next door is clear of the wall between them.
@@ -214,7 +229,7 @@ impl FlowGrid {
         let Some(at) = self.index(from.0.min(to.0), from.1.min(to.1)) else { return false };
         let Some(next) = self.index(to.0, to.1) else { return false };
         let bit = if from.1 == to.1 { 1 } else { 2 };
-        !self.blocked[next] && self.walls[at] & bit == 0
+        self.cells[next] & BLOCKED == 0 && self.cells[at] & bit == 0
     }
 
     /// Whether a straight walk between two points stays on open cells and goes through no wall.
@@ -244,7 +259,7 @@ impl FlowGrid {
         let (mut i, mut j) = self.nearest_open(field, from)?;
         let mut spot = self.center(i, j);
         for _ in 0..AHEAD {
-            let here = field.distance[self.index(i, j)?];
+            let here = field.get(self.index(i, j)?);
             let mut best = (i, j, here);
             for (da, db) in [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)] {
                 let Some(at) = self.index(i + da, j + db) else { continue };
@@ -254,8 +269,8 @@ impl FlowGrid {
                 } else {
                     self.step_open((i, j), (i + da, j)) && self.step_open((i + da, j), (i + da, j + db)) && self.step_open((i, j), (i, j + db)) && self.step_open((i, j + db), (i + da, j + db))
                 };
-                if open && field.distance[at] < best.2 {
-                    best = (i + da, j + db, field.distance[at]);
+                if open && field.get(at) < best.2 {
+                    best = (i + da, j + db, field.get(at));
                 }
             }
             if best.2 == here {
@@ -274,7 +289,7 @@ impl FlowGrid {
     pub fn walk_length(&self, field: &FlowField, from: Vec2) -> Option<f32> {
         let mut at = from;
         let mut walked = 0.0;
-        for _ in 0..self.blocked.len() {
+        for _ in 0..self.cells.len() {
             let next = self.toward(field, at)?;
             let step = next.distance(at);
             if step < self.rules.cell {
@@ -289,7 +304,7 @@ impl FlowGrid {
     /// How far along the way to this place, in metres, from here.
     pub fn metres_to(&self, field: &FlowField, from: Vec2) -> Option<f32> {
         let (i, j) = self.nearest_open(field, from)?;
-        Some(field.distance[self.index(i, j)?] as f32 * self.rules.cell)
+        Some(field.get(self.index(i, j)?) as f32 * self.rules.cell)
     }
 
     fn nearest_open(&self, field: &FlowField, from: Vec2) -> Option<(i32, i32)> {
@@ -299,10 +314,10 @@ impl FlowGrid {
             for b in j - reach..=j + reach {
                 for a in i - reach..=i + reach {
                     if let Some(at) = self.index(a, b)
-                        && field.distance[at] != UNREACHED
-                        && best.is_none_or(|x| field.distance[at] < x.2)
+                        && field.get(at) != UNREACHED
+                        && best.is_none_or(|x| field.get(at) < x.2)
                     {
-                        best = Some((a, b, field.distance[at]));
+                        best = Some((a, b, field.get(at)));
                     }
                 }
             }
@@ -332,10 +347,76 @@ fn crosses_box(a: Vec2, b: Vec2, half: Vec2) -> bool {
     from <= to
 }
 
-/// How far each cell is from one place.
+/// Cells a side of the squares a field is kept in.
+const TILE: usize = 8;
+const TILE_CELLS: usize = TILE * TILE;
+/// In a square kept small, a cell that can't reach the place.
+const SMALL_UNREACHED: u8 = u8::MAX;
+
+/// How far each cell is from one place, in cells. Kept in squares of [`TILE`] cells, each as the least
+/// distance in it and a byte a cell for how much more, since next door is only ever a step further. A
+/// square that a wall makes differ by more than a byte can hold, which is rare, keeps whole numbers.
+/// That is a little over half of two bytes a cell, for exactly the same distances.
 #[derive(Clone, Debug, PartialEq)]
 pub struct FlowField {
-    distance: Vec<u16>,
+    width: usize,
+    tiles_across: usize,
+    base: Vec<u16>,
+    small: Vec<u8>,
+    /// Squares kept whole, by number, in order.
+    wide: Vec<(usize, Box<[u16; TILE_CELLS]>)>,
+}
+
+impl FlowField {
+    fn pack(distance: &[u16], width: i32) -> Self {
+        let width = width as usize;
+        let tiles_across = width.div_ceil(TILE);
+        let tiles = tiles_across * tiles_across;
+        let mut field = Self { width, tiles_across, base: vec![UNREACHED; tiles], small: vec![SMALL_UNREACHED; tiles * TILE_CELLS], wide: Vec::new() };
+        for tile in 0..tiles {
+            let (ti, tj) = (tile % tiles_across, tile / tiles_across);
+            let mut whole = [UNREACHED; TILE_CELLS];
+            for (k, value) in whole.iter_mut().enumerate() {
+                let (i, j) = (ti * TILE + k % TILE, tj * TILE + k / TILE);
+                if i < width && j < width {
+                    *value = distance[j * width + i];
+                }
+            }
+            let reached = || whole.iter().copied().filter(|&d| d != UNREACHED);
+            let (Some(least), Some(most)) = (reached().min(), reached().max()) else { continue };
+            if most - least >= SMALL_UNREACHED as u16 {
+                field.wide.push((tile, Box::new(whole)));
+                continue;
+            }
+            field.base[tile] = least;
+            for (k, value) in whole.iter().enumerate() {
+                if *value != UNREACHED {
+                    field.small[tile * TILE_CELLS + k] = (value - least) as u8;
+                }
+            }
+        }
+        field
+    }
+
+    /// The distance at a cell, by its index in the grid.
+    fn get(&self, at: usize) -> u16 {
+        let (i, j) = (at % self.width, at / self.width);
+        let tile = (j / TILE) * self.tiles_across + i / TILE;
+        let k = (j % TILE) * TILE + i % TILE;
+        if !self.wide.is_empty()
+            && let Ok(found) = self.wide.binary_search_by_key(&tile, |(number, _)| *number)
+        {
+            return self.wide[found].1[k];
+        }
+        match self.small[tile * TILE_CELLS + k] {
+            SMALL_UNREACHED => UNREACHED,
+            more => self.base[tile] + more as u16,
+        }
+    }
+
+    fn bytes(&self) -> usize {
+        self.base.len() * 2 + self.small.len() + self.wide.len() * (TILE_CELLS * 2 + 16)
+    }
 }
 
 /// A map's grid and the way to each of the places on it, in the order of those places.
@@ -343,4 +424,43 @@ pub struct FlowField {
 pub struct FlowMap {
     pub grid: FlowGrid,
     pub fields: Vec<FlowField>,
+}
+
+impl FlowMap {
+    /// What it all takes up, near enough.
+    pub fn bytes(&self) -> usize {
+        self.grid.bytes() + self.fields.iter().map(FlowField::bytes).sum::<usize>()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_packed_field_gives_back_exactly_what_went_in() {
+        let mut distance: Vec<u16> = (0..37 * 37).map(|at| (at % 37 + at / 37) as u16).collect();
+        distance[5] = UNREACHED;
+        // A wall that makes next door a long way round, in one square only.
+        distance[37 * 20 + 20] = 900;
+        let field = FlowField::pack(&distance, 37);
+        assert_eq!(field.wide.len(), 1);
+        for (at, want) in distance.iter().enumerate() {
+            assert_eq!(field.get(at), *want, "cell {at}");
+        }
+    }
+
+    #[test]
+    fn on_a_real_map_packing_changes_no_distance_and_saves_most_of_the_room() {
+        let level = Level::named("town").expect("built in");
+        let rules = FlowRules { cell: 2.5, margin: 0.4, step: 0.4, headroom: 1.8, max_rise: 1.5, max_dip: f32::INFINITY };
+        let grid = FlowGrid::new(&level, rules);
+        for point in &level.capture_points {
+            let center = Vec2::new(point.center.x, point.center.z);
+            let raw = grid.distances_to(center, point.radius);
+            let field = grid.field_to(center, point.radius);
+            assert!((0..raw.len()).all(|at| field.get(at) == raw[at]));
+            assert!(field.bytes() < raw.len() * 2 * 6 / 10, "{} bytes against {}", field.bytes(), raw.len() * 2);
+        }
+    }
 }

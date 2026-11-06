@@ -294,6 +294,8 @@ mod skill_tests;
 mod sight_tests;
 #[cfg(test)]
 mod range_report;
+#[cfg(test)]
+mod flow_report;
 
 /// A jump to get unstuck is not a reason to go in through a window, where nothing says the way out, so it
 /// stays a jump: a climb only starts walking forward, on the ground or on the way up.
