@@ -66,6 +66,7 @@ pub struct Player<C: PredictedGame> {
     next_frame_ms: f64,
     /// A real client's clock is not quite anyone else's.
     pub clock_skew: f64,
+    /// How often it draws. Each frame runs as many ticks as the time it covers, as Bevy's fixed steps do.
     pub frame_ms: f64,
     pub frames: Vec<Frame>,
     pub server_events: Vec<<C::S as Schema>::Event>,
@@ -194,8 +195,8 @@ impl<C: PredictedGame, G: ServerGame<S = C::S>> World<C, G> {
                     let owed_real = now - player.last_frame_ms;
                     let owed = owed_real.min(player.max_frame_ms).max(player.frame_ms);
                     player.last_frame_ms = now;
-                    let steps = (owed / player.frame_ms).round().max(1.0) as u32;
-                    let dt = (player.frame_ms * player.clock_skew / 1000.0) as f32;
+                    let steps = (owed / TICK_MS).round().max(1.0) as u32;
+                    let dt = (TICK_MS * player.clock_skew / 1000.0) as f32;
                     let (input, who) = (player.input.clone(), player.who);
                     player.session.frame_started((owed_real / 1000.0) as f32);
                     for step in 0..steps {

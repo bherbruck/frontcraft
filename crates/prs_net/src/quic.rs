@@ -104,7 +104,8 @@ fn unhex(text: &str) -> Option<[u8; 32]> {
     Some(out)
 }
 
-/// Where to ask for [`WtInfo`], given the address of the WebSocket beside it.
+/// Where to ask for [`WtInfo`], given the address of the WebSocket beside it. Under the same path: a proxy
+/// that sends `/range` to one server and everything else to another sends this to the right one.
 pub fn info_url(websocket: &str) -> Option<String> {
     let (scheme, rest) = websocket.split_once("://")?;
     let scheme = match scheme {
@@ -112,8 +113,8 @@ pub fn info_url(websocket: &str) -> Option<String> {
         "wss" => "https",
         _ => return None,
     };
-    let authority = rest.split(['/', '?', '#']).next()?;
-    Some(format!("{scheme}://{authority}{INFO_PATH}"))
+    let address = rest.split(['?', '#']).next()?.trim_end_matches('/');
+    Some(format!("{scheme}://{address}{INFO_PATH}"))
 }
 
 /// The session to open, given the address of the WebSocket beside it and what the server said.
@@ -166,11 +167,13 @@ mod tests {
 
     #[test]
     fn a_websocket_address_says_where_to_look() {
-        assert_eq!(info_url("wss://play.example:443/x?y").as_deref(), Some("https://play.example:443/webtransport"));
+        assert_eq!(info_url("wss://play.example:443/x?y").as_deref(), Some("https://play.example:443/x/webtransport"));
+        assert_eq!(info_url("wss://play.example/range/").as_deref(), Some("https://play.example/range/webtransport"));
         assert_eq!(info_url("ws://127.0.0.1:7777").as_deref(), Some("http://127.0.0.1:7777/webtransport"));
         let info = WtInfo { port: 4433, certificate_hash: None };
         assert_eq!(session_url("wss://play.example", &info).as_deref(), Some("https://play.example:4433/play"));
         assert_eq!(session_url("ws://[::1]:7777/", &info).as_deref(), Some("https://[::1]:4433/play"));
+        assert_eq!(session_url("wss://play.example/range", &info).as_deref(), Some("https://play.example:4433/play"));
     }
 
     #[test]

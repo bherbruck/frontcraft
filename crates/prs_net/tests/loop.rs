@@ -232,6 +232,26 @@ fn coming_back_to_a_hidden_tab_is_steady_within_a_second() {
     }
 }
 
+/// Frames this slow look like coming back from away each time, but a machine that is always this slow
+/// is still playing, and has to send its commands.
+#[test]
+fn a_machine_that_is_always_slow_is_not_taken_for_away() {
+    let mut world = toy_world(ServerConfig::default());
+    let slow = world.join(ToyClient::factory(), patrol(), &Net::tcp(40.0, 0.0, 0.0, 200.0));
+    world.players[slow].frame_ms = 2500.0;
+    world.run(20.0);
+    let session = &world.players[slow].session;
+    assert_eq!(
+        world.server.player_count(),
+        1,
+        "its commands reached the server: {:?} {:?} {:?}",
+        session.state(),
+        session.stats(),
+        session.clock().map(|c| (c.rtt_ms(), c.jumps())),
+    );
+    assert!(world.players[slow].session.clock().is_some_and(|c| c.rtt_ms() < 5000.0));
+}
+
 #[test]
 fn a_long_frame_does_not_leave_everyone_else_stuck() {
     let mut world = toy_world(ServerConfig::default());

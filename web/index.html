@@ -111,6 +111,8 @@
   // A page built with FRONTCRAFT_ONLINE=1 is served by the game server, so the server is right here.
   const ONLINE = "__ONLINE__" === "1";
   const DEFAULT_SERVER = ONLINE ? `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}` : "";
+  // A second server for the shooting range, behind the same address under its own path.
+  const RANGE_SERVER = DEFAULT_SERVER && `${DEFAULT_SERVER}/range`;
   const REACH_TIMEOUT_MS = 6000;
 
   const loading = document.getElementById("loading");
@@ -249,7 +251,20 @@
         state.textContent = "The server can't be reached right now. You can still practise on the Shooting Range.";
       }
     };
-    alone.onclick = () => go("?solo=1&map=range");
+    // The range is played with everyone else on it when the server has one, and alone when it doesn't.
+    alone.onclick = async () => {
+      if (DEFAULT_SERVER) {
+        alone.disabled = true;
+        state.textContent = "Looking for the range";
+        const reached = await canReach(RANGE_SERVER);
+        alone.disabled = false;
+        if (reached) {
+          go(`?server=${encodeURIComponent(RANGE_SERVER)}`);
+          return;
+        }
+      }
+      go("?solo=1&map=range");
+    };
     document.getElementById("name-row").hidden = !DEFAULT_SERVER;
     choices.hidden = false;
     offerDownload();

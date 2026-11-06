@@ -45,6 +45,11 @@ pub struct ClientConfig {
     /// Keep it at least the longest frame the host catches up on in full, so that a slow machine is never
     /// taken for an absent player.
     pub away_after_s: f32,
+    /// ...and this many times as long as frames usually take. A machine that is always that slow is slow,
+    /// not away, and gets every tick it can.
+    pub away_after_usual: f32,
+    /// Weight of a new frame in what frames usually take.
+    pub usual_frame_smoothing: f32,
 }
 
 impl Default for ClientConfig {
@@ -60,6 +65,8 @@ impl Default for ClientConfig {
             requests_per_packet: 8,
             handshake_resend_ms: 250.0,
             away_after_s: 2.0,
+            away_after_usual: 4.0,
+            usual_frame_smoothing: 0.1,
             name: String::new(),
         }
     }
@@ -194,6 +201,8 @@ pub struct ClientSession<G: PredictedGame> {
     lossy: bool,
     /// Set by a frame that came after an absence, until it has been drawn.
     away: bool,
+    /// How long frames usually take, in seconds.
+    usual_frame_s: Option<f32>,
     /// Whether the transport has a frame still waiting to go out. Commands then wait to go in the next
     /// packet, all together, rather than queue up behind it one packet each.
     held_back: bool,
@@ -227,6 +236,7 @@ impl<G: PredictedGame> ClientSession<G> {
             next_request: 0,
             lossy: false,
             away: false,
+            usual_frame_s: None,
             held_back: false,
             stats: ClientStats::default(),
         }
@@ -472,7 +482,10 @@ impl<G: PredictedGame> ClientSession<G> {
     /// stamp from the future. So for that frame the updates do nothing, and the server says how late the
     /// clock is.
     pub fn frame_started(&mut self, real_dt: f32) {
-        self.away = real_dt > self.cfg.away_after_s;
+        let usual = self.usual_frame_s.unwrap_or(real_dt.min(self.cfg.away_after_s));
+        self.away = real_dt > self.cfg.away_after_s && real_dt > usual * self.cfg.away_after_usual;
+        // Absences count too, so that a machine whose every frame is that long stops looking away after a few.
+        self.usual_frame_s = Some(usual + (real_dt - usual) * self.cfg.usual_frame_smoothing);
     }
 
     pub fn update(&mut self, dt: f32, mut input: impl FnMut(u32) -> PlayerCmd) {
