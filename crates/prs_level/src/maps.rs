@@ -35,13 +35,15 @@ pub struct MapLimits {
     /// Trees a spec's woods would plant, and pieces of rubble it would scatter.
     pub max_trees: u64,
     pub max_rubble: u64,
+    /// Lengths of field wall and steps of stairs it would put up, together.
+    pub max_pieces: u64,
     pub max_storeys: u32,
 }
 
 impl Default for MapLimits {
     /// Several times the town in each, which is itself a kilometre across.
     fn default() -> Self {
-        Self { max_size: 4096.0, max_cells: 2048, max_splits: 6, max_items: 200_000, max_trees: 50_000, max_rubble: 20_000, max_storeys: 16 }
+        Self { max_size: 4096.0, max_cells: 2048, max_splits: 6, max_items: 200_000, max_trees: 50_000, max_rubble: 20_000, max_pieces: 100_000, max_storeys: 16 }
     }
 }
 
@@ -200,10 +202,12 @@ impl MapData {
     }
 }
 
-/// Every number is a number, and there are not more entries than a map has.
+/// Every number is a number no further out than the map is wide, and there are not more entries than a map
+/// has. Every length, spacing and coordinate in a map is one of these, so nothing worked out from them can
+/// come to infinity or not a number.
 fn plain(value: &toml::Value, limits: &MapLimits, items: &mut usize) -> Result<(), String> {
     match value {
-        toml::Value::Float(f) if !f.is_finite() => Err(format!("a number that is not one: {f}")),
+        toml::Value::Float(f) if !(f.abs() <= limits.max_size as f64) => Err(format!("a number past the size of a map: {f}")),
         toml::Value::Array(list) => {
             *items += list.len();
             if *items > limits.max_items {
@@ -217,9 +221,12 @@ fn plain(value: &toml::Value, limits: &MapLimits, items: &mut usize) -> Result<(
 }
 
 impl MapFile {
-    /// Whether building this would stay inside the limits, worked out from the description alone.
+    /// Whether building this would stay inside the limits, worked out from the description alone, for every
+    /// loop the builder runs that the file can make longer. Each comparison is written so that a value that is
+    /// not a number fails it.
     fn within(&self, limits: &MapLimits) -> Result<(), String> {
         let size = |size: f32| if size > 0.0 && size <= limits.max_size { Ok(()) } else { Err(format!("{size} m across")) };
+        let positive = |what: &str, v: f32| if v > 0.0 { Ok(()) } else { Err(format!("a {what} of {v}")) };
         if let Some(grid) = &self.terrain {
             size(grid.size)?;
             if grid.cells == 0 || grid.cells > limits.max_cells {
@@ -234,30 +241,50 @@ impl MapFile {
         if terrain.base_cells == 0 || splits > limits.max_splits || finest > limits.max_cells as u64 {
             return Err(format!("{} cells split {splits} times", terrain.base_cells));
         }
+        let length = |points: &[glam::Vec2]| points.windows(2).map(|p| p[0].distance(p[1]) as f64).sum::<f64>();
         let mut trees = 0.0_f64;
         for wood in &spec.woods {
             trees += match &wood.shape {
                 WoodShape::Line { points, spacing, .. } => {
-                    let length: f64 = points.windows(2).map(|p| p[0].distance(p[1]) as f64).sum();
-                    length / (*spacing as f64).max(1e-9) + points.len() as f64
+                    positive("tree spacing", *spacing)?;
+                    length(points) / *spacing as f64 + points.len() as f64
                 }
                 WoodShape::Clump { count, .. } => *count as f64,
                 WoodShape::Rows { half, spacing, .. } => {
-                    let spacing = (*spacing as f64).max(1e-9);
+                    positive("tree spacing", *spacing)?;
+                    let spacing = *spacing as f64;
                     (half.x.abs() as f64 * 2.0 / spacing + 1.0) * (half.y.abs() as f64 * 2.0 / spacing + 1.0)
                 }
             };
         }
-        if trees > limits.max_trees as f64 {
+        if !(trees <= limits.max_trees as f64) {
             return Err(format!("about {trees:.0} trees"));
         }
         let rubble: u64 = spec.rubble.iter().map(|r| r.count as u64).sum();
         if rubble > limits.max_rubble {
             return Err(format!("{rubble} pieces of rubble"));
         }
-        let storeys = spec.compounds.iter().flat_map(|c| &c.buildings).map(|b| b.storeys).max().unwrap_or(0);
-        if storeys > limits.max_storeys {
-            return Err(format!("a building of {storeys} storeys"));
+        let mut pieces = 0.0_f64;
+        for wall in &spec.walls {
+            positive("wall segment", wall.segment)?;
+            pieces += length(&wall.points) / wall.segment as f64 + wall.points.len() as f64;
+        }
+        let style = &spec.style;
+        positive("stair rise", style.stair_rise)?;
+        for building in spec.compounds.iter().flat_map(|c| &c.buildings) {
+            if building.storeys > limits.max_storeys {
+                return Err(format!("a building of {} storeys", building.storeys));
+            }
+            let storey = building.storey_height.unwrap_or(style.storey) as f64;
+            for flight in &building.flights {
+                if flight.to > building.storeys || flight.from.is_some_and(|from| from > flight.to) {
+                    return Err(format!("stairs to storey {} of a building of {}", flight.to, building.storeys));
+                }
+                pieces += (storey * flight.to as f64 + style.plinth as f64).abs() / style.stair_rise as f64 + 1.0;
+            }
+        }
+        if !(pieces <= limits.max_pieces as f64) {
+            return Err(format!("about {pieces:.0} lengths of wall and steps of stairs"));
         }
         Ok(())
     }
@@ -516,8 +543,22 @@ mod tests {
         assert!(matches!(swap("base_cells = 64", "base_cells = 4000000"), Err(MapError::TooBig { .. })));
         assert!(matches!(swap("max_splits = 3", "max_splits = 40"), Err(MapError::TooBig { .. })));
         assert!(matches!(swap("size = 1024.0", "size = 1e30"), Err(MapError::TooBig { .. })));
-        let rows = town.find("spacing = ").map(|at| &town[at..town[at..].find('\n').unwrap() + at]).unwrap().to_owned();
-        assert!(matches!(swap(&rows, "spacing = 0.000001"), Err(MapError::TooBig { .. })), "trees planted a micron apart");
+        // A key and its value, which may be inside an inline table.
+        let line_of = |key: &str| {
+            let at = town.find(key).unwrap();
+            let end = at + key.len() + town[at + key.len()..].find([',', '\n', '}']).unwrap();
+            town[at..end].to_owned()
+        };
+        let spacing = line_of("spacing = ");
+        assert!(matches!(swap(&spacing, "spacing = 0.000001"), Err(MapError::TooBig { .. })), "trees planted a micron apart");
+        assert!(matches!(swap(&spacing, "spacing = 0.0"), Err(MapError::TooBig { .. })), "or no distance apart");
+        assert!(matches!(swap(&spacing, "spacing = -1.0"), Err(MapError::TooBig { .. })));
+        assert!(matches!(swap(&spacing, "spacing = nan"), Err(MapError::TooBig { .. })), "a wood with a spacing that is not a number");
+        assert!(matches!(swap(&line_of("\nsegment = "), "\nsegment = 0.00001"), Err(MapError::TooBig { .. })), "a wall in tiny lengths");
+        assert!(matches!(swap(&line_of("\nstair_rise = "), "\nstair_rise = 0.00001"), Err(MapError::TooBig { .. })), "stairs with tiny steps");
+        assert!(matches!(swap(&line_of("\nto = "), "\nto = 1000000000"), Err(MapError::TooBig { .. })), "stairs to storey 1e9");
+        assert!(matches!(swap(&line_of("\nstoreys = "), "\nstoreys = 1000000"), Err(MapError::TooBig { .. })));
+        assert!(matches!(swap("seed = 1307", "seed = 1307\nignored = 1e300"), Err(MapError::TooBig { .. })), "a number past any map");
         let many = format!("format = 1\ntargets = [{}]\n", vec!["[0.0, 0.0, 0.0]"; 200_001].join(", "));
         assert!(matches!(level(&many), Err(MapError::TooBig { .. })));
         assert!(MapData::built_in("town").unwrap().level().is_ok() && MapData::built_in("range").unwrap().level().is_ok(), "the real maps fit");
