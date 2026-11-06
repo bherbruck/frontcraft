@@ -4,38 +4,93 @@ use crate::spec::{Compound, Ditch, Ground, Hill, MapSpec};
 use crate::{Terrain, smoothstep};
 use glam::Vec2;
 
-/// A polyline with its bounds, so that most points never measure a distance to it.
-struct Line<'a> {
-    points: &'a [Vec2],
-    min: Vec2,
-    max: Vec2,
+/// The closest point on a polyline to `p`, and how far away it is, among the segments given by their first
+/// point. [`Near`] gives the segments that come within reach of `p`, which are the only ones that can matter.
+fn nearest(points: &[Vec2], segments: &[(u32, u32)], p: Vec2) -> Option<(Vec2, f32)> {
+    let mut best = None;
+    for &(_, k) in segments {
+        let (Some(&a), Some(&b)) = (points.get(k as usize), points.get(k as usize + 1)) else { continue };
+        let along = b - a;
+        let t = ((p - a).dot(along) / along.length_squared()).clamp(0.0, 1.0);
+        let on = a + along * t;
+        let d = on.distance_squared(p);
+        if best.is_none_or(|(_, best_d)| d < best_d) {
+            best = Some((on, d));
+        }
+    }
+    best.map(|(on, d)| (on, d.sqrt()))
 }
 
-impl<'a> Line<'a> {
-    fn new(points: &'a [Vec2], reach: f32) -> Self {
-        let min = points.iter().fold(Vec2::splat(f32::MAX), |m, p| m.min(*p)) - reach;
-        let max = points.iter().fold(Vec2::splat(f32::MIN), |m, p| m.max(*p)) + reach;
-        Self { points, min, max }
+/// The entries for each line, a line at a time, in the order of the lines.
+fn by_line(entries: &[(u32, u32)]) -> impl Iterator<Item = (usize, &[(u32, u32)])> {
+    entries.chunk_by(|a, b| a.0 == b.0).map(|run| (run[0].0 as usize, run))
+}
+
+/// What comes near one square of the map: road and ditch segments as (line, segment), and pads, steps and zones,
+/// each in the order the map lists them, so that working through them gives what working through them all would.
+#[derive(Default)]
+struct Nearby {
+    roads: Vec<(u32, u32)>,
+    ditches: Vec<(u32, u32)>,
+    pads: Vec<u32>,
+    steps: Vec<u32>,
+    zones: Vec<u32>,
+}
+
+impl Nearby {
+    fn len(&self) -> usize {
+        self.roads.len() + self.ditches.len() + self.pads.len() + self.steps.len() + self.zones.len()
+    }
+}
+
+/// A grid over the map saying what is near each square of it, so a height or a colour looks only at what is
+/// near and not at everything on the map. Anywhere off the grid gets everything.
+struct Near {
+    origin: Vec2,
+    cell: f32,
+    n: u32,
+    cells: Vec<Nearby>,
+    everything: Nearby,
+}
+
+impl Near {
+    /// Squares this many to a side at most, and no smaller than this.
+    const MOST_CELLS: f32 = 256.0;
+    const LEAST_CELL: f32 = 4.0;
+
+    fn new(size: f32) -> Self {
+        let cell = (size / Self::MOST_CELLS).max(Self::LEAST_CELL);
+        let n = (size / cell).ceil().max(1.0) as u32;
+        let cells = (0..n * n).map(|_| Nearby::default()).collect();
+        Self { origin: Vec2::splat(-size * 0.5), cell, n, cells, everything: Nearby::default() }
     }
 
-    /// The closest point on the line and how far away it is, if `p` is within the line's reach.
-    fn nearest(&self, p: Vec2) -> Option<(Vec2, f32)> {
-        if p.x < self.min.x || p.x > self.max.x || p.y < self.min.y || p.y > self.max.y {
-            return None;
-        }
-        let mut best = (self.points[0], f32::MAX);
-        for pair in self.points.windows(2) {
-            let (a, b) = (pair[0], pair[1]);
-            let along = b - a;
-            let t = ((p - a).dot(along) / along.length_squared()).clamp(0.0, 1.0);
-            let on = a + along * t;
-            let d = on.distance_squared(p);
-            if d < best.1 {
-                best = (on, d);
-            }
-        }
-        Some((best.0, best.1.sqrt()))
+    /// Every square a box from `min` to `max` touches, for each to be told about something in it.
+    fn squares(&self, min: Vec2, max: Vec2) -> impl Iterator<Item = usize> + use<> {
+        let at = |v: f32, o: f32| ((v - o) / self.cell).floor();
+        let n = self.n as f32;
+        let (x0, x1) = (at(min.x, self.origin.x).max(0.0), at(max.x, self.origin.x).min(n - 1.0));
+        let (z0, z1) = (at(min.y, self.origin.y).max(0.0), at(max.y, self.origin.y).min(n - 1.0));
+        let (row, xs) = (self.n as usize, x0 as usize..=x1 as usize);
+        // A box off the grid, or not a box at all, touches nothing. Off the grid, everything is looked at anyway.
+        let any = x0 <= x1 && z0 <= z1;
+        (z0 as usize..=z1 as usize).filter(move |_| any).flat_map(move |z| xs.clone().map(move |x| z * row + x))
     }
+
+    fn at(&self, p: Vec2) -> &Nearby {
+        let (x, z) = (((p.x - self.origin.x) / self.cell).floor(), ((p.y - self.origin.y) / self.cell).floor());
+        if x >= 0.0 && z >= 0.0 && x < self.n as f32 && z < self.n as f32 {
+            &self.cells[z as usize * self.n as usize + x as usize]
+        } else {
+            &self.everything
+        }
+    }
+}
+
+/// The bounds of a box turned by `axis`, with `reach` all round.
+fn turned_bounds(at: Vec2, axis: Vec2, half: Vec2, reach: f32) -> (Vec2, Vec2) {
+    let extent = Vec2::new(axis.x.abs() * half.x + axis.y.abs() * half.y, axis.y.abs() * half.x + axis.x.abs() * half.y) + reach;
+    (at - extent, at + extent)
 }
 
 /// A level patch of ground under a compound, easing out into the land around it.
@@ -58,6 +113,8 @@ impl Pad {
 /// How far either side of a flight of steps, and how far below its line, the land is cut away for it.
 const STEP_CUT_MARGIN: f32 = 0.6;
 const STEP_CUT_DEPTH: f32 = 0.3;
+/// Nothing grows this close to a road or a compound.
+const GROWING_CLEARANCE: f32 = 1.0;
 
 pub(crate) struct Relief<'a> {
     spec: &'a MapSpec,
@@ -65,10 +122,7 @@ pub(crate) struct Relief<'a> {
     /// question gets a flat answer at once, and whoever is building gives up.
     work: std::cell::Cell<u64>,
     limit: u64,
-    /// What one look along every road and ditch, and at every pad, costs.
-    lines_cost: usize,
-    roads: Vec<Line<'a>>,
-    ditches: Vec<Line<'a>>,
+    near: Near,
     pub pads: Vec<Pad>,
     /// The height of the land at each end of each flight of steps, before the steps are cut into it.
     pub step_ends: Vec<(f32, f32)>,
@@ -80,16 +134,58 @@ impl<'a> Relief<'a> {
         Self::within(spec, u64::MAX)
     }
 
-    /// One that gives up past `limit` features looked at, whatever the spec asks for.
+    /// One that gives up past `limit` features looked at, whatever the spec asks for. Telling the grid what is
+    /// near each square counts too.
     pub fn within(spec: &'a MapSpec, limit: u64) -> Self {
-        let roads = spec.roads.iter().map(|r| Line::new(&r.points, r.width * 0.5 + r.shoulder)).collect();
-        let ditches = spec.ditches.iter().map(|d| Line::new(&d.points, d.width * 0.5)).collect();
-        let lines_cost = spec.roads.iter().map(|r| r.points.len()).sum::<usize>() + spec.ditches.iter().map(|d| d.points.len()).sum::<usize>() + spec.compounds.len();
         let work = std::cell::Cell::new(0);
-        let mut relief = Self { spec, work, limit, lines_cost, roads, ditches, pads: Vec::new(), step_ends: Vec::new() };
+        let near = Near::new(spec.terrain.size);
+        let mut relief = Self { spec, work, limit, near, pads: Vec::new(), step_ends: Vec::new() };
         relief.pads = spec.compounds.iter().map(|c| relief.pad(c)).collect();
+        relief.near = relief.index();
         relief.step_ends = spec.steps.iter().map(|s| (relief.uncut(s.from), relief.uncut(s.to))).collect();
         relief
+    }
+
+    /// Which roads, ditches, pads, steps and zones can matter to each square, out as far as any question asks:
+    /// past that, none of them changes the height, the colour or whether anything can grow there.
+    fn index(&self) -> Near {
+        let spec = self.spec;
+        let mut near = Near::new(spec.terrain.size);
+        let add = |near: &mut Near, (min, max): (Vec2, Vec2), put: &dyn Fn(&mut Nearby)| {
+            put(&mut near.everything);
+            for square in near.squares(min, max).collect::<Vec<_>>() {
+                if !self.spend(0) {
+                    return;
+                }
+                put(&mut near.cells[square]);
+            }
+        };
+        let segments = |points: &[Vec2], reach: f32| -> Vec<(Vec2, Vec2)> {
+            points.windows(2).map(|w| (w[0].min(w[1]) - reach, w[0].max(w[1]) + reach)).collect()
+        };
+        for (i, road) in spec.roads.iter().enumerate() {
+            let reach = road.width * 0.5 + road.shoulder.max(GROWING_CLEARANCE);
+            for (k, bounds) in segments(&road.points, reach).into_iter().enumerate() {
+                add(&mut near, bounds, &|cell| cell.roads.push((i as u32, k as u32)));
+            }
+        }
+        for (i, ditch) in spec.ditches.iter().enumerate() {
+            for (k, bounds) in segments(&ditch.points, ditch.width * 0.5).into_iter().enumerate() {
+                add(&mut near, bounds, &|cell| cell.ditches.push((i as u32, k as u32)));
+            }
+        }
+        let fade = spec.style.pad_fade.max(GROWING_CLEARANCE);
+        for (i, pad) in self.pads.iter().enumerate() {
+            add(&mut near, turned_bounds(pad.at, pad.axis, pad.half, fade), &|cell| cell.pads.push(i as u32));
+        }
+        for (i, steps) in spec.steps.iter().enumerate() {
+            let reach = steps.width * 0.5 + STEP_CUT_MARGIN;
+            add(&mut near, (steps.from.min(steps.to) - reach, steps.from.max(steps.to) + reach), &|cell| cell.steps.push(i as u32));
+        }
+        for (i, zone) in spec.zones.iter().enumerate() {
+            add(&mut near, turned_bounds(zone.at, Vec2::from_angle(-zone.yaw), zone.half, 0.0), &|cell| cell.zones.push(i as u32));
+        }
+        near
     }
 
     fn pad(&self, c: &Compound) -> Pad {
@@ -139,12 +235,14 @@ impl<'a> Relief<'a> {
     }
 
     pub fn height(&self, p: Vec2) -> f32 {
-        if !self.spend(self.spec.steps.len()) {
+        let near = self.near.at(p);
+        if !self.spend(near.steps.len()) {
             return 0.0;
         }
         let mut h = self.uncut(p);
         // Steps are let into a bank, so no tread is buried under a slope steeper than they are.
-        for (steps, &(start, end)) in self.spec.steps.iter().zip(&self.step_ends) {
+        for &i in &near.steps {
+            let (steps, (start, end)) = (&self.spec.steps[i as usize], self.step_ends[i as usize]);
             let along = steps.to - steps.from;
             let length = along.length();
             if length < 0.1 {
@@ -161,73 +259,76 @@ impl<'a> Relief<'a> {
     }
 
     fn uncut(&self, p: Vec2) -> f32 {
-        if !self.spend(self.lines_cost) {
+        let near = self.near.at(p);
+        if !self.spend(near.len()) {
             return 0.0;
         }
+        let spec = self.spec;
         let natural = self.natural(p);
         let mut h = natural;
-        let cut = |spec: &Ditch, d: f32| {
-            let bank = spec.width * 0.5;
-            let bed = spec.bed_width * 0.5;
-            spec.depth * (1.0 - ((d - bed) / (bank - bed)).clamp(0.0, 1.0))
+        let cut = |ditch: &Ditch, d: f32| {
+            let bank = ditch.width * 0.5;
+            let bed = ditch.bed_width * 0.5;
+            ditch.depth * (1.0 - ((d - bed) / (bank - bed)).clamp(0.0, 1.0))
         };
-        for (spec, line) in self.spec.ditches.iter().zip(&self.ditches).filter(|(s, _)| !s.cuts_roads) {
-            if let Some((_, d)) = line.nearest(p) {
-                h -= cut(spec, d);
+        let ditches = || by_line(&near.ditches).map(|(i, run)| (&spec.ditches[i], run));
+        for (ditch, run) in ditches().filter(|(d, _)| !d.cuts_roads) {
+            if let Some((_, d)) = nearest(&ditch.points, run, p) {
+                h -= cut(ditch, d);
             }
         }
-        for (spec, line) in self.spec.roads.iter().zip(&self.roads) {
-            if let Some((on, d)) = line.nearest(p) {
-                let edge = spec.width * 0.5;
-                let w = 1.0 - smoothstep(edge, edge + spec.shoulder, d);
+        for (i, run) in by_line(&near.roads) {
+            let road = &spec.roads[i];
+            if let Some((on, d)) = nearest(&road.points, run, p) {
+                let edge = road.width * 0.5;
+                let w = 1.0 - smoothstep(edge, edge + road.shoulder, d);
                 if w > 0.0 {
                     h += (self.natural(on) - h) * w;
                 }
             }
         }
-        // A canal goes through roads, so a road over it needs a bridge.
-        for (spec, line) in self.spec.ditches.iter().zip(&self.ditches).filter(|(s, _)| s.cuts_roads) {
-            if let Some((_, d)) = line.nearest(p) {
-                h = h.min(natural - cut(spec, d));
+        // A canal goes through roads, so a road over it needs a bridge. Only where the canal is: past its banks
+        // the land is as the roads and everything else left it.
+        for (ditch, run) in ditches().filter(|(d, _)| d.cuts_roads) {
+            if let Some((_, d)) = nearest(&ditch.points, run, p).filter(|&(_, d)| d < ditch.width * 0.5) {
+                h = h.min(natural - cut(ditch, d));
             }
         }
         // Nearest pad last, so that a pad is level right up to its edge whatever is next door.
-        let fade = self.spec.style.pad_fade;
-        let mut near: Vec<(f32, f32)> = self.pads.iter().filter_map(|pad| {
+        let fade = spec.style.pad_fade;
+        let mut levels: Vec<(f32, f32)> = near.pads.iter().map(|&i| &self.pads[i as usize]).filter_map(|pad| {
             let d = pad.outside(p);
             (d < fade).then_some((1.0 - smoothstep(0.0, fade, d), pad.level))
         }).collect();
-        near.sort_by(|a, b| a.0.total_cmp(&b.0));
-        for (weight, level) in near {
+        levels.sort_by(|a, b| a.0.total_cmp(&b.0));
+        for (weight, level) in levels {
             h += (level - h) * weight;
         }
         h
     }
 
     pub fn ground(&self, p: Vec2) -> Ground {
-        if !self.spend(self.lines_cost + self.spec.zones.len()) {
+        let near = self.near.at(p);
+        if !self.spend(near.len()) {
             return Ground::Meadow;
         }
-        for pad in &self.pads {
-            if pad.outside(p) < 0.5 {
-                return pad.ground;
-            }
+        let spec = self.spec;
+        if let Some(pad) = near.pads.iter().map(|&i| &self.pads[i as usize]).find(|pad| pad.outside(p) < 0.5) {
+            return pad.ground;
         }
-        let in_ditch = |(spec, line): &(&Ditch, &Line)| line.nearest(p).is_some_and(|(_, d)| d < spec.width * 0.5);
-        if let Some((spec, _)) = self.spec.ditches.iter().zip(&self.ditches).filter(|(s, _)| s.cuts_roads).find(in_ditch) {
-            return spec.ground;
+        let within = |points: &[Vec2], run: &[(u32, u32)], width: f32| nearest(points, run, p).is_some_and(|(_, d)| d < width * 0.5);
+        let ditches = || by_line(&near.ditches).map(|(i, run)| (&spec.ditches[i], run));
+        if let Some((ditch, _)) = ditches().filter(|(d, _)| d.cuts_roads).find(|(d, run)| within(&d.points, run, d.width)) {
+            return ditch.ground;
         }
-        for (spec, line) in self.spec.roads.iter().zip(&self.roads) {
-            if line.nearest(p).is_some_and(|(_, d)| d < spec.width * 0.5) {
-                return spec.ground;
-            }
+        if let Some(road) = by_line(&near.roads).map(|(i, run)| (&spec.roads[i], run)).find(|(r, run)| within(&r.points, run, r.width)) {
+            return road.0.ground;
         }
-        for (spec, line) in self.spec.ditches.iter().zip(&self.ditches) {
-            if line.nearest(p).is_some_and(|(_, d)| d < spec.width * 0.5) {
-                return spec.ground;
-            }
+        if let Some((ditch, _)) = ditches().find(|(d, run)| within(&d.points, run, d.width)) {
+            return ditch.ground;
         }
-        for zone in self.spec.zones.iter().rev() {
+        for &i in near.zones.iter().rev() {
+            let zone = &spec.zones[i as usize];
             let axis = Vec2::from_angle(-zone.yaw);
             let d = p - zone.at;
             let local = Vec2::new(d.dot(axis), d.dot(axis.perp()));
@@ -240,11 +341,13 @@ impl<'a> Relief<'a> {
 
     /// Whether something growing at `p` would be in the way of a road, a ditch or a compound.
     pub fn occupied(&self, p: Vec2) -> bool {
+        let near = self.near.at(p);
+        let spec = self.spec;
         // Past the limit, everywhere is taken, so nothing more is put anywhere.
-        !self.spend(self.lines_cost)
-            || self.pads.iter().any(|pad| pad.outside(p) < 1.0)
-            || self.spec.roads.iter().zip(&self.roads).any(|(s, l)| l.nearest(p).is_some_and(|(_, d)| d < s.width * 0.5 + 1.0))
-            || self.spec.ditches.iter().zip(&self.ditches).any(|(s, l)| l.nearest(p).is_some_and(|(_, d)| d < s.width * 0.5))
+        !self.spend(near.len())
+            || near.pads.iter().any(|&i| self.pads[i as usize].outside(p) < GROWING_CLEARANCE)
+            || by_line(&near.roads).any(|(i, run)| nearest(&spec.roads[i].points, run, p).is_some_and(|(_, d)| d < spec.roads[i].width * 0.5 + GROWING_CLEARANCE))
+            || by_line(&near.ditches).any(|(i, run)| nearest(&spec.ditches[i].points, run, p).is_some_and(|(_, d)| d < spec.ditches[i].width * 0.5))
     }
 
     /// The mesh, unless it would be more than `max_cells` cells or shaping it would take more than allowed.
@@ -497,6 +600,40 @@ fn balance(depth: &mut [u8], n: u32, max_splits: u32) {
         }
         if !changed {
             return;
+        }
+    }
+}
+
+#[cfg(test)]
+mod near_tests {
+    use super::*;
+
+    /// Looking only at what the grid says is near gives exactly what looking at everything does, everywhere.
+    #[test]
+    fn the_grid_changes_nothing_but_how_much_is_looked_at() {
+        for spec in [MapSpec::town(), MapSpec::claudabad()] {
+            let near = Relief::new(&spec);
+            let mut everywhere = Relief::new(&spec);
+            // With no squares, every question is off the grid and looks at everything.
+            everywhere.near.n = 0;
+            let half = spec.terrain.size * 0.5;
+            let step = spec.terrain.size / 397.0;
+            let mut asked = 0;
+            let mut y = -half;
+            while y <= half {
+                let mut x = -half;
+                while x <= half {
+                    let p = Vec2::new(x, y);
+                    assert_eq!(near.height(p).to_bits(), everywhere.height(p).to_bits(), "height at {p}");
+                    assert_eq!(near.ground(p), everywhere.ground(p), "ground at {p}");
+                    assert_eq!(near.occupied(p), everywhere.occupied(p), "room at {p}");
+                    asked += 1;
+                    x += step;
+                }
+                y += step;
+            }
+            assert!(asked > 150_000);
+            assert!(near.work.get() * 3 < everywhere.work.get(), "{} against {}", near.work.get(), everywhere.work.get());
         }
     }
 }
