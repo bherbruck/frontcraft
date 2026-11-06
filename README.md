@@ -103,7 +103,8 @@ another time of day inserts its own before startup. Nothing in it moves while yo
   none, so a shadowed facet still has its own colour. WebGL2 draws one directional light in Bevy, and a
   fill would put out the sun, so there the fills are folded into ambient, with a little of their direction
   baked into vertex colours (`face_tint`). Shaded sides are flatter on the web, and it has one shadow
-  cascade reaching 110 m.
+  cascade reaching 70 m: a longer one has texels so coarse that shadows show stair-steps and leak
+  through thin walls in 45 degree saw-teeth.
 - **Sky** is one unlit mesh that follows the camera: a gradient, a sun, hazy far ridges and faceted
   clouds. At the horizon it is exactly the colour of fully fogged land at that bearing, worked out from
   the same sum as the fog shader, so distant hills melt into it.

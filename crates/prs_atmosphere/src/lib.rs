@@ -51,8 +51,8 @@ impl Default for Shadows {
         let web = cfg!(target_arch = "wasm32");
         Self {
             cascades: if web { 1 } else { 4 },
-            first_bound: if web { 110.0 } else { 11.0 },
-            distance: if web { 110.0 } else { 340.0 },
+            first_bound: if web { 70.0 } else { 11.0 },
+            distance: if web { 70.0 } else { 340.0 },
             map_size: 2048,
             depth_bias: 0.06,
             normal_bias: 2.2,
@@ -95,6 +95,9 @@ pub struct Bake {
     /// Where there are no fill lights to tell facets apart in shade, how much of what they would have
     /// done goes into vertex colours by which way a face points, from 0 to 1. It tints sunlit faces too.
     pub face_tint: f32,
+    /// How far apart, in linear light, a tile's two diagonals may disagree before it gets a middle
+    /// vertex. Two triangles alone draw a saw-tooth of 45 degree edges where the light bends.
+    pub tile_twist: f32,
     /// Colour of light that has reached deep into a room, and right by its openings.
     pub room_deep: Vec3,
     pub room_near: Vec3,
@@ -114,6 +117,7 @@ impl Default for Bake {
     fn default() -> Self {
         Self {
             face_tint: if ONE_DIRECTIONAL_LIGHT { 0.55 } else { 0.0 },
+            tile_twist: 0.01,
             room_deep: Vec3::new(0.33, 0.34, 0.42),
             room_near: Vec3::new(0.86, 0.8, 0.72),
             room_gain: 34.0,

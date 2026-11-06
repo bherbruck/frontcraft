@@ -58,7 +58,7 @@ impl Batch {
     }
 
     /// A quad cut into tiles along its first edge and its last, with a colour worked out at each corner.
-    fn tiles(&mut self, corners: [Vec3; 4], along: &[f32], up: &[f32], normal: Vec3, color: impl Fn(Vec3) -> Vec3) {
+    fn tiles(&mut self, corners: [Vec3; 4], along: &[f32], up: &[f32], normal: Vec3, twist_limit: f32, color: impl Fn(Vec3) -> Vec3) {
         let [a, b, c, d] = corners;
         let base = self.positions.len() as u32;
         for &v in up {
@@ -71,11 +71,29 @@ impl Batch {
             }
         }
         let row = along.len() as u32;
+        let shade = |i: u32| Vec3::from_slice(&self.colors[i as usize]).dot(Vec3::new(0.2126, 0.7152, 0.0722));
+        let mut centres = Vec::new();
         for j in 0..up.len() as u32 - 1 {
             for i in 0..row - 1 {
                 let p = base + j * row + i;
-                self.indices.extend([p, p + 1, p + row + 1, p, p + row + 1, p + row]);
+                let (p00, p10, p11, p01) = (p, p + 1, p + row + 1, p + row);
+                // Two triangles show a tile's light as if it changed along one diagonal. Where the
+                // corners disagree, a middle vertex lit for itself takes the place of the guess.
+                let twist = (shade(p00) + shade(p11) - shade(p10) - shade(p01)).abs();
+                if twist > twist_limit {
+                    centres.push([p00, p10, p11, p01]);
+                } else {
+                    self.indices.extend([p00, p10, p11, p00, p11, p01]);
+                }
             }
+        }
+        for [p00, p10, p11, p01] in centres {
+            let middle = [p00, p10, p11, p01].iter().map(|&i| Vec3::from_array(self.positions[i as usize])).sum::<Vec3>() * 0.25;
+            let m = self.positions.len() as u32;
+            self.positions.push(middle.to_array());
+            self.normals.push(normal.to_array());
+            self.colors.push(linear(color(middle)));
+            self.indices.extend([p00, p10, m, p10, p11, m, p11, p01, m, p01, p00, m]);
         }
     }
 
@@ -248,12 +266,12 @@ fn add_solid(batch: &mut Batch, solid: &Solid, light: &RoomLight) {
                 }
             };
             let (along, up) = (cuts(corners[1] - corners[0]), cuts(corners[3] - corners[0]));
-            batch.tiles(corners, &along, &up, normal, |p| color * light.at(room, p, normal));
+            batch.tiles(corners, &along, &up, normal, bake.tile_twist, |p| color * light.at(room, p, normal));
         } else if let Some(cuts) = foot_cuts(&corners, normal, floor, light.bake()) {
             let bake = light.bake();
             match cuts {
-                FootCuts::Along(up) => batch.tiles(corners, &up, &[0.0, 1.0], normal, |p| color * foot_shade(bake, p.y - floor)),
-                FootCuts::Up(up) => batch.tiles(corners, &[0.0, 1.0], &up, normal, |p| color * foot_shade(bake, p.y - floor)),
+                FootCuts::Along(up) => batch.tiles(corners, &up, &[0.0, 1.0], normal, bake.tile_twist, |p| color * foot_shade(bake, p.y - floor)),
+                FootCuts::Up(up) => batch.tiles(corners, &[0.0, 1.0], &up, normal, bake.tile_twist, |p| color * foot_shade(bake, p.y - floor)),
             }
         } else {
             batch.quad(corners, [color; 4], normal);
