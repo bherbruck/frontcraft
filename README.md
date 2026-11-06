@@ -553,7 +553,7 @@ over the river (`prs_sim`'s `rides_tests.rs`). `DENSITY` in `fallujah.rs` scales
 
 The land under a map can be a survey: a grid of measured heights in the spec's `terrain.survey`, which
 waves, hills and calms then work on as on any land, and `waters` cut a sea or harbour into it to a level
-bed. Terrain: NASA SRTM, public domain (1 arc-second, sampled by `scripts/survey.py`; how each survey was
+bed, with a stone quay along the shore if it has one, open where steps or bridges cross. Terrain: NASA SRTM, public domain (1 arc-second, sampled by `scripts/survey.py`; how each survey was
 made is in `crates/prs_level/src/survey/README.md`).
 
 The range looks down lanes with targets at 25, 50, 100, 200 and 300 m, marked by boards either side:

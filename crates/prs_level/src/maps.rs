@@ -14,6 +14,9 @@ use std::fmt;
 use crate::spec::WoodShape;
 use crate::{CapturePoint, Doorway, Level, MapSpec, Room, Solid, SpawnPoint, Staircase, TargetMark, Team, Terrain, Tree, VehicleSpawn, Window};
 
+/// Furthest a shore's quay may reach out over the bed of its water, which has no width to measure it against.
+const MOST_OVER_BED: f32 = 10.0;
+
 /// What a file says it is written for. A file for a later one is refused, not misread.
 pub const FORMAT: u32 = 1;
 
@@ -368,6 +371,16 @@ impl MapFile {
                 let climb = floor(flight.to) - flight.from.map_or(0.0, floor);
                 pieces += (climb / style.stair_rise as f64).ceil().max(0.0);
             }
+        }
+        for (water, quay) in spec.waters.iter().filter_map(|w| w.quay.map(|q| (w, q))) {
+            positive("quay length", quay.length)?;
+            if !(quay.beyond >= 0.0 && quay.beyond <= limits.max_size && quay.over_bed >= 0.0 && quay.over_bed <= MOST_OVER_BED) {
+                return Err(format!("a quay {} past its shore and {} over its bed", quay.beyond, quay.over_bed));
+            }
+            // One bank to a shore, and a closed outline has a stretch back to its start.
+            let mut round = water.points.clone();
+            round.extend(water.points.first());
+            pieces += length(&round) / quay.length as f64 + round.len() as f64;
         }
         for (ditch, quay) in spec.ditches.iter().filter_map(|d| d.quay.map(|q| (d, q))) {
             positive("quay length", quay.length)?;

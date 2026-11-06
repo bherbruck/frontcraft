@@ -74,7 +74,7 @@ impl MapSpec {
                 SpawnSpec { at: Vec2::new(NORTH_BASE.0 - 80.0, -NORTH_BASE.1), yaw: 0.0 },
             ],
             vehicles: motor_pools(),
-            waters: vec![Water { points: river(), bed: 36.0 - DATUM, bank: 16.0, ground: Ground::Water }],
+            waters: vec![Water { points: river(), bed: 36.0 - DATUM, bank: 16.0, ground: Ground::Water, quay: None }],
             bridges: bridges(),
             steps: Vec::new(),
             landmarks: Vec::new(),

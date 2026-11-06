@@ -96,6 +96,10 @@ pub struct Water {
     /// How far in from the shore the bed is reached. A metre or two is a quay, tens of metres a beach.
     pub bank: f32,
     pub ground: Ground,
+    /// Stone along the shore, so the water meets a straight wall however coarse the ground beside it. `over_bed`
+    /// is how far it reaches out over the bed past the foot of the bank.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quay: Option<Quay>,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]

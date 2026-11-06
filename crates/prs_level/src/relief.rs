@@ -121,6 +121,18 @@ impl Shore<'_> {
         self.points.iter().fold((Vec2::splat(f32::MAX), Vec2::splat(f32::MIN)), |(min, max), p| (min.min(*p), max.max(*p)))
     }
 
+    /// How far `p` is from the nearest stretch of the shore, inside or out.
+    fn from_edge(&self, p: Vec2) -> f32 {
+        let mut nearest = f32::MAX;
+        for (k, &a) in self.points.iter().enumerate() {
+            let b = self.points[(k + 1) % self.points.len()];
+            let along = b - a;
+            let t = ((p - a).dot(along) / along.length_squared().max(1e-6)).clamp(0.0, 1.0);
+            nearest = nearest.min((a + along * t).distance_squared(p));
+        }
+        nearest.sqrt()
+    }
+
     /// How far inside the outline `p` is, if it is inside.
     fn inside(&self, p: Vec2) -> Option<f32> {
         if self.points.len() < 3 {
@@ -140,6 +152,9 @@ impl Shore<'_> {
         inside.then(|| nearest.sqrt())
     }
 }
+
+/// How far either side of a shore, past its bank, the land is meshed as finely as it goes.
+const SHORE_DETAIL: f32 = 4.0;
 
 /// What a survey costs to read at a point, against the work a map may take: the sixteen heights round it.
 const SURVEY_COST: usize = 16;
@@ -429,15 +444,17 @@ impl<'a> Relief<'a> {
     pub fn terrain(&self, max_cells: u64) -> Result<Terrain, String> {
         let t = &self.spec.terrain;
         let detail = |p: Vec2| {
-            // Past the limit, everywhere is detailed: the strict tolerance, and no more looking. A canal's banks are
-            // always detailed, so that they run straight wherever it goes.
+            // Past the limit, everywhere is detailed: the strict tolerance, and no more looking. A canal's banks and
+            // a shore are always detailed, so that they run straight wherever they go.
             let near = self.near.at(p);
-            let open = self.spend(t.detail.len() + near.ditches.len())
+            let shore_points: usize = near.waters.iter().map(|&i| self.shores[i as usize].points.len()).sum();
+            let open = self.spend(t.detail.len() + near.ditches.len() + shore_points)
                 && !t.detail.iter().any(|(at, radius)| at.distance(p) < *radius)
                 && !by_line(&near.ditches).any(|(i, run)| {
                     let ditch = &self.spec.ditches[i];
                     ditch.cuts_roads && nearest(&ditch.points, run, p).is_some_and(|(_, d)| d < ditch.width * 0.5)
-                });
+                })
+                && !near.waters.iter().any(|&i| self.shores[i as usize].from_edge(p) < self.spec.waters[i as usize].bank + SHORE_DETAIL);
             match (open, t.open_tolerance) {
                 (true, Some(tolerance)) => (tolerance, t.open_paint_splits.unwrap_or(t.paint_splits).min(t.paint_splits)),
                 _ => (t.tolerance, t.paint_splits),

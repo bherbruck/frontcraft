@@ -771,3 +771,21 @@ fn fallujah_nobody_walks_off() {
 fn fallujah_fits_the_build_budget_with_room_to_spare() {
     assert!(fallujah().spec.build_within(crate::maps::MapLimits::default().max_build_steps / 2).is_ok());
 }
+
+/// The bay is walled in stone along its shore, down to the bed, except where steps go down into it, and a
+/// quay reaching too far out over its bed is refused.
+#[test]
+fn muttrah_shore_is_a_quay_with_its_steps_left_open() {
+    let map = muttrah();
+    let quay = map.spec.waters[0].quay.unwrap();
+    let blocks: Vec<&crate::Solid> = map.level.solids.iter().filter(|s| s.paint == quay.paint && s.center.y - s.half.y < map.spec.waters[0].bed).collect();
+    assert!(blocks.len() > 200, "{} blocks", blocks.len());
+    for steps in &map.spec.steps {
+        let mid = steps.from.lerp(steps.to, 0.4);
+        assert!(blocks.iter().all(|b| flat(b.center).distance(mid) > b.half.x), "a quay block over the steps at {}", steps.from);
+    }
+    let mut far = map.spec.clone();
+    far.waters[0].quay = Some(Quay { over_bed: 11.0, ..quay });
+    let text = toml::to_string(&crate::maps::MapFile { format: crate::maps::FORMAT, spec: Some(far), ..Default::default() }).unwrap();
+    assert!(matches!(MapData::new("far", text).level(), Err(crate::MapError::TooBig { .. })));
+}

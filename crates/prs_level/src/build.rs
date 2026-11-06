@@ -66,6 +66,8 @@ const DECK_LIP: f32 = 0.12;
 const QUAY_LIP: f32 = 0.05;
 const QUAY_GAP: f32 = 0.5;
 const QUAY_BEND: f32 = 2.0;
+/// A shore this close to the edge of the map is the map's edge, where nothing is built.
+const SHORE_EDGE: f32 = 12.0;
 
 /// How far `p` is from the segment `a` to `b`.
 fn near_segment(p: Vec2, a: Vec2, b: Vec2) -> f32 {
@@ -159,6 +161,7 @@ impl MapSpec {
         builder.compounds();
         builder.bridges();
         builder.quays();
+        builder.shore_quays();
         builder.steps();
         builder.landmarks();
         builder.field_walls();
@@ -337,6 +340,68 @@ impl Builder<'_> {
                         let half = Vec3::new((end - start) * 0.5 + 0.02, (top - bottom).max(0.1) * 0.5, (outer - inner) * 0.5);
                         self.mason.level.solids.push(Solid { center, half, rotation, paint: quay.paint });
                     }
+                }
+            }
+        }
+    }
+
+    /// Stone along each shore that has a quay: a block for each stretch, from the bed up to the land beside it,
+    /// left open where a bridge or steps cross and wherever the outline runs along the edge of the map.
+    fn shore_quays(&mut self) {
+        let spec = self.spec;
+        let gaps: Vec<(Vec2, Vec2, f32)> = spec.bridges.iter().map(|b| (b.from, b.to, b.width)).chain(spec.steps.iter().map(|s| (s.from, s.to, s.width))).collect();
+        let edge = spec.terrain.size * 0.5 - SHORE_EDGE;
+        let on_edge = |p: Vec2| p.x.abs().max(p.y.abs()) > edge;
+        for water in &spec.waters {
+            let Some(quay) = water.quay else { continue };
+            let points = &water.points;
+            let n = points.len();
+            if n < 3 {
+                continue;
+            }
+            let (inner, outer) = (water.bank + quay.over_bed, quay.beyond);
+            let dirs: Vec<Vec2> = (0..n).map(|k| (points[(k + 1) % n] - points[k]).normalize_or_zero()).collect();
+            for k in 0..n {
+                let (a, b) = (points[k], points[(k + 1) % n]);
+                let (length, dir) = (a.distance(b), dirs[k]);
+                if length < 0.1 || (on_edge(a) && on_edge(b)) {
+                    continue;
+                }
+                // Which way is the water: whichever side of the middle of the stretch is in it.
+                let mid_way = a.lerp(b, 0.5);
+                let wet = if self.relief.wet(mid_way + dir.perp() * 0.5) { 1.0 } else { -1.0 };
+                let into = dir.perp() * wet;
+                // At a bend, the land side of the blocks on its outside runs on far enough to meet.
+                let reach = |from: Vec2, to: Vec2| {
+                    let turn = from.perp_dot(to).atan2(from.dot(to));
+                    if wet * turn > 0.0 { outer * (turn.abs().min(QUAY_BEND) * 0.5).tan() } else { 0.0 }
+                };
+                let (before, after) = (reach(dirs[(k + n - 1) % n], dir), reach(dir, dirs[(k + 1) % n]));
+                let blocks = (length / quay.length).ceil().max(1.0) as u32;
+                let block = length / blocks as f32;
+                let rotation = Quat::from_rotation_y((-dir.y).atan2(dir.x));
+                if !self.mason.budget.take_many(gaps.len()) {
+                    return;
+                }
+                let margin = inner + outer + quay.length + QUAY_GAP;
+                let (low, high) = (a.min(b) - Vec2::splat(margin), a.max(b) + Vec2::splat(margin));
+                let near: Vec<_> = gaps.iter().filter(|&&(from, to, width)| from.min(to).cmple(high + width * 0.5).all() && from.max(to).cmpge(low - width * 0.5).all()).collect();
+                for i in 0..blocks {
+                    if !self.mason.budget.take_many(1 + near.len()) {
+                        return;
+                    }
+                    let start = block * i as f32 - if i == 0 { before } else { 0.0 };
+                    let end = block * (i + 1) as f32 + if i + 1 == blocks { after } else { 0.0 };
+                    let mid = a + dir * ((start + end) * 0.5);
+                    let middle = mid + into * (inner - outer) * 0.5;
+                    if near.iter().any(|&&(from, to, width)| near_segment(middle, from, to) <= width * 0.5 + (end - start) * 0.5 + QUAY_GAP) {
+                        continue;
+                    }
+                    let top = self.relief.height(mid - into * outer) + QUAY_LIP;
+                    let bottom = water.bed - self.mason.style.foot;
+                    let center = Vec3::new(middle.x, (top + bottom) * 0.5, middle.y);
+                    let half = Vec3::new((end - start) * 0.5 + 0.02, (top - bottom).max(0.1) * 0.5, (inner + outer) * 0.5);
+                    self.mason.level.solids.push(Solid { center, half, rotation, paint: quay.paint });
                 }
             }
         }
