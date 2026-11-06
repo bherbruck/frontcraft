@@ -1,18 +1,21 @@
 //! The level as a few large meshes rather than thousands of entities. Everything static is merged by
 //! chunk, so one chunk is one draw call that can be culled as a whole, and all colour is baked into
-//! vertices so that one material does for everything. Nothing here runs after startup.
+//! vertices so that one material does for everything. Nothing here runs after startup; `lod` decides
+//! which of a chunk's meshes show from where.
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use crate::bake::{RoomLight, foot_shade, room_cuts, wall_rise_cuts};
 use prs_atmosphere::{Atmosphere, Bake, ICOSAHEDRON_CORNERS, ICOSAHEDRON_FACES};
-use prs_level::{Ground, Level, Paint, Room, Solid, Terrain, Tree, TreeKind};
+use prs_level::{Ground, Paint, Room, Solid, Terrain, Tree, TreeKind};
+#[cfg(test)]
+use prs_level::Level;
 use prs_runtime::SimResource;
 use std::collections::BTreeMap;
 
 /// Side of a chunk of merged geometry, in metres.
-const CHUNK: f32 = 128.0;
+pub(crate) const CHUNK: f32 = 128.0;
 /// Inside walls are plastered, whatever the outside looks like.
 const ROOM_PLASTER: Vec3 = Vec3::new(0.8, 0.74, 0.63);
 /// A wall has a foot to darken if it starts this near its floor, stands this tall, and is this wide.
@@ -37,14 +40,14 @@ const LEAF_TOP: Vec3 = Vec3::new(1.14, 1.08, 0.8);
 /// Triangles with their own flat normals and vertex colours.
 #[derive(Default)]
 pub(crate) struct Batch {
-    positions: Vec<[f32; 3]>,
-    normals: Vec<[f32; 3]>,
-    colors: Vec<[f32; 4]>,
-    indices: Vec<u32>,
+    pub(crate) positions: Vec<[f32; 3]>,
+    pub(crate) normals: Vec<[f32; 3]>,
+    pub(crate) colors: Vec<[f32; 4]>,
+    pub(crate) indices: Vec<u32>,
 }
 
 impl Batch {
-    fn triangle(&mut self, corners: [Vec3; 3], colors: [Vec3; 3]) {
+    pub(crate) fn triangle(&mut self, corners: [Vec3; 3], colors: [Vec3; 3]) {
         let [a, b, c] = corners;
         self.facing(corners, colors, (b - a).cross(c - a).normalize_or(Vec3::Y));
     }
@@ -59,7 +62,7 @@ impl Batch {
         }
     }
 
-    fn quad(&mut self, corners: [Vec3; 4], colors: [Vec3; 4], normal: Vec3) {
+    pub(crate) fn quad(&mut self, corners: [Vec3; 4], colors: [Vec3; 4], normal: Vec3) {
         let base = self.positions.len() as u32;
         for (p, color) in corners.iter().zip(colors) {
             self.positions.push(p.to_array());
@@ -110,22 +113,14 @@ impl Batch {
     }
 
     /// Multiplies each vertex's colour by something depending on which way it faces.
-    fn tint_by_face(&mut self, tint: impl Fn(Vec3) -> Vec3) {
+    pub(crate) fn tint_by_face(&mut self, tint: impl Fn(Vec3) -> Vec3) {
         for (color, normal) in self.colors.iter_mut().zip(&self.normals) {
             let tinted = Vec3::new(color[0], color[1], color[2]) * tint(Vec3::from_array(*normal));
             *color = [tinted.x, tinted.y, tinted.z, color[3]];
         }
     }
 
-    fn append(&mut self, other: Batch) {
-        let base = self.positions.len() as u32;
-        self.positions.extend(other.positions);
-        self.normals.extend(other.normals);
-        self.colors.extend(other.colors);
-        self.indices.extend(other.indices.iter().map(|i| i + base));
-    }
-
-    fn mesh(self) -> Mesh {
+    pub(crate) fn mesh(self) -> Mesh {
         Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::RENDER_WORLD)
             .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, self.positions)
             .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, self.normals)
@@ -138,13 +133,15 @@ fn linear(srgb: Vec3) -> [f32; 4] {
     LinearRgba::from(Color::srgb(srgb.x, srgb.y, srgb.z)).to_f32_array()
 }
 
-type Chunks = BTreeMap<(i32, i32), Batch>;
+pub(crate) type Chunks = BTreeMap<(i32, i32), Batch>;
 
-fn chunk_of(chunks: &mut Chunks, at: Vec3) -> &mut Batch {
+pub(crate) fn chunk_of(chunks: &mut Chunks, at: Vec3) -> &mut Batch {
     chunks.entry(((at.x / CHUNK).floor() as i32, (at.z / CHUNK).floor() as i32)).or_default()
 }
 
-/// Everything static, kept apart by what it does to a bullet.
+/// Everything static, kept apart by what it does to a bullet, at full detail: what tests check against
+/// the colliders.
+#[cfg(test)]
 pub(crate) struct StaticMeshes {
     pub terrain: Chunks,
     pub solids: Chunks,
@@ -154,6 +151,7 @@ pub(crate) struct StaticMeshes {
     pub water: Chunks,
 }
 
+#[cfg(test)]
 pub(crate) fn static_meshes(level: &Level, bake: Bake) -> StaticMeshes {
     let mut solids = Chunks::new();
     let mut canopies = Chunks::new();
@@ -170,7 +168,7 @@ pub(crate) fn static_meshes(level: &Level, bake: Bake) -> StaticMeshes {
 
 /// A flat surface a little over each stretch of bed under water. Only the bed, so the surface stops where
 /// the bank rises out of it, which reads as the water's edge.
-fn water_chunks(terrain: &Terrain) -> Chunks {
+pub(crate) fn water_chunks(terrain: &Terrain) -> Chunks {
     let water = |v: u32| terrain.ground[v as usize] == Ground::Water;
     let wet = |tri: &[u32; 3]| tri.iter().any(|&v| water(v));
     // The bed: every wet corner with nothing beside it much lower. A bank's corners all have.
@@ -205,10 +203,12 @@ pub(crate) fn spawn_level(
     mut commands: Commands,
     sim: Res<SimResource>,
     atmosphere: Res<Atmosphere>,
+    detail: Res<crate::lod::Detail>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let StaticMeshes { mut terrain, mut solids, canopies, water } = static_meshes(&sim.0.level, atmosphere.bake);
+    let crate::lod::Detailed { mut terrain, mut solids, water, blocks } = crate::lod::detailed_meshes(&sim.0.level, atmosphere.bake, &detail);
+    commands.insert_resource(blocks);
     let wet = materials.add(StandardMaterial {
         base_color: Color::srgba(1.0, 1.0, 1.0, WATER_ALPHA),
         alpha_mode: AlphaMode::Blend,
@@ -228,27 +228,21 @@ pub(crate) fn spawn_level(
         reflectance: 0.2,
         ..default()
     });
-    for (key, canopy) in canopies {
-        solids.entry(key).or_default().append(canopy);
-    }
     if atmosphere.bake.face_tint > 0.0 {
-        for batch in terrain.values_mut().chain(solids.values_mut()) {
+        for (batch, _) in terrain.iter_mut().chain(solids.iter_mut()) {
             batch.tint_by_face(|normal| atmosphere.face_tint(normal));
         }
     }
-    for batch in terrain.into_values() {
-        commands.spawn((Mesh3d(meshes.add(batch.mesh())), MeshMaterial3d(ground.clone())));
-    }
-    for batch in solids.into_values() {
-        commands.spawn((Mesh3d(meshes.add(batch.mesh())), MeshMaterial3d(painted.clone())));
-    }
-    for batch in water.into_values() {
-        commands.spawn((Mesh3d(meshes.add(batch.mesh())), MeshMaterial3d(wet.clone()), bevy::light::NotShadowCaster));
+    crate::lod::spawn(&mut commands, &mut meshes, terrain, &ground);
+    crate::lod::spawn(&mut commands, &mut meshes, solids, &painted);
+    for (batch, piece) in water {
+        let triangles = crate::Triangles(batch.indices.len() as u32 / 3);
+        commands.spawn((Mesh3d(meshes.add(batch.mesh())), MeshMaterial3d(wet.clone()), bevy::light::NotShadowCaster, triangles, piece, Visibility::Hidden));
     }
 }
 
 /// Colour, and how much it varies from one box to the next.
-fn palette(paint: Paint) -> (Vec3, f32) {
+pub(crate) fn palette(paint: Paint) -> (Vec3, f32) {
     let (rgb, vary) = match paint {
         Paint::Concrete => ([0.6, 0.59, 0.54], 0.0),
         Paint::Wood => ([0.5, 0.34, 0.18], 0.0),
@@ -278,7 +272,7 @@ fn palette(paint: Paint) -> (Vec3, f32) {
 }
 
 /// A repeatable number from 0 to 1 for something at this place.
-fn grain(at: Vec3) -> f32 {
+pub(crate) fn grain(at: Vec3) -> f32 {
     (at.dot(Vec3::new(12.9898, 4.1414, 78.233)).sin() * 43758.547).fract().abs()
 }
 
@@ -294,7 +288,7 @@ fn home_room<'a>(solid: &Solid, rooms: &'a [Room]) -> Option<&'a Room> {
         .map(|(room, _)| room)
 }
 
-fn add_solid(batch: &mut Batch, solid: &Solid, light: &RoomLight) {
+pub(crate) fn add_solid(batch: &mut Batch, solid: &Solid, light: &RoomLight) {
     let (color, vary) = palette(solid.paint);
     let home = home_room(solid, light.rooms());
     let tone = home.map_or(solid.center, |room| Vec3::new(room.center.x, 0.0, room.center.z));
@@ -365,7 +359,7 @@ fn foot_cuts(corners: &[Vec3; 4], normal: Vec3, floor: f32, bake: &Bake) -> Opti
 }
 
 /// The trunk's collider is a square post, so that is what gets drawn.
-fn add_trunk(batch: &mut Batch, tree: &Tree, light: &RoomLight) {
+pub(crate) fn add_trunk(batch: &mut Batch, tree: &Tree, light: &RoomLight) {
     let half = Vec3::new(prs_level::TRUNK_HALF_WIDTH, tree.height * prs_level::TRUNK_HALF_HEIGHT, prs_level::TRUNK_HALF_WIDTH);
     let solid = Solid {
         center: tree.base + Vec3::Y * half.y,
@@ -376,7 +370,7 @@ fn add_trunk(batch: &mut Batch, tree: &Tree, light: &RoomLight) {
     add_solid(batch, &solid, &RoomLight::outdoors(light));
 }
 
-fn add_canopy(batch: &mut Batch, tree: &Tree, light: &RoomLight) {
+pub(crate) fn add_canopy(batch: &mut Batch, tree: &Tree, light: &RoomLight) {
     let vary = 0.88 + grain(tree.base) * 0.24;
     let tilt = Quat::from_rotation_y(grain(tree.base + Vec3::X) * std::f32::consts::TAU);
     let (h, r) = (tree.height, tree.radius);
@@ -430,7 +424,7 @@ fn add_canopy(batch: &mut Batch, tree: &Tree, light: &RoomLight) {
 
 /// One flat colour for a facet of leaves: cool and dark underneath, warm where the top catches the sky,
 /// and each a little different so that a canopy reads as facets at any distance.
-fn leaf(color: Vec3, up: f32, place: Vec3) -> Vec3 {
+pub(crate) fn leaf(color: Vec3, up: f32, place: Vec3) -> Vec3 {
     color * LEAF_UNDER.lerp(LEAF_TOP, up) * (0.9 + grain(place) * 0.2)
 }
 
@@ -465,7 +459,8 @@ fn add_blob(batch: &mut Batch, center: Vec3, scale: Vec3, turn: Quat, color: Vec
 
 /// Faceted terrain: every triangle gets its own flat normal, and each corner a colour by what the
 /// ground is there.
-fn terrain_chunks(terrain: &Terrain) -> Chunks {
+#[cfg(test)]
+pub(crate) fn terrain_chunks(terrain: &Terrain) -> Chunks {
     let mut chunks = Chunks::new();
     for (i, tri) in terrain.indices.iter().enumerate() {
         let corners = tri.map(|v| terrain.vertices[v as usize]);
@@ -475,7 +470,7 @@ fn terrain_chunks(terrain: &Terrain) -> Chunks {
     chunks
 }
 
-fn triangle_colors(terrain: &Terrain, triangle: usize) -> [Vec3; 3] {
+pub(crate) fn triangle_colors(terrain: &Terrain, triangle: usize) -> [Vec3; 3] {
     let tri = terrain.indices[triangle];
     let height = tri.iter().map(|v| terrain.vertices[*v as usize].y).sum::<f32>() / 3.0;
     let steep = terrain.bareness(triangle);

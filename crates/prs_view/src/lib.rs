@@ -5,9 +5,11 @@
 //! far less jarring. The rifle is turned about the eye by whatever the camera did not take, so the
 //! front sight on screen always marks where the bullet is going.
 
+mod distance;
 mod spring;
 
 use bevy::prelude::*;
+pub use distance::ViewDistance;
 use bevy::render::view::ColorGrading;
 use prs_atmosphere::Atmosphere;
 use prs_runtime::prs_sim::SimEvent;
@@ -123,6 +125,9 @@ impl Plugin for ViewPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(Rig::default())
             .insert_resource(prs_mods::tuned("view.camera", ViewSettings::default()))
+            .insert_resource(prs_mods::tuned("view.distance", ViewDistance::default()))
+            .add_systems(PreStartup, distance::reach_from_distance)
+            .add_systems(PostUpdate, distance::apply_far_plane)
             .insert_resource(prs_mods::tuned("view.suppression", SuppressionLook::default()))
             .add_systems(Update, update_suppression_look)
             .add_systems(Startup, (spawn_camera, spawn_gun))

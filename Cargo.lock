@@ -4728,6 +4728,7 @@ dependencies = [
  "prs_scene",
  "prs_view",
  "prs_voice",
+ "serde",
  "tracing",
  "web-sys",
 ]
@@ -4899,6 +4900,7 @@ dependencies = [
  "prs_level",
  "prs_models",
  "prs_runtime",
+ "prs_view",
  "serde",
 ]
 

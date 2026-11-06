@@ -7,6 +7,7 @@ mod soldiers;
 mod statics;
 mod throwables;
 mod helicopters;
+mod lod;
 mod vehicles;
 
 use bevy::prelude::*;
@@ -16,6 +17,13 @@ use prs_runtime::{DrawnGun, GunDrawn, LocalSoldier, LevelReady, SimMessage, SimR
 
 const MAX_DEBRIS: usize = 220;
 
+/// How many triangles a static mesh of the level has, for reports. The mesh itself leaves the main
+/// world once it is on the GPU.
+#[derive(Component, Clone, Copy)]
+pub struct Triangles(pub u32);
+
+pub use lod::Detail;
+
 pub struct ScenePlugin;
 
 impl Plugin for ScenePlugin {
@@ -24,6 +32,14 @@ impl Plugin for ScenePlugin {
             .insert_resource(prs_runtime::prs_sim::prs_mods::tuned("view.smoke_jet", throwables::SmokeJet::default()))
             .insert_resource(prs_runtime::prs_sim::prs_mods::tuned("view.climb_hint", climb_hint::ClimbHintLook::default()))
             .init_resource::<climb_hint::ClimbHint>()
+            .insert_resource(prs_runtime::prs_sim::prs_mods::tuned("view.detail", lod::Detail::default()))
+            .add_systems(
+                PostUpdate,
+                lod::choose_detail
+                    .after(bevy::transform::TransformSystems::Propagate)
+                    .before(bevy::camera::visibility::VisibilitySystems::VisibilityPropagate)
+                    .run_if(resource_exists::<lod::Blocks>),
+            )
             .add_systems(Update, climb_hint::draw_climb_hint)
             .insert_resource(vehicles::FireLook::default())
             .insert_resource(vehicles::VehicleModels::default())

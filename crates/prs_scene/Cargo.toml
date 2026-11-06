@@ -11,3 +11,4 @@ prs_runtime.workspace = true
 prs_level.workspace = true
 prs_models.workspace = true
 prs_atmosphere.workspace = true
+prs_view.workspace = true

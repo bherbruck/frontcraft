@@ -1,5 +1,6 @@
 //! The game client for desktop and web. All behaviour lives in the crates; this only wires them up.
 
+mod bench;
 mod dev;
 #[cfg(not(target_arch = "wasm32"))]
 mod dev_climb;
@@ -64,6 +65,7 @@ fn requested_size() -> bevy::window::WindowResolution {
 }
 
 fn main() {
+    bench::mark_start();
     activate_mod();
     let window = Window {
         title: "FrontCraft".into(),
@@ -109,6 +111,7 @@ fn add_game(app: &mut App) {
             prs_voice::VoicePlugin,
             prs_hud::HudPlugin,
             dev::DevPlugin,
+            bench::BenchPlugin,
             netbot::NetBotPlugin,
         ));
 }

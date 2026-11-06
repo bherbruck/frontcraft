@@ -99,6 +99,7 @@ enum Setting {
     Microphone,
     VoiceVolume,
     HudSize,
+    ViewDistance,
     Mute(u16),
 }
 
@@ -270,6 +271,7 @@ fn spawn_hud(mut commands: Commands) {
                     ("Microphone", Setting::Microphone),
                     ("Voice volume", Setting::VoiceVolume),
                     ("HUD size", Setting::HudSize),
+                    ("View distance", Setting::ViewDistance),
                 ] {
                     menu_row(column, label, setting);
                 }
@@ -346,6 +348,7 @@ fn apply_step(
     tuning: Res<VoiceTuning>,
     mut size: ResMut<HudSize>,
     rules: Res<HudScaleRules>,
+    mut distance: ResMut<prs_view::ViewDistance>,
 ) {
     let Ok(step) = steps.get(activate.entity) else {
         return;
@@ -383,6 +386,10 @@ fn apply_step(
             voice.set_volume(volume + tuning.volume_step * step.direction);
         }
         Setting::HudSize => size.0 = rules.held(size.0 + rules.player_step * step.direction),
+        Setting::ViewDistance => {
+            let metres = distance.metres + distance.step * step.direction;
+            distance.set(metres);
+        }
         Setting::Mute(player) => voices.set_muted(player, step.direction > 0.0),
     }
 }
@@ -408,10 +415,11 @@ fn update_menu_values(
     voice: Res<VoiceSettings>,
     voices: Res<Voices>,
     size: Res<HudSize>,
+    distance: Res<prs_view::ViewDistance>,
     new: Query<(), Added<Setting>>,
     mut values: Query<(&Setting, &mut Text)>,
 ) {
-    let changed = view.is_changed() || input.is_changed() || audio.is_changed() || voice.is_changed() || size.is_changed();
+    let changed = view.is_changed() || input.is_changed() || audio.is_changed() || voice.is_changed() || size.is_changed() || distance.is_changed();
     if !changed && !voices.is_changed() && new.is_empty() {
         return;
     }
@@ -427,6 +435,7 @@ fn update_menu_values(
             Setting::Microphone => if voice.mic_on() { "On" } else { "Off" }.to_string(),
             Setting::VoiceVolume => format!("{:.0}%", voice.volume() * 100.0),
             Setting::HudSize => format!("{:.0}%", size.0 * 100.0),
+            Setting::ViewDistance => format!("{:.0} m", distance.metres),
             Setting::Mute(player) => if voices.is_muted(*player) { "Muted" } else { "Heard" }.to_string(),
         };
     }
@@ -722,6 +731,7 @@ mod tests {
             .insert_resource(VoiceTuning::default())
             .insert_resource(HudSize(1.0))
             .insert_resource(HudScaleRules::default())
+            .insert_resource(prs_view::ViewDistance::default())
             .add_observer(apply_step)
             .add_systems(Update, update_menu_values);
         let button = app.world_mut().spawn(Step { setting: Setting::SoundSet, direction: 1.0 }).id();

@@ -497,6 +497,13 @@ placed by hand on top, one to a line (`MapFile` in `crates/prs_level/src/maps.rs
 chooses the map by name or path, `PRS_MAPS_DIR` is where names are looked for, `maps` by default, and
 `DEFAULT_MAP` in `crates/prs_runtime/src/lib.rs` says which one you get without it.
 
+How far you see is `View distance` in the Esc menu, saved with the other settings, and `view.distance` in a mod
+(4 km on desktop for helicopters, 2.5 km on the web). It sets `ViewReach`, which the far plane, fog and sky follow.
+The level's detail falls off with distance and stops at it:
+each 128 m chunk shows its full terrain, boxes and trees near you, then a coarser grid, plain boxes and one shape
+per tree, and beyond `far_from` a whole 512 m block is one mesh. Only drawing changes; what stops a bullet is the
+same everywhere. The distances are `view.detail` in a mod (`Detail` in `crates/prs_scene/src/lod.rs`).
+
 The game carries only the town and the range inside it, for playing alone. The bigger maps stay files in
 `maps/`: a server plays them from its maps folder (`PRS_MAPS_DIR`, or `maps` beside it), and a program run
 from a checkout in a debug build, and every test, finds them in the source tree's `maps/`. So a server playing
@@ -636,6 +643,13 @@ cargo test -p prs_ai match_report -- --ignored --nocapture
 ```
 
 ## Checking without playing
+
+`PRS_BENCH=1 PRS_MODE=practice cargo run --release`, or `?bench=1&mode=practice` on the web, flies the camera
+over the map once it is drawn: a turn at head height, a circle at helicopter height and a low pass. It prints
+one `BENCH` line with load time, frame times and what was drawn on each leg, and exits (on the web the line is
+the page title). `PRS_BENCH_SHOTS=<folder>` also saves a screenshot from each leg. A release build finds the big maps
+with `PRS_MAPS_DIR=maps`. The software renderer
+here makes the frame times a floor; compare builds on the same machine.
 
 `PRS_SOAK=<simulated seconds>[:seed]` runs the real game with no window or graphics card and a seeded monkey at the keyboard and mouse, as fast as the machine can go. It is for finding panics: use it with `PRS_MAP`, `PRS_MODE`, `PRS_MOD` and `PRS_SERVER`. `crates/prs_game/tests/keys.rs` drives every binding the same way, with `cargo test -p prs_game --test keys -- --test-threads=1`.
 

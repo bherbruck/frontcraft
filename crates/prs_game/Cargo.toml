@@ -8,6 +8,7 @@ license.workspace = true
 prs_mods.workspace = true
 bevy.workspace = true
 prs_runtime.workspace = true
+serde.workspace = true
 prs_input.workspace = true
 prs_view.workspace = true
 prs_scene.workspace = true
@@ -18,7 +19,7 @@ prs_models.workspace = true
 prs_atmosphere.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-web-sys = { workspace = true, features = ["Document", "Location", "UrlSearchParams", "Window", "XmlHttpRequest"] }
+web-sys = { workspace = true, features = ["console", "Document", "Location", "UrlSearchParams", "Window", "XmlHttpRequest"] }
 # Compiles out info logs and below on the web, along with their strings and call sites.
 log = { version = "0.4", features = ["release_max_level_warn"] }
 tracing = { version = "0.1", default-features = false, features = ["release_max_level_warn"] }
