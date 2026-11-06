@@ -10,18 +10,21 @@
 # FrontCraft-macos.dmg, FrontCraft-linux.tar.gz), so releases/latest/download/<name> links, which the page uses,
 # keep working from one release to the next. latest.json lists them with their sizes.
 #
-# Release with Actions > Release > Run workflow on main, giving the tag (made on that commit if new), or push a
-# tag v*. Run from main it also refreshes the build caches, which tag runs can read but not share among themselves.
+# Release by pushing a tag v1.2.3 (that is also the installer version), or with Actions > Release > Run workflow
+# on main, giving the tag (made on that commit if new). A tag run can read the caches main saved but saves its own
+# where no other tag run sees them, so a nightly run on main builds without publishing to keep main's caches warm.
 name: Release
 
 on:
   push:
     tags: ["v*"]
+  schedule:
+    - cron: "17 9 * * *"
   workflow_dispatch:
     inputs:
       tag:
-        description: Tag to publish the release under (made on this commit if it does not exist)
-        required: true
+        description: Tag to publish the release under (made on this commit if it does not exist); empty builds without publishing
+        required: false
       version:
         description: Installer version major.minor.build (default the tag's if it is v1.2.3, else the workspace's major.minor and today as yyddd)
         required: false
@@ -58,7 +61,7 @@ jobs:
         name: Resolve version
         env:
           REQUESTED: ${{ inputs.version }}
-          TAG: ${{ inputs.tag || github.ref_name }}
+          TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
         run: |
           workspace=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
           # A tag v1.2.3 is the version itself; any other tag takes the workspace's major.minor and today.
@@ -68,7 +71,7 @@ jobs:
             echo "::error::version must be major.minor.build, major and minor under 256, build under 65536: $version"
             exit 1
           fi
-          if ! [[ "$TAG" =~ ^v[0-9A-Za-z.+-]+$ ]]; then
+          if [[ -n "$TAG" ]] && ! [[ "$TAG" =~ ^v[0-9A-Za-z.+-]+$ ]]; then
             echo "::error::the tag must look like v1.2.3: $TAG"
             exit 1
           fi
@@ -199,6 +202,7 @@ jobs:
   release:
     name: GitHub Release
     needs: [prepare, linux, windows, macos]
+    if: needs.prepare.outputs.tag != ''
     runs-on: ubuntu-latest
     permissions:
       contents: write
