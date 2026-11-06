@@ -268,22 +268,8 @@ impl MapFile {
                 return Err(format!("{count} {what}"));
             }
         }
-        // A quick first look: the real work is counted as the land is shaped. Every height goes through each of
-        // these, and roads twice.
-        let lines = |n: usize| n as u64;
-        let features = terrain.waves.len() as u64
-            + terrain.hills.len() as u64
-            + terrain.calm.len() as u64
-            + spec.steps.len() as u64
-            + spec.zones.len() as u64
-            + spec.compounds.len() as u64
-            + spec.roads.iter().map(|r| lines(r.points.len()) * 2).sum::<u64>()
-            + spec.ditches.iter().map(|d| lines(d.points.len()) * 2).sum::<u64>()
-            + 1;
-        let points = (finest + 1) * (finest + 1);
-        if points.saturating_mul(features) > limits.max_terrain_work {
-            return Err(format!("ground of {points} points shaped by {features} things"));
-        }
+        // The work of shaping the land is not guessed at here: Relief counts it as it goes, looking only at what
+        // is near each point, and stops at max_terrain_work.
         let length = |points: &[glam::Vec2]| points.windows(2).map(|p| p[0].distance(p[1]) as f64).sum::<f64>();
         let mut trees = 0.0_f64;
         for wood in &spec.woods {
@@ -648,8 +634,7 @@ mod tests {
         assert!(MapData::built_in("town").unwrap().level().is_ok() && MapData::built_in("range").unwrap().level().is_ok(), "the real maps fit");
     }
 
-    /// Ground that every height of a fine grid must work out through thousands of roads is refused before it
-    /// is shaped, however small the file.
+    /// Ground that would take too much looking at to shape is refused, by the count kept as it is shaped.
     #[test]
     fn ground_shaped_by_too_much_is_refused() {
         let town = MapData::built_in("town").unwrap();
