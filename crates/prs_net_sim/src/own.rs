@@ -491,7 +491,7 @@ fn read_discrete(s: &mut Soldier, r: &mut Reader) -> Result<(), WireError> {
     s.treatment = if r.u8()? != 0 {
         Some(Treatment {
             care: if r.u8()? != 0 { Care::Medkit } else { Care::Bandage },
-            patient: r.varu32()? as usize,
+            patient: crate::read_soldier(r)?,
             left: r.f32()?,
             total: r.f32()?,
         })

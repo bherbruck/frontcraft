@@ -334,7 +334,7 @@ pub(crate) fn write(event: &SimEvent, w: &mut Writer) {
 pub(crate) fn read(r: &mut Reader) -> Result<SimEvent, WireError> {
     Ok(match r.u8()? {
         SHOT => SimEvent::ShotFired {
-            soldier: r.varu32()? as usize,
+            soldier: crate::read_soldier(r)?,
             origin: r.vec3()?,
             dir: r.vec3()?,
             weapon: WeaponId(r.u16()?),
@@ -342,18 +342,18 @@ pub(crate) fn read(r: &mut Reader) -> Result<SimEvent, WireError> {
         IMPACT => SimEvent::Impact { point: r.vec3()?, normal: r.vec3()?, surface: surface_from_u8(r.u8()?)? },
         TARGET => SimEvent::TargetHit { target: r.varu32()? as usize, point: r.vec3()?, headshot: r.u8()? != 0 },
         HIT => SimEvent::SoldierHit {
-            soldier: r.varu32()? as usize,
-            shooter: r.varu32()? as usize,
+            soldier: crate::read_soldier(r)?,
+            shooter: crate::read_soldier(r)?,
             zone: zone_from_u8(r.u8()?)?,
             point: r.vec3()?,
             damage: r.f32()?,
         },
-        HEALTH => SimEvent::Health { soldier: r.varu32()? as usize, event: health_from_u8(r.u8()?)? },
-        RESPAWNED => SimEvent::Respawned { soldier: r.varu32()? as usize },
+        HEALTH => SimEvent::Health { soldier: crate::read_soldier(r)?, event: health_from_u8(r.u8()?)? },
+        RESPAWNED => SimEvent::Respawned { soldier: crate::read_soldier(r)? },
         KIT_DROPPED => SimEvent::KitDropped { kit: r.varu32()?, pos: r.vec3()? },
         KIT_GONE => SimEvent::KitGone { kit: r.varu32()? },
         SEAT => {
-            let soldier = r.varu32()? as usize;
+            let soldier = crate::read_soldier(r)?;
             let event = match r.u8()? {
                 0 => SeatEvent::Entered { carrier: r.varu32()?, seat: r.u8()? },
                 1 => SeatEvent::Swapped { carrier: r.varu32()?, seat: r.u8()? },
@@ -382,7 +382,7 @@ pub(crate) fn read(r: &mut Reader) -> Result<SimEvent, WireError> {
             SimEvent::Vehicle { vehicle, event }
         }
         VEHICLE_HIT => {
-            let (vehicle, shooter) = (r.varu32()? as usize, r.varu32()? as usize);
+            let (vehicle, shooter) = (r.varu32()? as usize, crate::read_soldier(r)?);
             let zone = match r.u8()? {
                 0 => VehicleZone::Body,
                 1 => VehicleZone::Engine,
@@ -392,7 +392,7 @@ pub(crate) fn read(r: &mut Reader) -> Result<SimEvent, WireError> {
             SimEvent::VehicleHit { vehicle, shooter, zone, point: r.vec3()?, normal: r.vec3()? }
         }
         THROWN => SimEvent::ThrownReleased {
-            soldier: r.varu32()? as usize,
+            soldier: crate::read_soldier(r)?,
             id: r.varu32()?,
             kind: kind_from_u8(r.u8()?)?,
             origin: r.vec3()?,
@@ -401,8 +401,8 @@ pub(crate) fn read(r: &mut Reader) -> Result<SimEvent, WireError> {
         },
         BURST => SimEvent::ThrownBurst { id: r.varu32()?, kind: kind_from_u8(r.u8()?)?, point: r.vec3()? },
         BULLET_PASSED => SimEvent::BulletPassed {
-            soldier: r.varu32()? as usize,
-            shooter: r.varu32()? as usize,
+            soldier: crate::read_soldier(r)?,
+            shooter: crate::read_soldier(r)?,
             point: r.vec3()?,
             weapon: WeaponId(r.u16()?),
             distance: r.f32()?,
@@ -412,7 +412,7 @@ pub(crate) fn read(r: &mut Reader) -> Result<SimEvent, WireError> {
         HELI => SimEvent::Heli { heli: r.varu32()? as usize, event: read_heli_event(r)? },
         HELI_HIT => SimEvent::HeliHit {
             heli: r.varu32()? as usize,
-            shooter: r.varu32()? as usize,
+            shooter: crate::read_soldier(r)?,
             zone: match r.u8()? {
                 0 => HeliZone::Engine,
                 1 => HeliZone::TailRotor,

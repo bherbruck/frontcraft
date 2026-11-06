@@ -48,11 +48,17 @@ impl SimClient {
         std::mem::take(&mut self.match_changed).then_some(self.match_state.as_ref()).flatten()
     }
 
-    fn grow_to(&mut self, id: SoldierId) {
+    /// Makes room for soldier `id` and everyone before it, unless that is past the limit. Whether it is there.
+    fn grow_to(&mut self, id: SoldierId) -> bool {
+        // What reads the wire already refuses these. This is for anything that gets past it.
+        if id >= crate::limits().max_soldiers {
+            return false;
+        }
         while self.sim.soldiers.len() <= id {
             let new = self.sim.spawn_soldier(0);
             self.sim.soldiers[new].present = false;
         }
+        true
     }
 }
 
@@ -117,7 +123,11 @@ impl PredictedGame for SimClient {
 
     fn join(&mut self, welcome: &Welcome<SimSchema>) {
         self.local = welcome.soldier as SoldierId;
-        self.grow_to(self.local);
+        if !self.grow_to(self.local) {
+            // Nowhere to be. The server is broken, and it gets a player who stands in the first place.
+            self.local = 0;
+            self.grow_to(0);
+        }
         rides::apply_own(&mut self.sim, self.local, &welcome.own);
         // The server holds them still until the first command comes, which is the one about to go.
         self.sim.soldiers[self.local].present = self.deploys_itself;
@@ -210,6 +220,7 @@ impl PredictedGame for SimClient {
             .iter()
             .filter(|(_, pose)| matches!(pose, AnyPose::Soldier(_)))
             .map(|(key, _)| *key as SoldierId)
+            .filter(|&id| id < crate::limits().max_soldiers)
             .max();
         if let Some(most) = most {
             self.grow_to(most);
@@ -248,5 +259,21 @@ impl PredictedGame for SimClient {
                 sim.place_seated(id);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_soldier_number_makes_room_past_the_limit() {
+        let mut client = SimClient::setup("range", "practice").expect("range");
+        let past = crate::limits().max_soldiers;
+        assert!(!client.grow_to(past));
+        assert!(!client.grow_to(SoldierId::MAX));
+        assert!(client.sim.soldiers.len() < past);
+        assert!(client.grow_to(past - 1));
+        assert_eq!(client.sim.soldiers.len(), past);
     }
 }

@@ -634,7 +634,8 @@ The server runs the same `prs_sim`, with no Bevy, and is the only copy that coun
 
 A client and a server must have the same rules and map, and one that differs is refused (`rules_hash`).
 Limits on what a client may ask are in `CmdLimits`, and tuning is in `ServerConfig`, `SimServerConfig`
-and `ClientConfig`.
+and `ClientConfig`. A client refuses any soldier number from a server at or past `NetLimits::max_soldiers`
+(512, `net_limits` in a mod), so a broken or hostile server cannot make it set aside room for millions.
 
 ### Voice
 

@@ -31,6 +31,37 @@ use prs_sim::{Sim, SimEvent};
 use remote::RemotePose;
 use rides::{HeliPose, OwnState, VehiclePose};
 
+/// Limits on what a client takes from a server. A server is trusted with the game, but not with how much
+/// memory a player's machine gives it: one that is broken or hostile could name any soldier at all.
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct NetLimits {
+    /// Soldier numbers at or above this are refused, and the client never makes room for more. Well above
+    /// the most players and bots a server runs. A mod changes it under `net_limits`.
+    pub max_soldiers: usize,
+}
+
+impl Default for NetLimits {
+    fn default() -> Self {
+        Self { max_soldiers: 512 }
+    }
+}
+
+/// The limits for this run, from the active mod. Read once, the first time they are needed.
+pub fn limits() -> NetLimits {
+    static LIMITS: std::sync::OnceLock<NetLimits> = std::sync::OnceLock::new();
+    *LIMITS.get_or_init(|| prs_sim::prs_mods::tuned("net_limits", NetLimits::default()))
+}
+
+/// A soldier's number off the wire, refused if it is past what any server should have.
+pub(crate) fn read_soldier(r: &mut Reader) -> Result<prs_sim::SoldierId, WireError> {
+    let id = r.varu()?;
+    if id >= limits().max_soldiers as u64 {
+        return Err(WireError::TooMany);
+    }
+    Ok(id as prs_sim::SoldierId)
+}
+
 pub const KIND_SOLDIER: u8 = 0;
 pub const KIND_VEHICLE: u8 = 1;
 pub const KIND_HELI: u8 = 2;

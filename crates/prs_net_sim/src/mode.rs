@@ -75,7 +75,7 @@ fn write_player(p: &PlayerState, w: &mut Writer) {
 }
 
 fn read_player(r: &mut Reader) -> Result<PlayerState, WireError> {
-    let soldier = r.varu()? as usize;
+    let soldier = crate::read_soldier(r)?;
     let team = r.u8()?;
     let squad = read_option(r)?.map(|v| v as u32);
     let kit = r.varu()? as usize;
@@ -125,10 +125,10 @@ fn write_squad(s: &Squad, w: &mut Writer) {
 }
 
 fn read_squad(r: &mut Reader) -> Result<Squad, WireError> {
-    let (id, team, leader) = (r.varu32()?, r.u8()?, r.varu()? as usize);
+    let (id, team, leader) = (r.varu32()?, r.u8()?, crate::read_soldier(r)?);
     let mut members = Vec::new();
     for _ in 0..r.count(MAX_ITEMS)? {
-        members.push(r.varu()? as usize);
+        members.push(crate::read_soldier(r)?);
     }
     let rally = if r.u8()? != 0 {
         Some(Rally {
@@ -369,11 +369,11 @@ fn read_mode_event(r: &mut Reader) -> Result<ModeEvent, WireError> {
         1 => ModeEvent::RoundEnded { winner: r.varu32()?.checked_sub(1).map(|team| team as u8) },
         2 => ModeEvent::PointNeutralised { point: r.varu32()? as usize, by: r.u8()? },
         3 => ModeEvent::PointCaptured { point: r.varu32()? as usize, team: r.u8()? },
-        4 => ModeEvent::Deployed { soldier: r.varu32()? as usize },
-        5 => ModeEvent::TeamKill { killer: r.varu32()? as usize, victim: r.varu32()? as usize },
+        4 => ModeEvent::Deployed { soldier: crate::read_soldier(r)? },
+        5 => ModeEvent::TeamKill { killer: crate::read_soldier(r)?, victim: crate::read_soldier(r)? },
         6 => ModeEvent::RallyPlaced { squad: r.varu32()? },
         7 => ModeEvent::RallyLost { squad: r.varu32()?, why: *RALLY_LOSSES.get(r.u8()? as usize).ok_or(WireError::BadTag)? },
-        8 => ModeEvent::Refused { soldier: r.varu32()? as usize, why: *REFUSALS.get(r.u8()? as usize).ok_or(WireError::BadTag)? },
+        8 => ModeEvent::Refused { soldier: crate::read_soldier(r)?, why: *REFUSALS.get(r.u8()? as usize).ok_or(WireError::BadTag)? },
         _ => return Err(WireError::BadTag),
     })
 }
@@ -425,6 +425,38 @@ mod tests {
         let mut w = Writer::default();
         write_state(&state, &mut w);
         assert_eq!(read_state(&mut Reader::new(&w.buf)), Ok(state));
+    }
+
+    /// A server could name any soldier at all, and a client would make room for every one up to it.
+    #[test]
+    fn a_soldier_past_the_limit_is_refused_wherever_it_is_named() {
+        let past = crate::limits().max_soldiers;
+        let refused = |state: MatchState| {
+            let mut w = Writer::default();
+            write_state(&state, &mut w);
+            read_state(&mut Reader::new(&w.buf))
+        };
+        let mut player = state();
+        player.players[0].soldier = past;
+        assert_eq!(refused(player), Err(WireError::TooMany));
+        let mut member = state();
+        member.squads[0].members.push(usize::MAX);
+        assert_eq!(refused(member), Err(WireError::TooMany));
+        let mut leader = state();
+        leader.squads[0].leader = past;
+        assert_eq!(refused(leader), Err(WireError::TooMany));
+        let mut fine = state();
+        fine.players[0].soldier = past - 1;
+        assert!(refused(fine).is_ok());
+
+        for event in [
+            WireEvent::Mode(ModeEvent::Deployed { soldier: past }),
+            WireEvent::Sim(prs_sim::SimEvent::Respawned { soldier: past }),
+        ] {
+            let mut w = Writer::default();
+            write_event(&event, &mut w);
+            assert_eq!(read_event(&mut Reader::new(&w.buf)), Err(WireError::TooMany), "{event:?}");
+        }
     }
 
     #[test]

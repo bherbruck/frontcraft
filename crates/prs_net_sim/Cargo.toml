@@ -10,6 +10,7 @@ prs_sim.workspace = true
 prs_net.workspace = true
 prs_mode.workspace = true
 prs_ai.workspace = true
+serde.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen.workspace = true

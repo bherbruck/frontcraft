@@ -4860,6 +4860,7 @@ dependencies = [
  "prs_mode",
  "prs_net",
  "prs_sim",
+ "serde",
  "wasm-bindgen",
 ]
 
