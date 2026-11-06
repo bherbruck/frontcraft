@@ -331,12 +331,14 @@ fn report(bench: &Bench, sim: &SimResource, stored: u64, detail: prs_scene::Deta
         ));
     }
     let line = format!(
-        "BENCH {{\"map_size\":{},\"peak_stored_triangles\":{stored},\"detail\":{{\"built\":{},\"dropped\":{},\"first_fill_ms\":{:.1},\"worst_frame_ms\":{:.2}}},\"terrain_triangles\":{},\"solids\":{},\"trees\":{},\"load_s\":{:.2},{}}}",
+        "BENCH {{\"map_size\":{},\"peak_stored_triangles\":{stored},\"detail\":{{\"built\":{},\"dropped\":{},\"first_fill_ms\":{:.1},\"worst_frame_ms\":{:.2},\"worst_box_ms\":{:.2},\"worst_mesh_ms\":{:.2}}},\"terrain_triangles\":{},\"solids\":{},\"trees\":{},\"load_s\":{:.2},{}}}",
         level.terrain.size,
         detail.built,
         detail.dropped,
         detail.first_fill_ms,
         detail.worst_frame_ms,
+        detail.worst_box_ms,
+        detail.worst_mesh_ms,
         level.terrain.indices.len(),
         level.solids.len(),
         level.trees.len(),

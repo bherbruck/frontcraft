@@ -256,7 +256,7 @@ pub(crate) struct FullParts {
     solids: HashMap<Key, Vec<u32>>,
     trees: HashMap<Key, Vec<u32>>,
     places: HashMap<Key, (Vec3, usize)>,
-    openings: Vec<Vec<crate::bake::Opening>>,
+    rooms: crate::bake::RoomCache,
     pub(crate) material: Handle<StandardMaterial>,
 }
 
@@ -269,6 +269,10 @@ pub(crate) struct Resident {
     /// A chunk part way through being built, so that no frame spends much more than its budget.
     pending: Option<Pending>,
     filled: bool,
+    /// What one box or tree, and one triangle of making a mesh, have lately cost, in milliseconds: a
+    /// step only starts if it should end within the budget.
+    step_ms: f32,
+    mesh_ms_per_triangle: f32,
 }
 
 struct Pending {
@@ -329,8 +333,11 @@ pub struct DetailStats {
     /// Chunks built and dropped so far.
     pub built: u32,
     pub dropped: u32,
-    /// The most milliseconds one frame spent building, after the first fill.
+    /// The most milliseconds one frame spent building, after the first fill, and the most one box or
+    /// tree, and one mesh, took.
     pub worst_frame_ms: f32,
+    pub worst_box_ms: f32,
+    pub worst_mesh_ms: f32,
     /// How long the first fill after loading took.
     pub first_fill_ms: f32,
 }
@@ -387,10 +394,17 @@ pub(crate) fn build_near(
     // Nearest last, to pop.
     wanted.sort_by(|a, b| b.0.total_cmp(&a.0));
     let level = &sim.0.level;
-    let light = RoomLight::with_openings(level, atmosphere.bake, &parts.openings);
+    let light = RoomLight::with_cache(level, atmosphere.bake, &parts.rooms);
     let started = Instant::now();
     let budget = detail.build_ms_per_frame.max(0.0);
-    let over_budget = |filled: bool| filled && started.elapsed().as_secs_f32() * 1000.0 >= budget;
+    let filled = resident.filled;
+    let elapsed = || started.elapsed().as_secs_f32() * 1000.0;
+    // Something is always done in a frame, so building moves on however tight the budget.
+    let mut done_any = false;
+    // Steps are judged at half again their recent worst, for what is not timed between them.
+    let fits = |cost: f32, done_any: bool| !filled || !done_any || elapsed() + cost * 1.5 <= budget;
+    // Lately seen costs, decaying slowly so one slow step does not stall building for long.
+    let (mut step_ms, mut mesh_ms) = (resident.step_ms, resident.mesh_ms_per_triangle);
     let none: &[u32] = &[];
     loop {
         let mut pending = match resident.pending.take() {
@@ -412,9 +426,10 @@ pub(crate) fn build_near(
         let trees = parts.trees.get(&pending.key).map_or(none, |v| v.as_slice());
         // One box or tree at a time, looking at the clock between them.
         while pending.next_solid < solids.len() || pending.next_tree < trees.len() {
-            if over_budget(resident.filled) {
+            if !fits(step_ms, done_any) {
                 break;
             }
+            let step_started = elapsed();
             if let Some(&i) = solids.get(pending.next_solid) {
                 let solid = &level.solids[i as usize];
                 statics::add_solid(&mut pending.solids[cell_of(pending.key, solid.center)], solid, &light);
@@ -426,6 +441,12 @@ pub(crate) fn build_near(
                 statics::add_canopy(cell, tree, &light);
                 pending.next_tree += 1;
             }
+            let took = elapsed() - step_started;
+            step_ms = took.max(step_ms * 0.98);
+            if filled {
+                stats.worst_box_ms = stats.worst_box_ms.max(took);
+            }
+            done_any = true;
         }
         if pending.next_solid < solids.len() || pending.next_tree < trees.len() {
             resident.pending = Some(pending);
@@ -444,6 +465,13 @@ pub(crate) fn build_near(
         let mut stopped = false;
         while let Some((group, role)) = pending.to_spawn.as_mut().and_then(Vec::pop) {
             let cells = if role == Role::SolidsFull { &mut pending.solids } else { &mut pending.trees };
+            let triangles: usize = group.iter().map(|&c| cells[c].indices.len() / 3).sum();
+            if !fits(triangles as f32 * mesh_ms, done_any) {
+                pending.to_spawn.as_mut().expect("being spawned").push((group, role));
+                stopped = true;
+                break;
+            }
+            let step_started = elapsed();
             let mut batch = Batch::default();
             for c in group {
                 append(&mut batch, std::mem::take(&mut cells[c]));
@@ -457,10 +485,12 @@ pub(crate) fn build_near(
             let piece = Piece { role, middle, chunk: pending.key, block };
             let triangles = crate::Triangles(batch.indices.len() as u32 / 3);
             pending.entities.push(commands.spawn((Mesh3d(meshes.add(batch.mesh())), MeshMaterial3d(parts.material.clone()), triangles, piece, Visibility::Hidden)).id());
-            if over_budget(resident.filled) {
-                stopped = true;
-                break;
+            let took = elapsed() - step_started;
+            mesh_ms = (took / triangles.0.max(1) as f32).max(mesh_ms * 0.98);
+            if filled {
+                stats.worst_mesh_ms = stats.worst_mesh_ms.max(took);
             }
+            done_any = true;
         }
         if stopped && pending.to_spawn.as_ref().is_some_and(|left| !left.is_empty()) {
             resident.pending = Some(pending);
@@ -468,10 +498,11 @@ pub(crate) fn build_near(
         }
         resident.chunks.insert(pending.key, (pending.entities, false));
         stats.built += 1;
-        if over_budget(resident.filled) {
+        if filled && elapsed() >= budget {
             break;
         }
     }
+    (resident.step_ms, resident.mesh_ms_per_triangle) = (step_ms, mesh_ms);
     let spent = started.elapsed().as_secs_f32() * 1000.0;
     if resident.filled {
         stats.worst_frame_ms = stats.worst_frame_ms.max(spent);
@@ -579,7 +610,7 @@ pub(crate) fn detailed_meshes(level: &Level, detail: &Detail) -> Detailed {
             piece.middle = middles[piece.block];
         }
     }
-    let parts = FullParts { solids: solid_parts, trees: tree_parts, places, openings: RoomLight::openings(level), material: Handle::default() };
+    let parts = FullParts { solids: solid_parts, trees: tree_parts, places, rooms: RoomLight::cache(level), material: Handle::default() };
     Detailed { terrain, solids, water, parts, blocks: Blocks { middles, radius: block * std::f32::consts::FRAC_1_SQRT_2 } }
 }
 

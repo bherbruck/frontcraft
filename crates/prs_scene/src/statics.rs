@@ -288,11 +288,13 @@ pub(crate) fn grain(at: Vec3) -> f32 {
 
 /// The nearest building's ground floor, if this box is part of one: its colour varies from house to
 /// house rather than from one wall panel to the next.
-fn home_room<'a>(solid: &Solid, rooms: &'a [Room]) -> Option<&'a Room> {
+fn home_room<'a>(solid: &Solid, light: &RoomLight<'a>) -> Option<&'a Room> {
     let flat = |p: Vec3| Vec2::new(p.x, p.z);
-    rooms
-        .iter()
-        .map(|room| (room, flat(room.center).distance_squared(flat(solid.center))))
+    let rooms = light.rooms();
+    light
+        .rooms_near(solid.center, BUILDING_REACH)
+        .into_iter()
+        .map(|i| (&rooms[i], flat(rooms[i].center).distance_squared(flat(solid.center))))
         .filter(|(_, d)| *d < BUILDING_REACH * BUILDING_REACH)
         .min_by(|a, b| a.1.total_cmp(&b.1).then(a.0.center.y.total_cmp(&b.0.center.y)))
         .map(|(room, _)| room)
@@ -300,7 +302,7 @@ fn home_room<'a>(solid: &Solid, rooms: &'a [Room]) -> Option<&'a Room> {
 
 pub(crate) fn add_solid(batch: &mut Batch, solid: &Solid, light: &RoomLight) {
     let (color, vary) = palette(solid.paint);
-    let home = home_room(solid, light.rooms());
+    let home = home_room(solid, light);
     let tone = home.map_or(solid.center, |room| Vec3::new(room.center.x, 0.0, room.center.z));
     let color = color * (1.0 - vary + grain(tone) * vary * 2.0);
     let floor = home.map_or(solid.center.y - solid.half.y, |room| room.center.y - room.half.y);

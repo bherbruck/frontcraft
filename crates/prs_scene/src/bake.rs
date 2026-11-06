@@ -23,27 +23,76 @@ pub(crate) struct Opening {
     area: f32,
 }
 
+/// Side of a square of the grid that finds the rooms near a point, in metres.
+const ROOM_CELL: f32 = 16.0;
+
+/// What lighting the boxes of a level needs worked out once: each room's openings to outside, and a grid
+/// of which rooms are near each place, so a box looks at a handful of rooms rather than all of them.
+#[derive(Default)]
+pub(crate) struct RoomCache {
+    openings: Vec<Vec<Opening>>,
+    cells: std::collections::HashMap<(i32, i32), Vec<u32>>,
+}
+
 /// The rooms of a level with the openings to outside that light them.
 pub(crate) struct RoomLight<'a> {
     rooms: &'a [Room],
-    openings: std::borrow::Cow<'a, [Vec<Opening>]>,
+    cache: std::borrow::Cow<'a, RoomCache>,
     bake: Bake,
+}
+
+impl Clone for RoomCache {
+    fn clone(&self) -> Self {
+        Self { openings: self.openings.clone(), cells: self.cells.clone() }
+    }
+}
+
+fn room_cell(x: f32, z: f32) -> (i32, i32) {
+    ((x / ROOM_CELL).floor() as i32, (z / ROOM_CELL).floor() as i32)
 }
 
 impl<'a> RoomLight<'a> {
     #[cfg(test)]
     pub fn new(level: &'a Level, bake: Bake) -> Self {
-        Self { rooms: &level.rooms, openings: std::borrow::Cow::Owned(Self::openings(level)), bake }
+        Self { rooms: &level.rooms, cache: std::borrow::Cow::Owned(Self::cache(level)), bake }
     }
 
-    /// With openings worked out before by [`RoomLight::openings`], which is the slow part, so that pieces
-    /// of a level can be lit one at a time as they are needed.
-    pub fn with_openings(level: &'a Level, bake: Bake, openings: &'a [Vec<Opening>]) -> Self {
-        Self { rooms: &level.rooms, openings: std::borrow::Cow::Borrowed(openings), bake }
+    /// With what [`RoomLight::cache`] worked out before, which is the slow part, so that pieces of a
+    /// level can be lit one at a time as they are needed.
+    pub fn with_cache(level: &'a Level, bake: Bake, cache: &'a RoomCache) -> Self {
+        Self { rooms: &level.rooms, cache: std::borrow::Cow::Borrowed(cache), bake }
+    }
+
+    pub fn cache(level: &Level) -> RoomCache {
+        let mut cells: std::collections::HashMap<(i32, i32), Vec<u32>> = std::collections::HashMap::new();
+        for (i, room) in level.rooms.iter().enumerate() {
+            let reach = Vec2::new(room.half.x, room.half.z).length();
+            let (lo, hi) = (room_cell(room.center.x - reach, room.center.z - reach), room_cell(room.center.x + reach, room.center.z + reach));
+            for x in lo.0..=hi.0 {
+                for z in lo.1..=hi.1 {
+                    cells.entry((x, z)).or_default().push(i as u32);
+                }
+            }
+        }
+        RoomCache { openings: Self::openings(level), cells }
+    }
+
+    /// Rooms that may come within `reach` of `p` across the ground, in the order of the level's list.
+    pub fn rooms_near(&self, p: Vec3, reach: f32) -> Vec<usize> {
+        let (lo, hi) = (room_cell(p.x - reach, p.z - reach), room_cell(p.x + reach, p.z + reach));
+        let mut found: Vec<usize> = Vec::new();
+        for x in lo.0..=hi.0 {
+            for z in lo.1..=hi.1 {
+                found.extend(self.cache.cells.get(&(x, z)).into_iter().flatten().map(|&i| i as usize));
+            }
+        }
+        found.sort_unstable();
+        found.dedup();
+        found
     }
 
     /// The openings to outside in each room's outer walls.
-    pub fn openings(level: &Level) -> Vec<Vec<Opening>> {
+    fn openings(level: &Level) -> Vec<Vec<Opening>> {
         let doors = level.doorways.iter().map(|d| Opening { at: d.at + Vec3::Y * DOOR_HEIGHT * 0.5, outward: d.outward, area: d.width * DOOR_HEIGHT });
         let windows = level.windows.iter().map(|w| Opening { at: w.at, outward: w.outward, area: w.width * w.height });
         let all: Vec<Opening> = doors.chain(windows).collect();
@@ -68,7 +117,7 @@ impl<'a> RoomLight<'a> {
 
     /// The same bake with no rooms in it, for things that stand outside whatever is nearby.
     pub fn outdoors(other: &RoomLight<'a>) -> Self {
-        Self { rooms: &[], openings: std::borrow::Cow::Owned(Vec::new()), bake: other.bake }
+        Self { rooms: &[], cache: std::borrow::Cow::Owned(RoomCache::default()), bake: other.bake }
     }
 
     pub fn bake(&self) -> &Bake {
@@ -81,13 +130,14 @@ impl<'a> RoomLight<'a> {
 
     /// The room this bit of surface faces into, if any.
     pub fn room_facing(&self, at: Vec3, normal: Vec3) -> Option<usize> {
-        self.rooms.iter().position(|room| room.contains(at + normal * 0.1))
+        let p = at + normal * 0.1;
+        self.rooms_near(p, 0.0).into_iter().find(|&i| self.rooms[i].contains(p))
     }
 
     /// What to multiply a surface's colour by at this point, in this room.
     pub fn at(&self, room: usize, p: Vec3, normal: Vec3) -> Vec3 {
         let mut seen = 0.0;
-        for opening in &self.openings[room] {
+        for opening in &self.cache.openings[room] {
             let to = opening.at - p;
             let d2 = to.length_squared().max(1e-4);
             let along = to / d2.sqrt();
@@ -184,7 +234,7 @@ mod tests {
         level.doorways.clear();
         level.doorways.push(prs_level::Doorway { at: Vec3::new(0.0, 0.0, 0.0), outward: Vec3::X, width: 1.2 });
         let light = RoomLight::new(&level, Bake::default());
-        assert!(light.openings[0].is_empty());
+        assert!(light.cache.openings[0].is_empty());
     }
 
     #[test]
