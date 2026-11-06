@@ -4,6 +4,7 @@
 #   macOS aarch64    .app in a .dmg, signed ad hoc only         scripts/package_macos.sh
 #   Linux x86_64     .tar.gz with launch scripts                scripts/package_linux.sh
 #
+# Tests run in ci.yml, not here, so a release takes as long as its slowest build.
 # Every package carries LICENSE-MIT, LICENSE-APACHE and THIRD_PARTY_LICENSES.html (cargo-about).
 # Each file is attached twice: FrontCraft-<version>-... and a name without the version (FrontCraft-windows.msi,
 # FrontCraft-macos.dmg, FrontCraft-linux.tar.gz), so releases/latest/download/<name> links, which the page uses,
@@ -22,7 +23,7 @@ on:
         description: Tag to publish the release under (made on this commit if it does not exist)
         required: true
       version:
-        description: Installer version major.minor.build (default the workspace's major.minor and today as yyddd)
+        description: Installer version major.minor.build (default the tag's if it is v1.2.3, else the workspace's major.minor and today as yyddd)
         required: false
 
 permissions:
@@ -55,6 +56,8 @@ jobs:
           TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           workspace=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
+          # A tag v1.2.3 is the version itself; any other tag takes the workspace's major.minor and today.
+          if [[ -z "$REQUESTED" && "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then REQUESTED="${BASH_REMATCH[1]}"; fi
           version="${REQUESTED:-$(cut -d. -f1-2 <<<"$workspace").$(date -u +%y%j | sed 's/^0*//')}"
           if ! [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] || ((BASH_REMATCH[1] > 255 || BASH_REMATCH[2] > 255 || BASH_REMATCH[3] > 65535)); then
             echo "::error::version must be major.minor.build, major and minor under 256, build under 65536: $version"
@@ -76,19 +79,6 @@ jobs:
           name: notices
           path: notices
           if-no-files-found: error
-
-  test:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@stable
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          workspaces: ". -> bin"
-          key: test-linux
-          cache-on-failure: true
-      - run: cargo test --workspace --locked
 
   linux:
     name: Linux x86_64
@@ -203,7 +193,7 @@ jobs:
 
   release:
     name: GitHub Release
-    needs: [prepare, test, linux, windows, macos]
+    needs: [prepare, linux, windows, macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write

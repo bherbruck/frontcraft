@@ -1,0 +1,38 @@
+# Workspace tests on every push to main and every pull request. Kept apart from release.yml so a release never
+# waits for them. Only main saves the build cache; pull requests restore it.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["web/**", "scripts/**", "**/*.md", ".github/workflows/release.yml"]
+  pull_request:
+    branches: [main]
+    paths-ignore: ["web/**", "scripts/**", "**/*.md", ".github/workflows/release.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: ". -> bin"
+          key: test-linux
+          cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo test --workspace --locked
