@@ -239,6 +239,20 @@ mod tests {
     use super::*;
     use prs_sim::Level;
 
+    /// What a client takes from a server is up to the player, so a mod can change it.
+    #[test]
+    fn a_mod_can_set_the_net_limits() {
+        let found = prs_sim::prs_mods::Mod::parse(
+            "limits",
+            "[net_limits]\nmax_soldiers = 64\nmax_map_bytes = 1000000\nmap_fetch_seconds = 5.0\n[net_limits.map]\nmax_trees = 10\n",
+        )
+        .unwrap();
+        let limits = found.over("net_limits", NetLimits::default()).unwrap();
+        assert_eq!((limits.max_soldiers, limits.max_map_bytes, limits.map_fetch_seconds), (64, 1_000_000, 5.0));
+        assert_eq!(limits.map.max_trees, 10);
+        assert_eq!(limits.map.max_cells, prs_sim::MapLimits::default().max_cells, "and the rest as they were");
+    }
+
     #[test]
     fn rounding_in_the_map_is_not_a_different_map_but_tuning_or_another_map_is() {
         let base = Sim::new(Level::named("range").unwrap());

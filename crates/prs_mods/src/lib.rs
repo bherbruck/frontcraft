@@ -18,7 +18,8 @@ use std::sync::OnceLock;
 /// server never looks at `audio`, and a client must not think `wepons` was fine.
 pub const SECTIONS: &[&str] = &[
     "weapons", "movement", "health", "suppression", "inventory", "body", "vehicles", "helicopter", "vehicle_ride",
-    "world", "mode", "ai", "atmosphere", "audio", "view", "team_looks",
+    "world", "mode", "ai", "atmosphere", "audio", "view", "team_looks", "hud", "name_tags", "voice", "net_limits",
+    "server_names", "server_voice",
 ];
 
 /// Everything that can be wrong with a mod, always saying where.

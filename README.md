@@ -598,7 +598,9 @@ path and what you probably meant. The sections are `weapons` (`m4`, `m249`, `m14
 `suppression`, `inventory`, `body`, `vehicles` (`truck`, `armoured_car`), `helicopter`, `vehicle_ride`, `world`,
 `mode` (`aas`, `tdm`, `practice`), `ai` (`troops`, `walkers`), `atmosphere`, `audio`, `view` (`camera`,
 `suppression`) and `team_looks` (by side, `0` and `1`: uniforms, armbands and banners, as in
-`team_looks.1.armband = [1.0, 0.5, 0.0]`). The names of the settings are the fields of those types, which are all in the crates' config files.
+`team_looks.1.armband = [1.0, 0.5, 0.0]`), `hud`, `name_tags`, `voice`, `net_limits` (what a client takes from a server:
+`max_soldiers`, `max_map_bytes`, `map_fetch_seconds` and `map`, the most a map may build), and for a server
+`server_names` and `server_voice`. The names of the settings are the fields of those types, which are all in the crates' config files.
 
 The server's mod is part of the rules. A client running anything else is refused and told which mod the server
 runs. `atmosphere`, `audio`, `view` and `team_looks` are the client's own and do not count. There are three examples in `mods/`:
