@@ -23,7 +23,8 @@ pub struct Propagation {
     pub air_db_per_km: [f32; BANDS],
     /// The pitch whose loss is the volume, low so that what comes through is heard at its weight, in Hz.
     pub gain_hz: f32,
-    /// Where the top end is cut: the pitch at which a sound has lost this much more than at `gain_hz`.
+    /// Where the top end is cut: the pitch at which a sound has lost this much more than at `gain_hz`. More
+    /// than the 3 dB a cut is defined at, as the filter falls far faster above it than these losses rise.
     pub cutoff_excess_db: f32,
     /// The cut is never lower than the first, and above the second there is nothing to cut.
     pub cutoff_range_hz: (f32, f32),
@@ -53,6 +54,13 @@ pub struct Propagation {
     pub top_step: f32,
     /// Most rays for one sound, after which what is left of the way counts as open.
     pub rays: usize,
+    /// Ways round the side, in a town down a street or round a corner: how far off the straight line, each
+    /// side, at its middle, in metres, and the most rays each may take before it is given up as too costly.
+    pub around_offsets: Vec<f32>,
+    pub around_rays: usize,
+    /// However much is in the way, two places out of doors never lose more than this at 125 Hz, nor more
+    /// than `cap_db_per_octave` more each octave up: in a town some of a sound always finds its way round.
+    pub outdoor_cap_db: f32,
 
     /// Loss through one wall at 125 Hz, how much more each octave up, and the most, in dB. This is the
     /// mass law, which is why only the lows get through.
@@ -82,7 +90,7 @@ impl Default for Propagation {
             bands_hz: [125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0],
             air_db_per_km: [0.4, 1.0, 2.8, 5.0, 9.0, 23.0, 78.0],
             gain_hz: 125.0,
-            cutoff_excess_db: 3.0,
+            cutoff_excess_db: 8.0,
             cutoff_range_hz: (180.0, 16_000.0),
             speed_of_sound: 343.0,
             edge_strength: 0.7,
@@ -97,6 +105,9 @@ impl Default for Propagation {
             land_looks: 64,
             top_step: 0.6,
             rays: 160,
+            around_offsets: vec![8.0, 20.0, 40.0],
+            around_rays: 80,
+            outdoor_cap_db: 10.0,
             wall_db_at_125: 22.0,
             wall_db_per_octave: 5.0,
             wall_cap_db: 45.0,
@@ -248,6 +259,45 @@ impl Propagation {
             previous = (hz, l);
         }
         Heard { gain, cutoff_hz: cutoff.max(lowest) }
+    }
+
+    /// The loss between two places out of doors, beyond what the air takes: over the top, or round the
+    /// side if that is better, added as sound adds, and never past `outdoor_cap_db`.
+    fn outdoor_loss(&self, ground: &impl Ground, a: Vec3, b: Vec3, rays: &mut usize) -> Bands {
+        let mut edges = Vec::new();
+        self.outdoor_edges(ground, a, b, rays, &mut edges);
+        let over = self.edges_loss(&edges);
+        let cap = self.bands_hz.map(|hz| self.outdoor_cap_db + self.octaves(hz) * self.cap_db_per_octave);
+        if over[0] < 1.0 {
+            return std::array::from_fn(|band| over[band].min(cap[band]));
+        }
+        let mut ways = vec![over];
+        let straight = a.distance(b);
+        let middle = (a + b) * 0.5;
+        let side = (b - a).cross(Vec3::Y).normalize_or(Vec3::X);
+        for &offset in &self.around_offsets {
+            for turn in [side * offset, -side * offset] {
+                let at = middle + turn;
+                let at = Vec3::new(at.x, ground.land(at.x, at.z).map_or(at.y, |land| at.y.max(land + 1.6)), at.z);
+                let mut spent = 0;
+                let mut legs = Vec::new();
+                self.outdoor_edges(ground, a, at, &mut spent, &mut legs);
+                self.outdoor_edges(ground, at, b, &mut spent, &mut legs);
+                // Only a way that really goes round counts: one still over the same top is the same way.
+                let round = self.edges_loss(&legs);
+                if spent >= self.around_rays || round[0] > over[0] - 3.0 {
+                    continue;
+                }
+                *rays += spent;
+                let longer = a.distance(at) + at.distance(b) - straight;
+                legs.push(Edge { longer, rise: offset, minor: false });
+                let bent = self.edges_loss(&legs);
+                let air = self.air(longer);
+                ways.push(std::array::from_fn(|band| bent[band] + air[band]));
+            }
+        }
+        // The best way, not their sum: ways round on either side are much the same way.
+        std::array::from_fn(|band| ways.iter().map(|way| way[band]).fold(f32::MAX, f32::min).max(0.0).min(cap[band]))
     }
 
     /// What lies between `a` and `b` out of doors: the corners of a band stretched over the ground and
@@ -520,10 +570,8 @@ pub fn loss(cfg: &Propagation, spaces: &Spaces, ground: &impl Ground, source: Ve
         if here.is_some() {
             return air;
         }
-        let mut edges = Vec::new();
-        cfg.outdoor_edges(ground, source, ear, &mut rays, &mut edges);
-        let over = cfg.edges_loss(&edges);
-        return std::array::from_fn(|band| over[band] + air[band]);
+        let out = cfg.outdoor_loss(ground, source, ear, &mut rays);
+        return std::array::from_fn(|band| out[band] + air[band]);
     }
 
     // Through the walls between.
@@ -692,6 +740,50 @@ mod tests {
         }
     }
 
+    /// A wall `high` metres tall at x = 50, standing from z = -5 to 5 on flat ground.
+    struct Wall {
+        high: f32,
+    }
+
+    impl Ground for Wall {
+        fn ray(&self, origin: Vec3, dir: Vec3, max_distance: f32) -> Option<f32> {
+            let mut t = 0.0;
+            while t <= max_distance {
+                let p = origin + dir * t;
+                if p.y <= 0.0 || ((p.x - 50.0).abs() < 0.3 && p.z.abs() < 5.0 && p.y <= self.high) {
+                    return Some(t);
+                }
+                t += 0.05;
+            }
+            None
+        }
+
+        fn land(&self, _x: f32, _z: f32) -> Option<f32> {
+            Some(0.0)
+        }
+    }
+
+    #[test]
+    fn round_the_end_of_a_tall_wall_is_better_than_over_it() {
+        let cfg = Propagation::default();
+        let (a, b) = (Vec3::new(0.0, 1.6, 0.0), Vec3::new(100.0, 1.6, 0.0));
+        let wall = Wall { high: 14.0 };
+        let mut edges = Vec::new();
+        cfg.outdoor_edges(&wall, a, b, &mut 0, &mut edges);
+        let over = cfg.edges_loss(&edges);
+        let either = cfg.outdoor_loss(&wall, a, b, &mut 0);
+        assert!(either[0] < over[0] - 0.5, "round {either:?}, over {over:?}");
+        let none = Propagation { around_offsets: Vec::new(), ..Propagation::default() };
+        assert!(none.outdoor_loss(&wall, a, b, &mut 0)[0] >= either[0]);
+    }
+
+    #[test]
+    fn two_places_out_of_doors_never_lose_more_than_the_cap() {
+        let cfg = Propagation::default();
+        let loss = cfg.outdoor_loss(&Ridge { at: 50.0, high: 40.0, thick: 20.0 }, Vec3::new(0.0, 1.6, 0.0), Vec3::new(100.0, 1.6, 0.0), &mut 0);
+        assert!(loss[0] <= cfg.outdoor_cap_db + 1e-3, "{loss:?}");
+    }
+
     #[test]
     fn more_ridges_take_more_but_less_than_each_alone_added() {
         let cfg = Propagation::default();
@@ -704,7 +796,7 @@ mod tests {
     fn walls_let_the_lows_through_and_cut_the_highs() {
         let cfg = Propagation::default();
         let heard = cfg.heard(&cfg.walls(1));
-        assert!(heard.cutoff_hz < 400.0 && heard.gain < 0.1, "{heard:?}");
+        assert!(heard.cutoff_hz < 500.0 && heard.gain < 0.1, "{heard:?}");
     }
 
     /// What it was before: four straight rays and a count of walls round each end, as a volume and a cut.
@@ -871,7 +963,7 @@ mod tests {
                 None => println!("{name:9} no building with open ground both sides"),
             }
             match map.pair(120.0, |a, b| (3..=8).contains(&map.things_between(a, b))) {
-                Some((ear, source)) => map.row("three streets over", source, ear, "about -8 to -15 dB, thumps not snaps"),
+                Some((ear, source)) => map.row("three streets over", source, ear, "clearly audible, a bit dull: no worse than -10 dB"),
                 None => println!("{name:9} no line with 3 to 8 things between"),
             }
             let door = map.level.doorways.iter().find(|d| {
