@@ -1,0 +1,189 @@
+# Builds the desktop game for Windows, macOS and Linux and publishes them as a GitHub Release with a combined
+# latest.json, which the server box pulls into the site's downloads/ folder.
+#
+# Push a tag v* to release, or run it by hand (Actions > Release > Run workflow) with a tag to publish under.
+# Mac minutes cost ten times as much on a private repository, so the Mac job only builds and packages.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to publish the release under (made on this commit if it does not exist)
+        required: true
+      version:
+        description: Installer version major.minor.build (default the workspace's major.minor and today as yyddd)
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}-${{ inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_RELEASE_STRIP: symbols
+
+jobs:
+  # One version for every platform, so the three files and latest.json agree even across midnight.
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        env:
+          REQUESTED: ${{ inputs.version }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          workspace=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
+          version="${REQUESTED:-$(cut -d. -f1-2 <<<"$workspace").$(date -u +%y%j | sed 's/^0*//')}"
+          if ! [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] || ((BASH_REMATCH[1] > 255 || BASH_REMATCH[2] > 255 || BASH_REMATCH[3] > 65535)); then
+            echo "::error::version must be major.minor.build, major and minor under 256, build under 65536: $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "FrontCraft $version, release $TAG"
+
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> bin"
+          shared-key: test
+      - run: cargo test --workspace
+
+  linux:
+    needs: version
+    # The oldest supported runner, so the binary's glibc floor (2.35) is as low as it can be.
+    runs-on: ubuntu-22.04
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> bin"
+          shared-key: release
+      - name: Build
+        run: cargo build -p prs_game --release --config "build.rustflags = ['--remap-path-prefix=$PWD=']"
+      - name: Package
+        run: scripts/package_linux.sh bin/release/prs_game "$VERSION" dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/*
+          if-no-files-found: error
+
+  windows:
+    needs: version
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      TARGET: x86_64-pc-windows-msvc
+      # Only for the game itself, since --target keeps these off build scripts: no console window, and the C
+      # runtime linked in so it needs nothing that Windows does not already have.
+      CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS: -Ctarget-feature=+crt-static -Clink-arg=/SUBSYSTEM:WINDOWS -Clink-arg=/ENTRY:mainCRTStartup
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> bin"
+          shared-key: release
+      - name: Build
+        run: cargo build -p prs_game --release --target "$TARGET"
+      - name: Package
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          scripts/stage_windows.sh stage "bin/$TARGET/release/prs_game.exe" "$VERSION"
+          (cd stage && wix build -arch x64 -o FrontCraft.msi FrontCraft.wxs)
+          mkdir -p dist
+          cp stage/FrontCraft.msi "dist/FrontCraft-$VERSION.msi"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*
+          if-no-files-found: error
+
+  macos:
+    needs: version
+    runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> bin"
+          shared-key: release
+      # One universal binary, for Apple Silicon and Intel Macs alike.
+      - name: Build
+        run: |
+          cargo build -p prs_game --release --target aarch64-apple-darwin --target x86_64-apple-darwin
+          lipo -create -output prs_game bin/aarch64-apple-darwin/release/prs_game bin/x86_64-apple-darwin/release/prs_game
+          lipo -info prs_game
+      - name: Package
+        run: scripts/package_macos.sh prs_game "$VERSION" dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs: [version, test, linux, windows, macos]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      TAG: ${{ needs.version.outputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      # latest.json keeps the Windows-only fields at the top, which older pages read, and lists every platform.
+      - name: latest.json
+        working-directory: dist
+        run: |
+          entry() { jq -n --arg file "$1" --argjson bytes "$(stat -c %s "$1")" '{file: $file, bytes: $bytes}'; }
+          win="FrontCraft-$VERSION.msi"
+          mac="FrontCraft-$VERSION-macos.dmg"
+          linux="FrontCraft-$VERSION-linux-x86_64.tar.gz"
+          jq -n --arg version "$VERSION" --argjson w "$(entry "$win")" --argjson m "$(entry "$mac")" --argjson l "$(entry "$linux")" \
+            '{version: $version, file: $w.file, bytes: $w.bytes, platforms: {windows: $w, macos: $m, linux: $l}}' > latest.json
+          cat latest.json
+          ls -l
+      - name: Publish
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+            gh release edit "$TAG" --latest
+          else
+            gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "FrontCraft $VERSION" --latest \
+              --notes "FrontCraft $VERSION for Windows (.msi), macOS (.dmg, Apple Silicon and Intel) and Linux (x86_64 .tar.gz)."
+          fi

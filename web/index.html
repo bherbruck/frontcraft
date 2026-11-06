@@ -35,6 +35,10 @@
   #download { display: block; margin-top: 14px; color: #7d8668; font-size: 12px; text-decoration: none; }
   #download[hidden] { display: none; }
   #download:hover { color: #a9b08f; text-decoration: underline; }
+  #other-downloads { margin-top: 6px; color: #5f6a4c; font-size: 12px; }
+  #other-downloads[hidden] { display: none; }
+  #other-downloads a { color: #7d8668; text-decoration: none; }
+  #other-downloads a:hover { color: #a9b08f; text-decoration: underline; }
   #name { flex: 1; padding: 8px 10px; border: 1px solid #5f6a4c; border-radius: 0; background: none; color: #d8dccc; font: inherit; }
 </style>
 </head>
@@ -51,6 +55,7 @@
       <button id="play-alone" type="button">Shooting Range</button>
     </div>
     <a id="download" hidden download></a>
+    <div id="other-downloads" hidden></div>
   </div>
 </div>
 <canvas id="game" tabindex="0"></canvas>
@@ -247,19 +252,62 @@
     offerDownload();
   }
 
-  // scripts/build_windows.sh writes downloads/latest.json beside the installer. No file, no link.
+  // downloads/latest.json says which installers are beside it: the release workflow lists every platform under
+  // "platforms", and scripts/build_windows.sh writes only the Windows "file" and "bytes". No file, no link.
+  // The visitor's own system is offered first and the others under it.
+  const PLATFORMS = {
+    windows: { label: "Windows", kind: ".msi", file: /^FrontCraft-[0-9.]+\.msi$/ },
+    macos: { label: "macOS", kind: ".dmg", file: /^FrontCraft-[0-9.]+-macos\.dmg$/ },
+    linux: { label: "Linux", kind: ".tar.gz", file: /^FrontCraft-[0-9.]+-linux-x86_64\.tar\.gz$/ },
+  };
+  function visitorPlatform() {
+    const name = `${navigator.userAgentData?.platform || ""} ${navigator.platform || ""} ${navigator.userAgent || ""}`;
+    if (/Android|iPhone|iPad|iPod|CrOS/i.test(name)) return null;
+    if (/Win/i.test(name)) return "windows";
+    if (/Mac/i.test(name)) return "macos";
+    if (/Linux|X11/i.test(name)) return "linux";
+    return null;
+  }
   async function offerDownload() {
     if (!ONLINE) return;
     try {
       const response = await fetch("downloads/latest.json", { cache: "no-cache" });
       if (!response.ok) return;
       const latest = await response.json();
-      if (!/^FrontCraft-[0-9.]+\.msi$/.test(latest.file) || !(latest.bytes > 0)) return;
-      const link = document.getElementById("download");
-      link.href = `downloads/${latest.file}`;
-      link.textContent = `Download for Windows (.msi, ${megabytes(latest.bytes)} MB)`;
-      link.title = `FrontCraft ${latest.version} for Windows`;
-      link.hidden = false;
+      const listed = { ...(latest.platforms || {}) };
+      if (!listed.windows && latest.file) listed.windows = { file: latest.file, bytes: latest.bytes };
+      const offered = Object.keys(PLATFORMS).filter((key) => {
+        const entry = listed[key];
+        return entry && PLATFORMS[key].file.test(entry.file) && entry.bytes > 0;
+      });
+      if (!offered.length) return;
+      const mine = visitorPlatform();
+      const first = offered.includes(mine) ? mine : null;
+      const describe = (key) => `${PLATFORMS[key].label} (${PLATFORMS[key].kind}, ${megabytes(listed[key].bytes)} MB)`;
+      const point = (link, key) => {
+        link.href = `downloads/${listed[key].file}`;
+        link.title = `FrontCraft ${latest.version} for ${PLATFORMS[key].label}`;
+        link.setAttribute("download", "");
+      };
+      if (first) {
+        const link = document.getElementById("download");
+        point(link, first);
+        link.textContent = `Download for ${describe(first)}`;
+        link.hidden = false;
+      }
+      const rest = offered.filter((key) => key !== first);
+      if (rest.length) {
+        const others = document.getElementById("other-downloads");
+        others.append(first ? "Also for " : "Download for ");
+        rest.forEach((key, i) => {
+          if (i) others.append(" \u00b7 ");
+          const link = document.createElement("a");
+          point(link, key);
+          link.textContent = first ? PLATFORMS[key].label : describe(key);
+          others.append(link);
+        });
+        others.hidden = false;
+      }
     } catch {}
   }
 
