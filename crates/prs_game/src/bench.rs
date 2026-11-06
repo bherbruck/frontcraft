@@ -154,6 +154,7 @@ fn record(
     time: Res<Time<Real>>,
     sim: Res<SimResource>,
     drawn: Query<(&ViewVisibility, Option<&prs_scene::Triangles>), With<Mesh3d>>,
+    all: Query<&prs_scene::Triangles>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if bench.done || bench.loaded_at.is_none() {
@@ -169,7 +170,7 @@ fn record(
     }
     let Some((leg, through)) = leg_at(&bench, &route) else {
         bench.done = true;
-        report(&bench, &sim);
+        report(&bench, &sim, all.iter().map(|t| t.0 as u64).sum());
         exit.write(AppExit::Success);
         return;
     };
@@ -279,7 +280,7 @@ fn percentile(sorted: &[f32], p: f32) -> f32 {
     sorted[((sorted.len() - 1) as f32 * p).round() as usize]
 }
 
-fn report(bench: &Bench, sim: &SimResource) {
+fn report(bench: &Bench, sim: &SimResource, stored: u64) {
     let level = &sim.0.level;
     let mut legs = Vec::new();
     for (leg, stats) in LEGS.iter().zip(&bench.legs) {
@@ -298,7 +299,7 @@ fn report(bench: &Bench, sim: &SimResource) {
         ));
     }
     let line = format!(
-        "BENCH {{\"map_size\":{},\"terrain_triangles\":{},\"solids\":{},\"trees\":{},\"load_s\":{:.2},{}}}",
+        "BENCH {{\"map_size\":{},\"stored_triangles\":{stored},\"terrain_triangles\":{},\"solids\":{},\"trees\":{},\"load_s\":{:.2},{}}}",
         level.terrain.size,
         level.terrain.indices.len(),
         level.solids.len(),

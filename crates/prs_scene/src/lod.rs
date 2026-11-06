@@ -10,12 +10,16 @@
 //! One system picks what shows, by distances measured from fixed middles: a chunk's choice from its
 //! own middle, and whether a block stands in for its chunks from the block's middle. So the pieces of
 //! one chunk always agree, and a block and its chunks are never drawn together or missing together.
+//!
+//! Wherever a soldier or a vehicle stands, the ground under it is the full mesh at any distance, and its
+//! block never stands in for its chunks. A coarse grid can sit up to a metre off the true ground, which
+//! through a scope would show someone floating or sunk to the knees.
 
 use bevy::prelude::*;
 use prs_atmosphere::Bake;
 use prs_level::{Level, Paint, Solid, Terrain, Tree, TreeKind};
 use prs_view::{ViewDistance, WorldCamera};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::bake::RoomLight;
 use crate::statics::{self, Batch, CHUNK, Chunks};
@@ -87,6 +91,8 @@ enum Role {
 pub(crate) struct Piece {
     role: Role,
     middle: Vec3,
+    /// The chunk it covers, or the corner chunk of its block.
+    chunk: Key,
     /// The block this piece is part of, as an index into [`Blocks`].
     block: usize,
 }
@@ -124,24 +130,44 @@ fn block_is_far(distance: f32, radius: f32, detail: &Detail, view: f32) -> bool 
     distance >= detail.far_from && distance <= view + radius
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn choose_detail(
     detail: Res<Detail>,
     distance: Res<ViewDistance>,
     blocks: Res<Blocks>,
+    sim: Res<prs_runtime::SimResource>,
     camera: Query<&GlobalTransform, With<WorldCamera>>,
     mut pieces: Query<(&Piece, &mut Visibility)>,
     mut far: Local<Vec<bool>>,
+    mut occupied: Local<HashSet<Key>>,
 ) {
     let Ok(camera) = camera.single() else {
         return;
     };
     let eye = camera.translation();
     let view = distance.metres;
+    let sim = &sim.0;
+    occupied.clear();
+    let standing = sim.soldiers.iter().map(|s| s.body.pos).chain(sim.vehicles.iter().map(|v| v.pos)).chain(sim.helicopters.iter().map(|h| h.state.pos));
+    occupied.extend(standing.map(chunk_key));
     far.clear();
     far.extend(blocks.middles.iter().map(|m| block_is_far(m.distance(eye), blocks.radius, &detail, view)));
+    // A block with anyone in it is drawn as its chunks, so their ground can be the full mesh.
+    for piece in pieces.iter().map(|(p, _)| p).filter(|p| p.role == Role::TerrainFull && occupied.contains(&p.chunk)) {
+        if let Some(f) = far.get_mut(piece.block) {
+            *f = false;
+        }
+    }
     for (piece, mut visibility) in &mut pieces {
         let block_far = far.get(piece.block).copied().unwrap_or(false);
-        let show = shows(piece.role, piece.middle.distance(eye), block_far, &detail, view);
+        let mut show = shows(piece.role, piece.middle.distance(eye), block_far, &detail, view);
+        if occupied.contains(&piece.chunk) && !block_far && piece.middle.distance(eye) <= view + CHUNK {
+            match piece.role {
+                Role::TerrainFull => show = true,
+                Role::TerrainCoarse => show = false,
+                _ => {}
+            }
+        }
         visibility.set_if_neq(if show { Visibility::Inherited } else { Visibility::Hidden });
     }
 }
@@ -188,6 +214,7 @@ pub(crate) fn detailed_meshes(level: &Level, bake: Bake, detail: &Detail) -> Det
     let piece = |role: Role, k: Key, index_of: &mut dyn FnMut(Key) -> usize| Piece {
         role,
         middle: chunk_middle(k),
+        chunk: k,
         block: index_of(block_of(k)),
     };
 
@@ -233,7 +260,7 @@ pub(crate) fn detailed_meshes(level: &Level, bake: Bake, detail: &Detail) -> Det
     }
     let middle_of_block = |b: Key, index_of: &mut dyn FnMut(Key) -> usize| {
         let index = index_of(b);
-        Piece { role: Role::Block, middle: Vec3::ZERO, block: index }
+        Piece { role: Role::Block, middle: Vec3::ZERO, chunk: (b.0 * per_block, b.1 * per_block), block: index }
     };
     for (b, batch) in coarse_terrain(&sampler, &detail.far_terrain_cells, detail.far_terrain_error, block, detail.skirt) {
         let block = (b.0.div_euclid(per_block), b.1.div_euclid(per_block));
