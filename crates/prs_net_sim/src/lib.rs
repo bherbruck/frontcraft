@@ -39,11 +39,14 @@ pub struct NetLimits {
     /// Soldier numbers at or above this are refused, and the client never makes room for more. Well above
     /// the most players and bots a server runs. A mod changes it under `net_limits`.
     pub max_soldiers: usize,
+    /// The largest map file a client fetches from a server, in bytes. One said to be bigger is refused
+    /// before anything is fetched, and a download is stopped past it.
+    pub max_map_bytes: usize,
 }
 
 impl Default for NetLimits {
     fn default() -> Self {
-        Self { max_soldiers: 512 }
+        Self { max_soldiers: 512, max_map_bytes: 16 << 20 }
     }
 }
 

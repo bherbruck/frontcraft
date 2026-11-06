@@ -4,16 +4,16 @@
 //! next time. A browser keeps it for itself: the address has the hash in it, so it is kept for good.
 
 use prs_net::client::MapOffer;
-use prs_sim::MapData;
+use prs_sim::{MapData, valid_map_name};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
-
-/// Larger than any map should be, so a server cannot have a client fill its memory.
-const MAX_MAP_BYTES: usize = 32 << 20;
 
 /// Where the server keeps its map, given where its WebSocket is. Under the same path, so a proxy that sends
 /// `/range` to one server sends this to the same one.
 pub(crate) fn map_url(server: &str, name: &str, hash: u64) -> Option<String> {
+    if !valid_map_name(name) {
+        return None;
+    }
     let (scheme, rest) = server.split_once("://")?;
     let scheme = match scheme {
         "ws" => "http",
@@ -22,6 +22,15 @@ pub(crate) fn map_url(server: &str, name: &str, hash: u64) -> Option<String> {
     };
     let address = rest.split(['?', '#']).next()?.trim_end_matches('/');
     Some(format!("{scheme}://{address}/map/{name}.toml?v={hash:016x}"))
+}
+
+/// Why an offer cannot be taken up at all, before anything is looked for: a name that is not a plain name, or a
+/// file bigger than this game will fetch. Any server can say anything.
+pub(crate) fn refuse(offer: &MapOffer, max_bytes: usize) -> Option<String> {
+    if !valid_map_name(&offer.name) {
+        return Some("the server named its map with something that is not a map name".into());
+    }
+    (offer.bytes as usize > max_bytes).then(|| format!("the server's map is {} KB, more than the {} KB this game takes", offer.bytes / 1000, max_bytes / 1000))
 }
 
 /// Whether what came is the map that was offered.
@@ -40,6 +49,9 @@ pub(crate) fn check(offer: &MapOffer, bytes: Vec<u8>) -> Result<MapData, String>
 
 /// A copy already here that is the one offered: built in, in the maps folder, or fetched before.
 pub(crate) fn find_local(offer: &MapOffer) -> Option<MapData> {
+    if !valid_map_name(&offer.name) {
+        return None;
+    }
     let same = |data: &MapData| offer.hash == 0 || data.hash == offer.hash;
     if let Some(data) = MapData::find(&offer.name).ok().filter(same) {
         return Some(data);
@@ -55,10 +67,10 @@ pub(crate) struct Fetch {
 }
 
 impl Fetch {
-    pub(crate) fn start(server: &str, offer: &MapOffer) -> Self {
+    pub(crate) fn start(server: &str, offer: &MapOffer, max_bytes: usize) -> Self {
         let fetch = Self { received: Arc::default(), result: Arc::default() };
         match map_url(server, &offer.name, offer.hash) {
-            Some(url) => download(url, offer.clone(), fetch.received.clone(), fetch.result.clone()),
+            Some(url) => download(url, offer.clone(), max_bytes, fetch.received.clone(), fetch.result.clone()),
             None => *fetch.result.lock().unwrap() = Some(Err(format!("no way to fetch a map from {server}"))),
         }
         fetch
@@ -75,9 +87,9 @@ impl Fetch {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn download(url: String, offer: MapOffer, received: Arc<AtomicUsize>, result: Arc<Mutex<Option<Result<MapData, String>>>>) {
+fn download(url: String, offer: MapOffer, max_bytes: usize, received: Arc<AtomicUsize>, result: Arc<Mutex<Option<Result<MapData, String>>>>) {
     std::thread::spawn(move || {
-        let fetched = match prs_net::http_native::fetch(&url, MAX_MAP_BYTES, &received) {
+        let fetched = match prs_net::http_native::fetch(&url, max_bytes, &received) {
             Ok((200, bytes)) => check(&offer, bytes),
             Ok((status, _)) => Err(format!("the server would not give its map ({status})")),
             Err(error) => Err(format!("the map could not be fetched: {error}")),
@@ -90,7 +102,7 @@ fn download(url: String, offer: MapOffer, received: Arc<AtomicUsize>, result: Ar
 }
 
 #[cfg(target_arch = "wasm32")]
-fn download(url: String, offer: MapOffer, received: Arc<AtomicUsize>, result: Arc<Mutex<Option<Result<MapData, String>>>>) {
+fn download(url: String, offer: MapOffer, max_bytes: usize, received: Arc<AtomicUsize>, result: Arc<Mutex<Option<Result<MapData, String>>>>) {
     use wasm_bindgen::JsCast;
     use wasm_bindgen_futures::JsFuture;
     wasm_bindgen_futures::spawn_local(async move {
@@ -106,7 +118,7 @@ fn download(url: String, offer: MapOffer, received: Arc<AtomicUsize>, result: Ar
             }
             let buffer = JsFuture::from(response.array_buffer().map_err(|_| "no body")?).await.map_err(|_| "the map was cut short")?;
             let bytes = js_sys::Uint8Array::new(&buffer).to_vec();
-            if bytes.len() > MAX_MAP_BYTES {
+            if bytes.len() > max_bytes {
                 return Err("the map is too big".into());
             }
             received.store(bytes.len(), Ordering::Relaxed);
@@ -117,8 +129,8 @@ fn download(url: String, offer: MapOffer, received: Arc<AtomicUsize>, result: Ar
     });
 }
 
-/// Maps fetched before, in the user's cache folder, named by their hash so an old one is never taken for a
-/// new one.
+/// Maps fetched before, in the user's cache folder. A file is named by the hash alone, never by anything a
+/// server said, and is checked against the offer again when it is read.
 #[cfg(not(target_arch = "wasm32"))]
 mod cache {
     use super::*;
@@ -133,18 +145,17 @@ mod cache {
         Some(base.join("prs").join("maps"))
     }
 
-    fn file(name: &str, hash: u64) -> Option<PathBuf> {
-        prs_sim::valid_map_name(name).then_some(())?;
-        Some(folder()?.join(format!("{name}-{hash:016x}.toml")))
+    pub(super) fn file(hash: u64) -> Option<PathBuf> {
+        Some(folder()?.join(format!("{hash:016x}.toml")))
     }
 
     pub(super) fn read(offer: &MapOffer) -> Option<String> {
-        std::fs::read_to_string(file(&offer.name, offer.hash)?).ok()
+        std::fs::read_to_string(file(offer.hash)?).ok()
     }
 
     /// Best effort: without a cache it is fetched again next time.
     pub(super) fn write(data: &MapData) {
-        let Some(path) = file(&data.name, data.hash) else { return };
+        let Some(path) = file(data.hash) else { return };
         if let Some(parent) = path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
@@ -176,6 +187,27 @@ mod tests {
         );
         assert_eq!(map_url("wss://host/range?x=1", "range", hash).as_deref(), Some("https://host/range/map/range.toml?v=00000000000000ab"));
         assert_eq!(map_url("ftp://host", "town", hash), None);
+    }
+
+    /// A server can name its map anything, so a name that reaches for a file is refused before anything is
+    /// read, fetched or written.
+    #[test]
+    fn a_hostile_name_or_size_is_refused_before_anything_is_touched() {
+        let offer = |name: &str, bytes: u32| MapOffer { name: name.into(), hash: 7, bytes };
+        for name in ["../../etc/passwd", "../town", "/etc/hosts", "C:\\Windows\\win.ini", "town.toml", "maps/town", "", "Town"] {
+            assert!(refuse(&offer(name, 10), 1 << 20).is_some(), "{name}");
+            assert!(find_local(&offer(name, 10)).is_none(), "{name}");
+            assert!(map_url("ws://host", name, 7).is_none(), "{name}");
+        }
+        assert!(refuse(&offer("town", 17 << 20), 16 << 20).is_some(), "too big to fetch");
+        assert!(refuse(&offer("town", 1000), 16 << 20).is_none());
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn a_kept_map_is_named_by_its_hash_alone() {
+        let path = cache::file(0xabc).unwrap();
+        assert_eq!(path.file_name().unwrap().to_str(), Some("0000000000000abc.toml"));
     }
 
     #[test]

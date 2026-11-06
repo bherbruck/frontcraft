@@ -72,7 +72,9 @@ fn main() -> std::io::Result<()> {
         }
     }
     // A name from the maps folder or built in, or a path to a file.
-    let data = MapData::find(&map).unwrap_or_else(|error| {
+    let path = std::path::Path::new(&map);
+    let found = if map.ends_with(".toml") || path.components().count() > 1 { MapData::from_path(path) } else { MapData::find(&map) };
+    let data = found.unwrap_or_else(|error| {
         eprintln!("{error}");
         std::process::exit(2);
     });

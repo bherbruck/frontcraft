@@ -95,9 +95,10 @@ pub fn hash_bytes(bytes: &[u8]) -> u64 {
     bytes.iter().fold(0xcbf2_9ce4_8422_2325, |hash, &byte| (hash ^ byte as u64).wrapping_mul(0x0000_0100_0000_01b3))
 }
 
-/// Whether this can be a map's name, which also goes in an address.
+/// Whether this can be a map's name: 1 to 32 of lower case letters, digits, `-` and `_`. A name comes from
+/// whatever server was joined, and goes into a file name and an address, so nothing else ever passes.
 pub fn valid_name(name: &str) -> bool {
-    !name.is_empty() && name.len() <= 64 && name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    (1..=32).contains(&name.len()) && name.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-' || b == b'_')
 }
 
 /// One map's file, as read or as downloaded, and its hash.
@@ -118,18 +119,21 @@ impl MapData {
         BUILT_IN.iter().find(|(n, _)| *n == name).map(|(n, text)| Self::new(n, (*text).to_owned()))
     }
 
+    /// A map file at a path, named after the file. Only for what whoever runs the program asks for, such as a
+    /// server's `--map`: never for a name that came from anywhere else.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn from_path(path: &std::path::Path) -> Result<Self, MapError> {
+        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or_default();
+        if !valid_name(stem) {
+            return Err(MapError::BadName(stem.to_owned()));
+        }
+        std::fs::read_to_string(path).map(|text| Self::new(stem, text)).map_err(|_| MapError::NotFound(path.display().to_string()))
+    }
+
     /// A map by name from the maps folder, `PRS_MAPS_DIR` or `maps` where the program runs, or else one built
-    /// in. A path to a `.toml` file is read as it is, named after the file.
+    /// in. Only ever a plain name, so whatever a server says, nothing outside that folder is read.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn find(name: &str) -> Result<Self, MapError> {
-        let path = std::path::Path::new(name);
-        if name.ends_with(".toml") {
-            let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or_default();
-            if !valid_name(stem) {
-                return Err(MapError::BadName(stem.to_owned()));
-            }
-            return std::fs::read_to_string(path).map(|text| Self::new(stem, text)).map_err(|_| MapError::NotFound(name.to_owned()));
-        }
         if !valid_name(name) {
             return Err(MapError::BadName(name.to_owned()));
         }
@@ -396,9 +400,12 @@ mod tests {
     #[test]
     fn a_name_is_only_ever_a_plain_word() {
         assert!(valid_name("range") && valid_name("kill-house_2"));
-        for bad in ["", "../town", "a/b", "town.toml", "a b", "é"] {
+        let long = "a".repeat(33);
+        for bad in ["", "../town", "a/b", "town.toml", "a b", "é", "Town", "/etc/passwd", "..", "C:\\x", long.as_str()] {
             assert!(!valid_name(bad), "{bad}");
         }
-        assert!(matches!(MapData::find("../etc/passwd"), Err(MapError::BadName(_))));
+        for path in ["../etc/passwd", "../../secret.toml", "/etc/hosts.toml", "maps/../town.toml", "C:\\Windows\\x.toml"] {
+            assert!(matches!(MapData::find(path), Err(MapError::BadName(_))), "{path}");
+        }
     }
 }

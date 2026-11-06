@@ -131,11 +131,18 @@ fn make_game(map: Arc<Mutex<Option<MapData>>>) -> impl FnOnce(&str, &str) -> Opt
 /// Finds the map the server is playing, here or by fetching it, and lets the session go on once it has it.
 fn get_map(link: &mut NetLink) {
     let Some(offer) = link.session.map_wanted().cloned() else { return };
+    let max_bytes = prs_net_sim::limits().max_map_bytes;
+    if link.fetching.is_none()
+        && let Some(why) = map_fetch::refuse(&offer, max_bytes)
+    {
+        link.session.map_unavailable(why);
+        return;
+    }
     let found = match &link.fetching {
         None => match map_fetch::find_local(&offer) {
             Some(data) => Some(Ok(data)),
             None => {
-                link.fetching = Some(Fetch::start(&link.server, &offer));
+                link.fetching = Some(Fetch::start(&link.server, &offer, max_bytes));
                 None
             }
         },
