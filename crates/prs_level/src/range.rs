@@ -99,7 +99,7 @@ impl Level {
             props: Vec::new(),
         };
         let ground = self.ground(KILL_HOUSE_AT.x, KILL_HOUSE_AT.y);
-        crate::build::Mason { style: &style, level: self }.compound(&compound, ground);
+        crate::build::Mason { style: &style, level: self, budget: crate::build::Budget::new(u64::MAX) }.compound(&compound, ground);
         // The start line, out from the side door.
         let turn = Quat::from_rotation_y(KILL_HOUSE_YAW);
         let door = turn * Vec3::new(-8.0, 0.0, half.y - 1.0 + START_LINE_OUT);

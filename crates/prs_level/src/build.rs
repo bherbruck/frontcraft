@@ -58,8 +58,37 @@ struct Rect {
     max: Vec2,
 }
 
+/// How much building is left: one step for every turn of every loop the builder takes. A map that would take
+/// more stops being built, whatever its spec says, and is refused.
+pub(crate) struct Budget {
+    left: u64,
+    spent: bool,
+}
+
+impl Budget {
+    pub fn new(steps: u64) -> Self {
+        Self { left: steps, spent: false }
+    }
+
+    /// One more step. False once there are none left, and from then on every loop gives up.
+    pub fn take(&mut self) -> bool {
+        if self.left == 0 {
+            self.spent = true;
+            return false;
+        }
+        self.left -= 1;
+        true
+    }
+}
+
 impl MapSpec {
+    /// The level, for a spec made in code, which is trusted to be a real map.
     pub fn build(&self) -> Level {
+        self.build_within(u64::MAX).expect("a map made in code fits")
+    }
+
+    /// The level, unless building it would take more than `steps`.
+    pub fn build_within(&self, steps: u64) -> Result<Level, String> {
         let relief = Relief::new(self);
         let terrain = relief.terrain();
         let mut level = Level {
@@ -81,14 +110,18 @@ impl MapSpec {
             vehicles: Vec::new(),
             source: 0,
         };
-        let mut builder = Builder { spec: self, relief: &relief, mason: Mason { style: &self.style, level: &mut level }, scatter: Scatter(self.seed) };
+        let mason = Mason { style: &self.style, level: &mut level, budget: Budget::new(steps) };
+        let mut builder = Builder { spec: self, relief: &relief, mason, scatter: Scatter(self.seed) };
         builder.compounds();
         builder.field_walls();
         builder.rubble();
         builder.props();
         builder.woods();
         builder.objectives();
-        level
+        if builder.mason.budget.spent {
+            return Err(format!("more than {steps} steps to build"));
+        }
+        Ok(level)
     }
 }
 
@@ -103,11 +136,15 @@ struct Builder<'a> {
 pub(crate) struct Mason<'a> {
     pub style: &'a BuildStyle,
     pub level: &'a mut Level,
+    pub budget: Budget,
 }
 
 impl Builder<'_> {
     fn compounds(&mut self) {
         for (index, compound) in self.spec.compounds.iter().enumerate() {
+            if !self.mason.budget.take() {
+                return;
+            }
             self.mason.compound(compound, self.relief.pads[index].level);
         }
     }
@@ -115,14 +152,23 @@ impl Builder<'_> {
     fn field_walls(&mut self) {
         let s = *self.mason.style;
         for wall in &self.spec.walls {
+            if !self.mason.budget.take() {
+                return;
+            }
             let mut walked = 0.0;
             for pair in wall.points.windows(2) {
+                if !self.mason.budget.take() {
+                    return;
+                }
                 let (a, b) = (pair[0], pair[1]);
                 let length = a.distance(b);
                 let dir = (b - a) / length;
                 let pieces = (length / wall.segment).ceil().max(1.0) as u32;
                 let piece = length / pieces as f32;
                 for i in 0..pieces {
+                    if !self.mason.budget.take() {
+                        return;
+                    }
                     let from = walked + piece * i as f32;
                     let to = from + piece;
                     let jitter = self.scatter.range(-wall.unevenness, wall.unevenness);
@@ -150,7 +196,13 @@ impl Builder<'_> {
 
     fn rubble(&mut self) {
         for heap in &self.spec.rubble {
+            if !self.mason.budget.take() {
+                return;
+            }
             for _ in 0..heap.count {
+                if !self.mason.budget.take() {
+                    return;
+                }
                 let angle = self.scatter.range(0.0, std::f32::consts::TAU);
                 let reach = self.scatter.range(0.0, 1.0).sqrt() * heap.radius;
                 let p = heap.at + Vec2::from_angle(angle) * reach;
@@ -172,6 +224,9 @@ impl Builder<'_> {
 
     fn props(&mut self) {
         for placed in &self.spec.props {
+            if !self.mason.budget.take() {
+                return;
+            }
             let y = self.relief.height(placed.at);
             let frame = Frame { origin: Vec3::new(placed.at.x, y, placed.at.y), rotation: Quat::from_rotation_y(placed.yaw) };
             self.mason.place_prop(&frame, placed.prop);
@@ -180,12 +235,21 @@ impl Builder<'_> {
 
     fn woods(&mut self) {
         for wood in &self.spec.woods {
+            if !self.mason.budget.take() {
+                return;
+            }
             match &wood.shape {
                 WoodShape::Line { points, spacing, jitter } => {
                     for pair in points.windows(2) {
+                        if !self.mason.budget.take() {
+                            return;
+                        }
                         let (a, b) = (pair[0], pair[1]);
                         let count = (a.distance(b) / spacing).ceil().max(1.0) as u32;
                         for i in 0..count {
+                            if !self.mason.budget.take() {
+                                return;
+                            }
                             let p = a.lerp(b, (i as f32 + self.scatter.range(0.2, 0.8)) / count as f32);
                             let shift = Vec2::new(self.scatter.range(-*jitter, *jitter), self.scatter.range(-*jitter, *jitter));
                             self.tree(wood, p + shift);
@@ -194,6 +258,9 @@ impl Builder<'_> {
                 }
                 WoodShape::Clump { at, half, yaw, count } => {
                     for _ in 0..*count {
+                        if !self.mason.budget.take() {
+                            return;
+                        }
                         let local = Vec2::new(self.scatter.range(-half.x, half.x), self.scatter.range(-half.y, half.y));
                         self.tree(wood, *at + Vec2::from_angle(-*yaw).rotate(local));
                     }
@@ -201,7 +268,13 @@ impl Builder<'_> {
                 WoodShape::Rows { at, half, yaw, spacing } => {
                     let (nx, nz) = ((half.x * 2.0 / spacing) as i32, (half.y * 2.0 / spacing) as i32);
                     for j in 0..=nz {
+                        if !self.mason.budget.take() {
+                            return;
+                        }
                         for i in 0..=nx {
+                            if !self.mason.budget.take() {
+                                return;
+                            }
                             let local = Vec2::new(i as f32 * spacing - half.x, j as f32 * spacing - half.y);
                             self.tree(wood, *at + Vec2::from_angle(-*yaw).rotate(local));
                         }
@@ -222,6 +295,9 @@ impl Builder<'_> {
 
     fn objectives(&mut self) {
         for team in &self.spec.teams {
+            if !self.mason.budget.take() {
+                return;
+            }
             let spawns = team
                 .spawns
                 .iter()
@@ -230,6 +306,9 @@ impl Builder<'_> {
             self.mason.level.teams.push(Team { name: team.name.clone(), spawns, base_radius: team.base_radius });
         }
         for point in &self.spec.capture_points {
+            if !self.mason.budget.take() {
+                return;
+            }
             self.mason.level.capture_points.push(CapturePoint {
                 name: point.name.clone(),
                 center: Vec3::new(point.at.x, self.relief.height(point.at), point.at.y),
@@ -239,9 +318,15 @@ impl Builder<'_> {
         let sentry = self.spec.sentry;
         self.mason.level.sentry = SpawnPoint { pos: Vec3::new(sentry.at.x, self.relief.height(sentry.at) + 0.1, sentry.at.y), yaw: sentry.yaw };
         for pad in &self.spec.helipads {
+            if !self.mason.budget.take() {
+                return;
+            }
             self.mason.level.helipads.push(SpawnPoint { pos: Vec3::new(pad.at.x, self.relief.height(pad.at), pad.at.y), yaw: pad.yaw });
         }
         for &(kind, at) in &self.spec.vehicles {
+            if !self.mason.budget.take() {
+                return;
+            }
             let pos = Vec3::new(at.at.x, self.relief.height(at.at), at.at.y);
             self.mason.level.vehicles.push(crate::VehicleSpawn { kind, pos, yaw: at.yaw });
         }
@@ -265,9 +350,15 @@ impl Mason<'_> {
             self.yard_wall(&frame, compound.half, wall);
         }
         for building in &compound.buildings {
+            if !self.budget.take() {
+                return;
+            }
             self.building(&frame, building);
         }
         for placed in &compound.props {
+            if !self.budget.take() {
+                return;
+            }
             self.place_prop(&frame.child(placed.at, placed.yaw), placed.prop);
         }
     }
@@ -284,6 +375,9 @@ impl Mason<'_> {
                 .collect();
             self.wall_run(frame, run, &holes);
             for gate in wall.gates.iter().filter(|g| g.side == side) {
+                if !self.budget.take() {
+                    return;
+                }
                 self.doorway(frame, side, half, t, gate.along, 0.0, gate.width);
             }
         }
@@ -307,6 +401,9 @@ impl Mason<'_> {
         sorted.sort_by(|a, b| a.at.total_cmp(&b.at));
         let mut cursor = run.from;
         for hole in &sorted {
+            if !self.budget.take() {
+                return;
+            }
             let (left, right) = (hole.at - hole.width * 0.5, hole.at + hole.width * 0.5);
             self.wall_piece(frame, run, cursor, left, run.base - run.foot, run.base + run.height);
             if hole.sill > 0.0 {
@@ -365,6 +462,9 @@ impl Mason<'_> {
         );
 
         for level in 0..b.storeys {
+            if !self.budget.take() {
+                return;
+            }
             let base = floor + storey * level as f32;
             let foot = if level == 0 { s.foot } else { 0.0 };
             for side in [Side::N, Side::S, Side::E, Side::W] {
@@ -373,6 +473,9 @@ impl Mason<'_> {
                 let holes: Vec<Hole> = openings.clone().map(|o| self.opening_hole(o, storey)).collect();
                 self.wall_run(&frame, run, &holes);
                 for opening in openings {
+                    if !self.budget.take() {
+                        return;
+                    }
                     self.record_opening(&frame, b, opening, base);
                 }
             }
@@ -390,13 +493,22 @@ impl Mason<'_> {
         }
 
         for p in &b.partitions {
+            if !self.budget.take() {
+                return;
+            }
             self.partition(&frame, p, floor + storey * p.storey as f32, storey);
         }
         for flight in &b.flights {
+            if !self.budget.take() {
+                return;
+            }
             self.flight(&frame, flight, storey, b.stairs);
         }
         self.place_parts(&frame, &b.fixtures);
         for t in &b.targets {
+            if !self.budget.take() {
+                return;
+            }
             let pos = frame.point(Vec3::new(t.at.x, floor + storey * t.storey as f32, t.at.y));
             let forward = frame.direction(Vec3::new(t.facing.sin(), 0.0, t.facing.cos()));
             // Marks go by the same index as targets, and plain targets before these may have none.
@@ -480,11 +592,17 @@ impl Mason<'_> {
         let t = self.style.slab;
         let mut xs = vec![-inner.x, inner.x];
         for h in holes {
+            if !self.budget.take() {
+                return;
+            }
             xs.push(h.min.x.clamp(-inner.x, inner.x));
             xs.push(h.max.x.clamp(-inner.x, inner.x));
         }
         xs.sort_by(f32::total_cmp);
         for pair in xs.windows(2) {
+            if !self.budget.take() {
+                return;
+            }
             let (x0, x1) = (pair[0], pair[1]);
             if x1 - x0 < 0.01 {
                 continue;
@@ -494,6 +612,9 @@ impl Mason<'_> {
             cuts.sort_by(|a, b| a.0.total_cmp(&b.0));
             let mut z = -inner.y;
             for (from, to) in cuts {
+                if !self.budget.take() {
+                    return;
+                }
                 self.slab_piece(frame, b, x0, x1, z, from.clamp(-inner.y, inner.y), top, t);
                 z = z.max(to.clamp(-inner.y, inner.y));
             }
@@ -536,6 +657,9 @@ impl Mason<'_> {
         let holes: Vec<Hole> = p.doors.iter().map(|d| Hole { at: from + d, width: s.door_width, sill: 0.0, head: s.door_head }).collect();
         self.wall_run(frame, run, &holes);
         for d in &p.doors {
+            if !self.budget.take() {
+                return;
+            }
             let local = if along_x { Vec3::new(from + d, base, across) } else { Vec3::new(across, base, from + d) };
             let out = if along_x { Vec3::Z } else { Vec3::X };
             self.level.doorways.push(Doorway {
@@ -560,6 +684,9 @@ impl Mason<'_> {
         let foot = if f.from.is_none() { s.foot } else { 0.0 };
 
         for i in 0..steps {
+            if !self.budget.take() {
+                return;
+            }
             let tread = rise * (i + 1) as f32;
             let at = f.foot + dir * (s.stair_run * i as f32 + half_run);
             let half_y = (tread + foot) * 0.5;
@@ -675,6 +802,9 @@ impl Mason<'_> {
 
     fn place_parts(&mut self, frame: &Frame, parts: &[Part]) {
         for &(at, half, yaw, paint) in parts {
+            if !self.budget.take() {
+                return;
+            }
             let part = frame.child(Vec2::ZERO, yaw);
             let center = frame.point(Vec3::from(at));
             self.level.solids.push(Solid { center, half: Vec3::from(half), rotation: part.rotation, paint });

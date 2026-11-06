@@ -37,13 +37,15 @@ pub struct MapLimits {
     pub max_rubble: u64,
     /// Lengths of field wall and steps of stairs it would put up, together.
     pub max_pieces: u64,
+    /// Turns of the builder's loops in all. However a spec gets past the rest, building stops here.
+    pub max_build_steps: u64,
     pub max_storeys: u32,
 }
 
 impl Default for MapLimits {
     /// Several times the town in each, which is itself a kilometre across.
     fn default() -> Self {
-        Self { max_size: 4096.0, max_cells: 2048, max_splits: 6, max_items: 200_000, max_trees: 50_000, max_rubble: 20_000, max_pieces: 100_000, max_storeys: 16 }
+        Self { max_size: 4096.0, max_cells: 2048, max_splits: 6, max_items: 200_000, max_trees: 50_000, max_rubble: 20_000, max_pieces: 100_000, max_build_steps: 1_000_000, max_storeys: 16 }
     }
 }
 
@@ -199,7 +201,7 @@ impl MapData {
         plain(&value, limits, &mut items).map_err(too_big)?;
         let file = MapFile::deserialize(value).map_err(syntax)?;
         file.within(limits).map_err(too_big)?;
-        let mut level = file.into_level(&self.name)?;
+        let mut level = file.into_level(&self.name, limits)?;
         level.source = self.hash;
         Ok(level)
     }
@@ -317,13 +319,13 @@ impl Terrain {
 }
 
 impl MapFile {
-    fn into_level(self, name: &str) -> Result<Level, MapError> {
+    fn into_level(self, name: &str, limits: &MapLimits) -> Result<Level, MapError> {
         if self.format > FORMAT {
             return Err(MapError::Format { name: name.to_owned(), format: self.format });
         }
         let incomplete = |missing| MapError::Incomplete { name: name.to_owned(), missing };
         let mut level = match (self.spec, self.terrain) {
-            (Some(spec), _) => spec.build(),
+            (Some(spec), _) => spec.build_within(limits.max_build_steps).map_err(|what| MapError::TooBig { name: name.to_owned(), what })?,
             (None, Some(grid)) => {
                 let row = grid.cells as usize + 1;
                 let expected = row.checked_mul(row).ok_or_else(|| incomplete("a grid it can hold"))?;
@@ -592,6 +594,16 @@ mod tests {
         let many = format!("format = 1\ntargets = [{}]\n", vec!["[0.0, 0.0, 0.0]"; 200_001].join(", "));
         assert!(matches!(level(&many), Err(MapError::TooBig { .. })));
         assert!(MapData::built_in("town").unwrap().level().is_ok() && MapData::built_in("range").unwrap().level().is_ok(), "the real maps fit");
+    }
+
+    /// Whatever a spec gets past the checks with, the builder itself stops at its budget.
+    #[test]
+    fn building_stops_at_its_budget_whatever_the_spec() {
+        let town = MapData::built_in("town").unwrap();
+        let tight = MapLimits { max_build_steps: 500, ..MapLimits::default() };
+        assert!(matches!(town.level_within(&tight), Err(MapError::TooBig { .. })));
+        assert!(MapSpec::town().build_within(500).is_err());
+        assert!(MapSpec::town().build_within(MapLimits::default().max_build_steps).is_ok(), "the town fits with room to spare");
     }
 
     #[test]
