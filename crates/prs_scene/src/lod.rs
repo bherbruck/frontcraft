@@ -63,6 +63,10 @@ pub struct Detail {
     pub full_drop_behind: f32,
     /// Milliseconds a frame may spend building full detail. The first fill after loading has no limit.
     pub build_ms_per_frame: f32,
+    /// A chunk's boxes or trees with more triangles than this are cut into 64 m squares, and those into
+    /// 32 m ones if still over, so a dense souq is culled in smaller pieces. Detail is still chosen for
+    /// the whole chunk at once, so its pieces always agree.
+    pub split_triangles: u32,
 }
 
 impl Default for Detail {
@@ -83,6 +87,7 @@ impl Default for Detail {
             full_build_ahead: 150.0,
             full_drop_behind: 250.0,
             build_ms_per_frame: 2.0,
+            split_triangles: 12_000,
         }
     }
 }
@@ -202,7 +207,7 @@ pub(crate) fn choose_detail(
     mut pieces: Query<(&Piece, &mut Visibility)>,
     mut far: Local<Vec<bool>>,
     mut occupied: Local<HashSet<Key>>,
-    mut built: Local<(HashSet<Key>, HashSet<Key>)>,
+    resident: Res<Resident>,
 ) {
     let Ok((camera, projection)) = camera.single() else {
         return;
@@ -216,26 +221,15 @@ pub(crate) fn choose_detail(
     far.clear();
     far.extend(blocks.middles.iter().map(|m| block_is_far(eye.near(*m), blocks.radius, &detail, view) && eye.away(*m) <= view + blocks.radius));
     // A block with anyone in it is drawn as its chunks, so their ground can be the full mesh.
-    // Which chunks have their full detail built, for their plain boxes and far trees to stand in until then.
-    let (solids_built, trees_built) = &mut *built;
-    solids_built.clear();
-    trees_built.clear();
     for (piece, _) in &pieces {
-        match piece.role {
-            Role::TerrainFull if occupied.contains(&piece.chunk) => {
-                if let Some(f) = far.get_mut(piece.block) {
-                    *f = false;
-                }
+        if piece.role == Role::TerrainFull && occupied.contains(&piece.chunk) {
+            if let Some(f) = far.get_mut(piece.block) {
+                *f = false;
             }
-            Role::SolidsFull => {
-                solids_built.insert(piece.chunk);
-            }
-            Role::TreesFull => {
-                trees_built.insert(piece.chunk);
-            }
-            _ => {}
         }
     }
+    // Plain boxes and far trees stand in for a chunk's full detail until all of it exists.
+    let ready = |k: &Key| resident.chunks.get(k).is_some_and(|(_, ready)| *ready);
     let reach = CHUNK * std::f32::consts::FRAC_1_SQRT_2;
     for (piece, mut visibility) in &mut pieces {
         let block_far = far.get(piece.block).copied().unwrap_or(false);
@@ -245,8 +239,9 @@ pub(crate) fn choose_detail(
         match piece.role {
             Role::TerrainFull if occupied.contains(&piece.chunk) && !block_far && in_view => show = true,
             Role::TerrainCoarse if occupied.contains(&piece.chunk) && !block_far => show = false,
-            Role::SolidsPlain if !solids_built.contains(&piece.chunk) => show = in_view,
-            Role::TreesFar if !trees_built.contains(&piece.chunk) => show = in_view && near < detail.trees_until,
+            Role::SolidsFull | Role::TreesFull if !ready(&piece.chunk) => show = false,
+            Role::SolidsPlain if !ready(&piece.chunk) => show = in_view,
+            Role::TreesFar if !ready(&piece.chunk) => show = in_view && near < detail.trees_until,
             _ => {}
         }
         visibility.set_if_neq(if show { Visibility::Inherited } else { Visibility::Hidden });
@@ -267,7 +262,9 @@ pub(crate) struct FullParts {
 /// The chunks whose full detail is built, and the entities it is drawn by.
 #[derive(Resource, Default)]
 pub(crate) struct Resident {
-    chunks: HashMap<Key, Vec<Entity>>,
+    /// Each built chunk's entities, and whether they exist yet: they are spawned at the end of the frame
+    /// that finishes them, so a chunk only stands in for its plain boxes from the next.
+    chunks: HashMap<Key, (Vec<Entity>, bool)>,
     /// A chunk part way through being built, so that no frame spends much more than its budget.
     pending: Option<Pending>,
     filled: bool,
@@ -275,10 +272,54 @@ pub(crate) struct Resident {
 
 struct Pending {
     key: Key,
-    solids: Batch,
-    trees: Batch,
+    /// Boxes and trees built so far, sorted into the chunk's 32 m squares by where each stands.
+    solids: [Batch; CELLS],
+    trees: [Batch; CELLS],
     next_solid: usize,
     next_tree: usize,
+    /// Once every box and tree is in: which squares go into each mesh, still to spawn one at a time.
+    to_spawn: Option<Vec<(Vec<usize>, Role)>>,
+    entities: Vec<Entity>,
+}
+
+/// A chunk is built in 32 m squares, four by four, so a dense one can be drawn in smaller pieces.
+const CELLS_ACROSS: usize = 4;
+const CELLS: usize = CELLS_ACROSS * CELLS_ACROSS;
+
+/// Which of a chunk's 32 m squares a point is in.
+fn cell_of(chunk: Key, at: Vec3) -> usize {
+    let corner = Vec2::new(chunk.0 as f32 * CHUNK, chunk.1 as f32 * CHUNK);
+    let cell = ((at.xz() - corner) / (CHUNK / CELLS_ACROSS as f32)).floor().clamp(Vec2::ZERO, Vec2::splat(CELLS_ACROSS as f32 - 1.0));
+    cell.x as usize + CELLS_ACROSS * cell.y as usize
+}
+
+/// Which squares go into each mesh: the whole chunk if it is within `cap` triangles, else each 64 m
+/// quarter that is, else its 32 m squares one by one.
+fn group_cells(triangles: &[usize; CELLS], cap: u32) -> Vec<Vec<usize>> {
+    let cap = cap.max(1) as usize;
+    if triangles.iter().sum::<usize>() <= cap {
+        return vec![(0..CELLS).collect()];
+    }
+    let mut groups = Vec::new();
+    for qy in 0..2 {
+        for qx in 0..2 {
+            let quarter: Vec<usize> = (0..4).map(|i| (qx * 2 + i % 2) + CELLS_ACROSS * (qy * 2 + i / 2)).collect();
+            if quarter.iter().map(|&c| triangles[c]).sum::<usize>() <= cap {
+                groups.push(quarter);
+            } else {
+                groups.extend(quarter.into_iter().map(|c| vec![c]));
+            }
+        }
+    }
+    groups
+}
+
+fn append(into: &mut Batch, from: Batch) {
+    let base = into.positions.len() as u32;
+    into.positions.extend(from.positions);
+    into.normals.extend(from.normals);
+    into.colors.extend(from.colors);
+    into.indices.extend(from.indices.into_iter().map(|i| i + base));
 }
 
 /// How building full detail is going, for reports.
@@ -316,13 +357,19 @@ pub(crate) fn build_near(
 
     let gone: Vec<Key> = resident.chunks.keys().filter(|k| near(k) > drop_beyond).copied().collect();
     for key in gone {
-        for entity in resident.chunks.remove(&key).unwrap_or_default() {
+        for entity in resident.chunks.remove(&key).map(|(entities, _)| entities).unwrap_or_default() {
             commands.entity(entity).despawn();
         }
         stats.dropped += 1;
     }
+    // What was spawned last frame exists now.
+    for (_, ready) in resident.chunks.values_mut() {
+        *ready = true;
+    }
     if resident.pending.as_ref().is_some_and(|p| near(&p.key) > drop_beyond) {
-        resident.pending = None;
+        for entity in resident.pending.take().map(|p| p.entities).unwrap_or_default() {
+            commands.entity(entity).despawn();
+        }
     }
     let pending_key = resident.pending.as_ref().map(|p| p.key);
     let mut wanted: Vec<(f32, Key)> = parts
@@ -348,7 +395,15 @@ pub(crate) fn build_near(
         let mut pending = match resident.pending.take() {
             Some(pending) => pending,
             None => match wanted.pop() {
-                Some((_, key)) => Pending { key, solids: Batch::default(), trees: Batch::default(), next_solid: 0, next_tree: 0 },
+                Some((_, key)) => Pending {
+                    key,
+                    solids: Default::default(),
+                    trees: Default::default(),
+                    next_solid: 0,
+                    next_tree: 0,
+                    to_spawn: None,
+                    entities: Vec::new(),
+                },
                 None => break,
             },
         };
@@ -360,12 +415,14 @@ pub(crate) fn build_near(
                 break;
             }
             if let Some(&i) = solids.get(pending.next_solid) {
-                statics::add_solid(&mut pending.solids, &level.solids[i as usize], &light);
+                let solid = &level.solids[i as usize];
+                statics::add_solid(&mut pending.solids[cell_of(pending.key, solid.center)], solid, &light);
                 pending.next_solid += 1;
             } else {
                 let tree = &level.trees[trees[pending.next_tree] as usize];
-                statics::add_trunk(&mut pending.trees, tree, &light);
-                statics::add_canopy(&mut pending.trees, tree, &light);
+                let cell = &mut pending.trees[cell_of(pending.key, tree.base)];
+                statics::add_trunk(cell, tree, &light);
+                statics::add_canopy(cell, tree, &light);
                 pending.next_tree += 1;
             }
         }
@@ -374,19 +431,41 @@ pub(crate) fn build_near(
             break;
         }
         let (middle, block) = parts.places[&pending.key];
-        let mut entities = Vec::new();
-        for (mut batch, role) in [(pending.solids, Role::SolidsFull), (pending.trees, Role::TreesFull)] {
+        if pending.to_spawn.is_none() {
+            let mut plan = Vec::new();
+            for role in [Role::SolidsFull, Role::TreesFull] {
+                let cells = if role == Role::SolidsFull { &pending.solids } else { &pending.trees };
+                let triangles: [usize; CELLS] = std::array::from_fn(|c| cells[c].indices.len() / 3);
+                plan.extend(group_cells(&triangles, detail.split_triangles).into_iter().map(|group| (group, role)));
+            }
+            pending.to_spawn = Some(plan);
+        }
+        let mut stopped = false;
+        while let Some((group, role)) = pending.to_spawn.as_mut().and_then(Vec::pop) {
+            let cells = if role == Role::SolidsFull { &mut pending.solids } else { &mut pending.trees };
+            let mut batch = Batch::default();
+            for c in group {
+                append(&mut batch, std::mem::take(&mut cells[c]));
+            }
             if batch.indices.is_empty() {
                 continue;
             }
             if atmosphere.bake.face_tint > 0.0 {
                 batch.tint_by_face(|normal| atmosphere.face_tint(normal));
             }
-            let triangles = crate::Triangles(batch.indices.len() as u32 / 3);
             let piece = Piece { role, middle, chunk: pending.key, block };
-            entities.push(commands.spawn((Mesh3d(meshes.add(batch.mesh())), MeshMaterial3d(parts.material.clone()), triangles, piece, Visibility::Hidden)).id());
+            let triangles = crate::Triangles(batch.indices.len() as u32 / 3);
+            pending.entities.push(commands.spawn((Mesh3d(meshes.add(batch.mesh())), MeshMaterial3d(parts.material.clone()), triangles, piece, Visibility::Hidden)).id());
+            if over_budget(resident.filled) {
+                stopped = true;
+                break;
+            }
         }
-        resident.chunks.insert(pending.key, entities);
+        if stopped && pending.to_spawn.as_ref().is_some_and(|left| !left.is_empty()) {
+            resident.pending = Some(pending);
+            break;
+        }
+        resident.chunks.insert(pending.key, (pending.entities, false));
         stats.built += 1;
         if over_budget(resident.filled) {
             break;
@@ -472,8 +551,10 @@ pub(crate) fn detailed_meshes(level: &Level, detail: &Detail) -> Detailed {
     let places = solid_parts.keys().chain(tree_parts.keys()).map(|&k| (k, (chunk_middle(k), index_of(block_of(k))))).collect();
     for (chunks, role) in [(plain, Role::SolidsPlain), (trees_far, Role::TreesFar)] {
         for (k, batch) in chunks {
-            if !batch.indices.is_empty() {
-                solids.push((batch, piece(role, k, &mut index_of)));
+            for part in split_to_cap(batch, k, detail.split_triangles) {
+                if !part.indices.is_empty() {
+                    solids.push((part, piece(role, k, &mut index_of)));
+                }
             }
         }
     }
@@ -499,6 +580,55 @@ pub(crate) fn detailed_meshes(level: &Level, detail: &Detail) -> Detailed {
     }
     let parts = FullParts { solids: solid_parts, trees: tree_parts, places, openings: RoomLight::openings(level), material: Handle::default() };
     Detailed { terrain, solids, water, parts, blocks: Blocks { middles, radius: block * std::f32::consts::FRAC_1_SQRT_2 } }
+}
+
+/// A chunk's batch, cut into 64 m squares if it has more than `cap` triangles, and any of those still
+/// over it into 32 m squares.
+fn split_to_cap(batch: Batch, chunk: Key, cap: u32) -> Vec<Batch> {
+    const SMALLEST: f32 = 32.0;
+    let corner = Vec2::new(chunk.0 as f32 * CHUNK, chunk.1 as f32 * CHUNK);
+    let mut out = Vec::new();
+    let mut todo = vec![(batch, corner, CHUNK)];
+    while let Some((batch, corner, side)) = todo.pop() {
+        if batch.indices.len() / 3 <= cap.max(1) as usize || side <= SMALLEST {
+            out.push(batch);
+            continue;
+        }
+        let half = side * 0.5;
+        for (i, part) in split_in_four(&batch, corner, half).into_iter().enumerate() {
+            let at = corner + Vec2::new((i % 2) as f32 * half, (i / 2) as f32 * half);
+            if !part.indices.is_empty() {
+                todo.push((part, at, half));
+            }
+        }
+    }
+    out
+}
+
+/// Cuts a batch into the four squares of `half` from `corner`, by where each triangle's middle is. A
+/// triangle stays whole, so a box across a line goes with one side, which only moves its culling.
+fn split_in_four(batch: &Batch, corner: Vec2, half: f32) -> [Batch; 4] {
+    let mut parts: [Batch; 4] = Default::default();
+    let mut remap: [Vec<u32>; 4] = Default::default();
+    for map in &mut remap {
+        *map = vec![u32::MAX; batch.positions.len()];
+    }
+    for tri in batch.indices.chunks(3) {
+        let middle = tri.iter().map(|&i| Vec3::from_array(batch.positions[i as usize])).sum::<Vec3>() / 3.0;
+        let along = ((middle.xz() - corner) / half).floor().clamp(Vec2::ZERO, Vec2::ONE);
+        let which = along.x as usize + 2 * along.y as usize;
+        let (part, map) = (&mut parts[which], &mut remap[which]);
+        for &i in tri {
+            if map[i as usize] == u32::MAX {
+                map[i as usize] = part.positions.len() as u32;
+                part.positions.push(batch.positions[i as usize]);
+                part.normals.push(batch.normals[i as usize]);
+                part.colors.push(batch.colors[i as usize]);
+            }
+            part.indices.push(map[i as usize]);
+        }
+    }
+    parts
 }
 
 /// Whether a box is too small to be worth drawing from far away.
@@ -944,6 +1074,43 @@ mod tests {
         assert_eq!(eye.near(Vec3::new(800.0, 0.0, 0.0)), 800.0);
         let unzoomed = Eye { zoom: 1.0, ..eye };
         assert_eq!(unzoomed.near(Vec3::new(0.0, 0.0, -800.0)), 800.0);
+    }
+
+    /// A dense chunk is cut into smaller squares, every triangle kept exactly once and in its square.
+    #[test]
+    fn squares_are_grouped_up_to_the_cap() {
+        assert_eq!(group_cells(&[100; CELLS], 5_000), vec![(0..CELLS).collect::<Vec<_>>()]);
+        let quarters = group_cells(&[1_000; CELLS], 5_000);
+        assert_eq!(quarters.len(), 4);
+        assert!(quarters.iter().all(|q| q.len() == 4));
+        assert_eq!(group_cells(&[2_000; CELLS], 5_000).len(), CELLS);
+        let mut all: Vec<usize> = quarters.concat();
+        all.sort();
+        assert_eq!(all, (0..CELLS).collect::<Vec<_>>());
+        assert_eq!(cell_of((0, 0), Vec3::new(5.0, 0.0, 5.0)), 0);
+        assert_eq!(cell_of((0, 0), Vec3::new(127.0, 0.0, 127.0)), CELLS - 1);
+        assert_eq!(cell_of((-1, 0), Vec3::new(-1.0, 0.0, 40.0)), 3 + CELLS_ACROSS);
+    }
+
+    #[test]
+    fn dense_chunks_are_cut_into_smaller_squares() {
+        let mut batch = Batch::default();
+        for i in 0..64 {
+            for j in 0..64 {
+                let p = Vec3::new(128.0 + i as f32 * 2.0 + 0.5, 0.0, -128.0 + j as f32 * 2.0 + 0.5);
+                batch.triangle([p, p + Vec3::X, p + Vec3::Z], [Vec3::ONE; 3]);
+            }
+        }
+        let parts = split_to_cap(batch, (1, -1), 300);
+        assert_eq!(parts.len(), 16, "4096 triangles at 300 a part go down to 32 m squares");
+        assert_eq!(parts.iter().map(|p| p.indices.len() / 3).sum::<usize>(), 4096);
+        for part in &parts {
+            let xs: Vec<f32> = part.positions.iter().map(|p| p[0]).collect();
+            let span = xs.iter().copied().fold(f32::MIN, f32::max) - xs.iter().copied().fold(f32::MAX, f32::min);
+            assert!(span < 33.0, "{span}");
+        }
+        let few = Batch::default();
+        assert_eq!(split_to_cap(few, (0, 0), 300).len(), 1);
     }
 
     #[test]
