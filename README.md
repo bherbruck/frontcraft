@@ -812,3 +812,7 @@ micrometre, walking and firing, because `PredictConfig::epsilon` lets that much 
 by its shape and not its numbers.
 
 `?netbot=1` on the web or `PRS_NETBOT=1` on a desktop plays by itself, for checking without a mouse.
+
+## Licence
+
+Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
