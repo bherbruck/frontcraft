@@ -58,6 +58,9 @@ wasm-bindgen "${CARGO_TARGET_DIR:-bin}/wasm32-unknown-unknown/wasm-release/prs_s
 # Fetched by the game itself with ?mod=name.
 cp -r mods "$staging/mods"
 
+# Linked from the page: every crate the game is built from, with its licence.
+scripts/third_party_licenses.sh "$staging/THIRD_PARTY_LICENSES.html"
+
 for file in "$wasm" "$staging/prs_game.js"; do
   gzip -9 -k "$file"
   if command -v brotli >/dev/null; then

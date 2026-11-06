@@ -5,6 +5,7 @@
 # Then, in that folder: wix build -arch x64 -o FrontCraft.msi FrontCraft.wxs
 #
 #   FRONTCRAFT_SERVER   where the main shortcut plays, wss://play.frontcraft.online by default.
+#   FRONTCRAFT_NOTICES  THIRD_PARTY_LICENSES.html made already; otherwise scripts/third_party_licenses.sh makes it.
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
 work="$1"
@@ -23,6 +24,15 @@ Mods for FrontCraft. Each .toml file here is one. To play with one, start FrontC
 its name, for example PRS_MOD=arcade for arcade.toml. A server decides the rules for itself, so online the
 server's rules win; mods are for playing alone.
 EOF
+# The game's own licences and every crate's, beside the game.
+notices="${FRONTCRAFT_NOTICES:-}"
+if [[ -z "$notices" ]]; then
+  notices="$work/notices.html"
+  "$here/scripts/third_party_licenses.sh" "$notices" "$src"
+fi
+cp "$src/LICENSE-MIT" "$src/LICENSE-APACHE" "$work"/
+cp "$notices" "$work"/THIRD_PARTY_LICENSES.html
+
 # Windows has a python3 that only points at the Store, so take whichever one runs.
 python=python3
 "$python" -c '' 2>/dev/null || python=python
@@ -52,6 +62,9 @@ cat > "$work/FrontCraft.wxs" <<EOF
       <Directory Id="INSTALLFOLDER" Name="FrontCraft">
         <Component Id="Game" Guid="E556783A-9D28-4E96-A8F1-EB82BE87F094">
           <File Id="FrontCraftExe" Source="FrontCraft.exe" KeyPath="no" />
+          <File Id="LicenceMit" Source="LICENSE-MIT" Name="LICENSE-MIT.txt" KeyPath="no" />
+          <File Id="LicenceApache" Source="LICENSE-APACHE" Name="LICENSE-APACHE.txt" KeyPath="no" />
+          <File Id="ThirdPartyLicences" Source="THIRD_PARTY_LICENSES.html" KeyPath="no" />
           <RegistryValue Root="HKCU" Key="Software\FrontCraft" Name="InstallFolder" Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
           <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
           <!-- Only goes if nothing else is in it. -->

@@ -7,6 +7,7 @@
 # opens it with right click > Open (or System Settings > Privacy & Security > Open Anyway).
 #
 #   FRONTCRAFT_SERVER   where it plays when opened from Finder, wss://play.frontcraft.online by default.
+#   FRONTCRAFT_NOTICES  THIRD_PARTY_LICENSES.html made already; otherwise scripts/third_party_licenses.sh makes it.
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
 exe="$1"
@@ -22,6 +23,16 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources/mods"
 cp "$exe" "$app/Contents/MacOS/prs_game"
 cp "$src/mods/"*.toml "$app/Contents/Resources/mods/"
 python3 "$here/scripts/make_icons.py" "$app/Contents/Resources" icns
+
+# The game's own licences and every crate's, beside the game.
+notices="${FRONTCRAFT_NOTICES:-}"
+if [[ -z "$notices" ]]; then
+  notices="$work/notices.html"
+  "$here/scripts/third_party_licenses.sh" "$notices" "$src"
+fi
+cp "$src/LICENSE-MIT" "$src/LICENSE-APACHE" "$app/Contents/Resources"/
+cp "$notices" "$app/Contents/Resources"/THIRD_PARTY_LICENSES.html
+cp "$app/Contents/Resources/"{LICENSE-MIT,LICENSE-APACHE,THIRD_PARTY_LICENSES.html} "$work/dmg/"
 
 # Finder starts an app with no arguments and in /, so this says where to play and where the mods are.
 # Started from a terminal with arguments of its own (--map range, --server ...), those win.

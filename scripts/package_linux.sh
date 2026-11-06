@@ -4,6 +4,7 @@
 # Writes <out dir>/FrontCraft-<version>-linux-x86_64.tar.gz, which unpacks into FrontCraft/.
 #
 #   FRONTCRAFT_SERVER   where play-online.sh plays, wss://play.frontcraft.online by default.
+#   FRONTCRAFT_NOTICES  THIRD_PARTY_LICENSES.html made already; otherwise scripts/third_party_licenses.sh makes it.
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
 exe="$1"
@@ -18,6 +19,15 @@ game="$work/FrontCraft"
 mkdir -p "$game/mods"
 install -m 755 "$exe" "$game/frontcraft"
 cp "$src/mods/"*.toml "$game/mods/"
+
+# The game's own licences and every crate's, beside the game.
+notices="${FRONTCRAFT_NOTICES:-}"
+if [[ -z "$notices" ]]; then
+  notices="$work/notices.html"
+  "$here/scripts/third_party_licenses.sh" "$notices" "$src"
+fi
+cp "$src/LICENSE-MIT" "$src/LICENSE-APACHE" "$game"/
+cp "$notices" "$game"/THIRD_PARTY_LICENSES.html
 
 # The mods folder is found from where the game runs, so each script starts it from here.
 for script in "play-online.sh:--server $server" "shooting-range.sh:--map range"; do
