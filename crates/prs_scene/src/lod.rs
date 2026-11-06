@@ -222,10 +222,11 @@ pub(crate) fn choose_detail(
     far.extend(blocks.middles.iter().map(|m| block_is_far(eye.near(*m), blocks.radius, &detail, view) && eye.away(*m) <= view + blocks.radius));
     // A block with anyone in it is drawn as its chunks, so their ground can be the full mesh.
     for (piece, _) in &pieces {
-        if piece.role == Role::TerrainFull && occupied.contains(&piece.chunk) {
-            if let Some(f) = far.get_mut(piece.block) {
-                *f = false;
-            }
+        if piece.role == Role::TerrainFull
+            && occupied.contains(&piece.chunk)
+            && let Some(f) = far.get_mut(piece.block)
+        {
+            *f = false;
         }
     }
     // Plain boxes and far trees stand in for a chunk's full detail until all of it exists.
