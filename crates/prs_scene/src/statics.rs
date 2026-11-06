@@ -679,7 +679,8 @@ mod tests {
             let report = |what: &str, chunks: &Chunks| {
                 let tris: usize = chunks.values().map(|b| b.indices.len() / 3).sum();
                 let verts: usize = chunks.values().map(|b| b.positions.len()).sum();
-                println!("{name} {what}: {} chunks, {tris} triangles, {verts} vertices", chunks.len());
+                let busiest = chunks.values().map(|b| b.indices.len() / 3).max().unwrap_or(0);
+                println!("{name} {what}: {} chunks, {tris} triangles, {verts} vertices, busiest chunk {busiest}", chunks.len());
             };
             report("terrain", &meshes.terrain);
             report("solids", &meshes.solids);

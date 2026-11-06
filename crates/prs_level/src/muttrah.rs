@@ -305,7 +305,7 @@ fn town(spec: &MapSpec) -> Vec<Compound> {
     site.reserve(Vec2::new(-950.0, -700.0), 0.0, Vec2::new(60.0, 10.0));
     let quarters = [
         // The souq: blocks shoulder to shoulder from the corniche back to the back street.
-        Quarter { at: Vec2::new(0.0, -590.0), yaw: 0.0, half: Vec2::new(140.0, 92.0), block: Vec2::new(30.0, 22.0), street: 5.0, kind: Kind::Souq, density: 0.75, drop: 2.5, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Ochre, Paint::Limewash] },
+        Quarter { at: Vec2::new(0.0, -590.0), yaw: 0.0, half: Vec2::new(140.0, 92.0), block: Vec2::new(30.0, 22.0), street: 5.0, kind: Kind::Souq, density: 0.9, drop: 2.5, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Ochre, Paint::Limewash] },
         // Warehouses on the port.
         Quarter { at: Vec2::new(-690.0, -680.0), yaw: 0.0, half: Vec2::new(110.0, 80.0), block: Vec2::new(44.0, 30.0), street: 9.0, kind: Kind::Works, density: 1.0, drop: 2.5, heart: None, paints: &[Paint::Cement, Paint::Concrete, Paint::Brick] },
         // The old quarter, walled houses up the foot of the hills.
