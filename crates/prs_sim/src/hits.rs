@@ -251,7 +251,8 @@ impl Sim {
             Some((id, distance)) if distance < wall_distance => {
                 let point = from + dir * distance;
                 let target = &mut self.targets[id];
-                target.down_for = self.world_cfg.target_down_time;
+                let in_room = self.level.target_mark(id).in_room;
+                target.down_for = if in_room { self.world_cfg.room_target_down_time } else { self.world_cfg.target_down_time };
                 target.hits += 1;
                 let headshot = point.y - target.pos.y > self.world_cfg.target_head_height;
                 self.events.push(SimEvent::TargetHit { target: id, point, headshot });

@@ -22,7 +22,13 @@ impl Building {
             partitions: Vec::new(),
             flights: Vec::new(),
             fixtures: Vec::new(),
+            targets: Vec::new(),
         }
+    }
+
+    pub fn target(mut self, storey: u32, at: (f32, f32), facing: f32, kind: crate::TargetKind) -> Self {
+        self.targets.push(TargetSpec { at: at.into(), storey, facing, kind });
+        self
     }
 
     /// Puts a prop on a flat roof, at `at` from the middle.
@@ -281,4 +287,83 @@ pub fn tower(s: &BuildStyle, at: (f32, f32), yaw: f32, half: (f32, f32), walls: 
         }
     }
     tower
+}
+
+/// A house for practising clearing rooms: two floors of three rooms either side of a hallway, a flight
+/// half way along it, ways in at one side and both ends, and targets waiting in the corners and at the
+/// back of the rooms, some of them people who must not be shot.
+pub fn kill_house(s: &BuildStyle, at: (f32, f32), yaw: f32, walls: Paint) -> Building {
+    use crate::TargetKind::{Hostile, NoShoot};
+    use std::f32::consts::{FRAC_PI_2, PI};
+    let (hx, hz) = (12.0, 8.0);
+    let (x, z) = (hx - s.wall, hz - s.wall);
+    let hall = 1.2;
+    // The flight runs along the north side of the hallway.
+    let flight_z = -hall + s.partition * 0.5 + s.stair_width * 0.5 + 0.02;
+    let mut house = Building::new(at, yaw, (hx, hz), 2, walls, Paint::FloorTile, Roof::Flat { paint: Paint::Cement })
+        .door(Side::S, -8.0)
+        .door(Side::W, 0.0)
+        .door(Side::E, 0.45)
+        .flight(Flight {
+            foot: Vec2::new(3.0, flight_z),
+            ascent: Side::E,
+            from: Some(0),
+            to: 1,
+            finish: FlightFinish::Through { open_right: true, open_left: false },
+        });
+    for storey in 0..2 {
+        // Doors off the hallway, measured along it from the west end.
+        let north_doors: &[f32] = &[x - 8.0, x, x + 9.5];
+        let south_doors: &[f32] = &[x - 8.0, x, x + 8.0];
+        house = house
+            .partition(storey, (-x, -hall), (x, -hall), north_doors)
+            .partition(storey, (-x, hall), (x, hall), south_doors)
+            .partition(storey, (-4.0, hall), (-4.0, z), &[(z - hall) * 0.5])
+            .partition(storey, (4.0, hall), (4.0, z), &[])
+            .partition(storey, (-4.0, -z), (-4.0, -hall), &[])
+            .partition(storey, (4.0, -z), (4.0, -hall), &[(z - hall) * 0.5]);
+        for along in [-8.0, 0.0, 8.0] {
+            house = house.window(Side::N, storey, along);
+        }
+        for along in [-4.5, 4.5] {
+            house = house.window(Side::W, storey, along).window(Side::E, storey, along);
+        }
+    }
+    house = house.window(Side::S, 0, 0.0).window(Side::S, 0, 8.0);
+    for along in [-8.0, 0.0, 8.0] {
+        house = house.window(Side::S, 1, along);
+    }
+    // Facing: 0 looks towards +z, PI towards -z, FRAC_PI_2 towards +x.
+    let ground = [
+        ((-11.0, 2.0), 0.45, Hostile),
+        ((-5.0, 2.0), 0.0, NoShoot),
+        ((3.2, 7.0), PI, Hostile),
+        ((-3.3, 2.0), FRAC_PI_2, Hostile),
+        ((11.0, 7.0), PI, Hostile),
+        ((5.0, 6.5), PI, NoShoot),
+        ((-11.0, -7.0), 0.0, Hostile),
+        ((-4.7, -2.0), -FRAC_PI_2, Hostile),
+        ((0.0, -7.0), 0.0, NoShoot),
+        ((-3.3, -7.0), 0.0, Hostile),
+        ((11.0, -7.0), 0.0, Hostile),
+        ((4.7, -2.0), FRAC_PI_2, Hostile),
+        ((11.0, 0.6), -FRAC_PI_2, Hostile),
+    ];
+    let upper = [
+        ((-11.0, 7.0), PI, Hostile),
+        ((0.0, 7.0), PI, NoShoot),
+        ((-3.3, 2.0), FRAC_PI_2, Hostile),
+        ((11.0, 2.0), -FRAC_PI_2, Hostile),
+        ((5.0, 7.0), PI, Hostile),
+        ((-11.0, -2.0), FRAC_PI_2, Hostile),
+        ((3.3, -7.0), 0.0, Hostile),
+        ((-3.0, -7.0), 0.0, NoShoot),
+        ((11.0, -7.0), 0.0, Hostile),
+    ];
+    for (storey, spots) in [(0, &ground[..]), (1, &upper[..])] {
+        for &(at, facing, kind) in spots {
+            house = house.target(storey, at, facing, kind);
+        }
+    }
+    house
 }

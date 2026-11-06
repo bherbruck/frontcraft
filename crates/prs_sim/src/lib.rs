@@ -48,7 +48,7 @@ pub use prs_mods;
 pub use prs_suppression as suppression;
 pub use prs_throwables as throwables;
 pub use prs_inventory as inventory;
-pub use prs_level::{CapturePoint, Level, MapData, MapError, MapLimits, valid_map_name, Paint, Solid, SpawnPoint, TRUNK_HALF_HEIGHT, TRUNK_HALF_WIDTH, Team, VehicleSpawn};
+pub use prs_level::{CapturePoint, Level, MapData, MapError, MapLimits, valid_map_name, Paint, Solid, SpawnPoint, TRUNK_HALF_HEIGHT, TRUNK_HALF_WIDTH, TargetKind, TargetMark, Team, VehicleSpawn};
 pub use prs_collision::{CollisionWorld, Surface};
 pub use prs_movement as movement;
 pub use prs_protocol as protocol;
@@ -379,6 +379,9 @@ pub struct WorldConfig {
     pub pitch_limit: f32,
     /// Seconds a range target stays down, and how high on it counts as the head, in metres.
     pub target_down_time: f32,
+    /// Seconds a target in a room, such as in a kill house, stays down: long enough to see from the
+    /// door what a run through the rooms has cleared.
+    pub room_target_down_time: f32,
     pub target_head_height: f32,
     /// How far past a vehicle's panel a bullet that went through picks up again, in metres.
     pub panel_through: f32,
@@ -386,7 +389,7 @@ pub struct WorldConfig {
 
 impl Default for WorldConfig {
     fn default() -> Self {
-        Self { pitch_limit: 1.54, target_down_time: 4.0, target_head_height: 1.5, panel_through: 0.08 }
+        Self { pitch_limit: 1.54, target_down_time: 4.0, room_target_down_time: 25.0, target_head_height: 1.5, panel_through: 0.08 }
     }
 }
 

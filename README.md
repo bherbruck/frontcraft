@@ -512,6 +512,18 @@ roofs, ditches and hedged fields to the west, a wash and an orchard to the east,
 Stairs, doors, walls, windows and cover heights are held to `MoveConfig` by tests
 that walk a soldier through them, in `crates/prs_level/src/town_tests.rs`.
 
+The range looks down lanes with targets at 25, 50, 100, 200 and 300 m, marked by boards either side:
+a white stripe per 25 m, then a red board per 100 m. Along the firing line are sandbags, a bench to rest
+on standing, a box for kneeling and a low bag for lying behind, and a wall with openings to fire through
+standing, kneeling and lying down. Off to the east is a lane of things to climb, from a hop over to a
+window to go through and a wall too high to get over. West of the firing line is a kill house: two floors
+of three rooms either side of a hallway with a flight half way along, a side door with a start line out
+in front, doors at both ends, and targets in the corners and at the back of the rooms. The ones in light
+clothes with their hands up are people not to shoot. A target in a room stays down for the world config's
+`room_target_down_time` (25 s), so you can see from a doorway what you have cleared, and one on the lanes
+for `target_down_time` (4 s). Where everything stands is data at the top of `crates/prs_level/src/range.rs`,
+the kill house is `kill_house` in `archetypes.rs`, and the tests that walk it are in `range_tests.rs`.
+
 `prs_scene` merges static geometry into 128 m chunks with colour in the vertices, one or two draws per
 chunk, and nothing static runs after startup. `prs_collision` buckets colliders on a grid, so queries
 do not grow with the map. For the numbers:

@@ -10,7 +10,7 @@ mod helicopters;
 mod vehicles;
 
 use bevy::prelude::*;
-use prs_runtime::prs_sim::SimEvent;
+use prs_runtime::prs_sim::{SimEvent, TargetKind};
 use prs_runtime::prs_sim::vehicles::{VehicleEvent, VehicleZone};
 use prs_runtime::{DrawnGun, GunDrawn, LocalSoldier, LevelReady, SimMessage, SimResource};
 
@@ -44,6 +44,7 @@ impl Plugin for ScenePlugin {
 struct TargetVisual {
     id: usize,
     fall: f32,
+    yaw: f32,
 }
 
 fn spawn_targets(
@@ -67,21 +68,41 @@ fn spawn_targets(
         perceptual_roughness: 1.0,
         ..default()
     });
+    // Someone not to shoot: light clothes and hands up, so it reads at a glance through a doorway.
+    let shirt = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.84, 0.83, 0.78),
+        perceptual_roughness: 1.0,
+        ..default()
+    });
+    let jacket = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.32, 0.5, 0.74),
+        perceptual_roughness: 1.0,
+        ..default()
+    });
     let legs = meshes.add(Cuboid::new(0.34, 0.86, 0.2));
     let torso = meshes.add(Cuboid::new(0.46, 0.6, 0.24));
     let head = meshes.add(Cuboid::new(0.2, 0.22, 0.2));
+    let arm = meshes.add(Cuboid::new(0.1, 0.5, 0.1));
 
     for (id, target) in sim.0.targets.iter().enumerate() {
+        let mark = sim.0.level.target_mark(id);
+        let no_shoot = mark.kind == TargetKind::NoShoot;
+        let (lower, upper) = if no_shoot { (&shirt, &jacket) } else { (&cloth, &vest) };
         commands
             .spawn((
-                TargetVisual { id, fall: 0.0 },
-                Transform::from_translation(target.pos),
+                TargetVisual { id, fall: 0.0, yaw: mark.yaw },
+                Transform::from_translation(target.pos).with_rotation(Quat::from_rotation_y(mark.yaw)),
                 Visibility::default(),
             ))
             .with_children(|root| {
-                root.spawn((Mesh3d(legs.clone()), MeshMaterial3d(cloth.clone()), Transform::from_xyz(0.0, 0.43, 0.0)));
-                root.spawn((Mesh3d(torso.clone()), MeshMaterial3d(vest.clone()), Transform::from_xyz(0.0, 1.16, 0.0)));
+                root.spawn((Mesh3d(legs.clone()), MeshMaterial3d(lower.clone()), Transform::from_xyz(0.0, 0.43, 0.0)));
+                root.spawn((Mesh3d(torso.clone()), MeshMaterial3d(upper.clone()), Transform::from_xyz(0.0, 1.16, 0.0)));
                 root.spawn((Mesh3d(head.clone()), MeshMaterial3d(skin.clone()), Transform::from_xyz(0.0, 1.6, 0.0)));
+                if no_shoot {
+                    for side in [-0.3, 0.3] {
+                        root.spawn((Mesh3d(arm.clone()), MeshMaterial3d(skin.clone()), Transform::from_xyz(side, 1.62, 0.0)));
+                    }
+                }
             });
     }
 }
@@ -98,7 +119,7 @@ fn animate_targets(
         visual.fall = (visual.fall + (goal - visual.fall).clamp(-rate * dt, rate * dt)).clamp(0.0, 1.0);
         // Accelerates as it topples, so a hit reads as weight rather than an animation.
         let angle = visual.fall * visual.fall * std::f32::consts::FRAC_PI_2 * 0.98;
-        transform.rotation = Quat::from_rotation_x(-angle);
+        transform.rotation = Quat::from_rotation_y(visual.yaw) * Quat::from_rotation_x(-angle);
     }
 }
 

@@ -3,7 +3,7 @@
 
 use crate::relief::Relief;
 use crate::spec::*;
-use crate::{CapturePoint, Doorway, Level, Paint, Room, Scatter, Solid, SpawnPoint, Staircase, Team, Tree, Window};
+use crate::{CapturePoint, Doorway, Level, Paint, Room, Scatter, Solid, SpawnPoint, Staircase, TargetMark, Team, Tree, Window};
 use glam::{Quat, Vec2, Vec3};
 
 /// A place and a heading that local coordinates hang off.
@@ -67,6 +67,7 @@ impl MapSpec {
             solids: Vec::new(),
             trees: Vec::new(),
             targets: Vec::new(),
+            target_marks: Vec::new(),
             spawn: Vec3::ZERO,
             spawn_yaw: 0.0,
             teams: Vec::new(),
@@ -80,7 +81,7 @@ impl MapSpec {
             vehicles: Vec::new(),
             source: 0,
         };
-        let mut builder = Builder { spec: self, style: &self.style, relief: &relief, level: &mut level, scatter: Scatter(self.seed) };
+        let mut builder = Builder { spec: self, relief: &relief, mason: Mason { style: &self.style, level: &mut level }, scatter: Scatter(self.seed) };
         builder.compounds();
         builder.field_walls();
         builder.rubble();
@@ -93,31 +94,181 @@ impl MapSpec {
 
 struct Builder<'a> {
     spec: &'a MapSpec,
-    style: &'a BuildStyle,
     relief: &'a Relief<'a>,
-    level: &'a mut Level,
+    mason: Mason<'a>,
     scatter: Scatter,
 }
 
+/// Puts up buildings, walls and props on a level from their specs, wherever the level came from.
+pub(crate) struct Mason<'a> {
+    pub style: &'a BuildStyle,
+    pub level: &'a mut Level,
+}
+
 impl Builder<'_> {
+    fn compounds(&mut self) {
+        for (index, compound) in self.spec.compounds.iter().enumerate() {
+            self.mason.compound(compound, self.relief.pads[index].level);
+        }
+    }
+
+    fn field_walls(&mut self) {
+        let s = *self.mason.style;
+        for wall in &self.spec.walls {
+            let mut walked = 0.0;
+            for pair in wall.points.windows(2) {
+                let (a, b) = (pair[0], pair[1]);
+                let length = a.distance(b);
+                let dir = (b - a) / length;
+                let pieces = (length / wall.segment).ceil().max(1.0) as u32;
+                let piece = length / pieces as f32;
+                for i in 0..pieces {
+                    let from = walked + piece * i as f32;
+                    let to = from + piece;
+                    let jitter = self.scatter.range(-wall.unevenness, wall.unevenness);
+                    let stray = dir.perp() * self.scatter.range(-wall.wander, wall.wander);
+                    if wall.gaps.iter().any(|(g0, g1)| from < *g1 && to > *g0) {
+                        continue;
+                    }
+                    let mid = a + dir * (piece * (i as f32 + 0.5)) + stray;
+                    let ends = [a + dir * (piece * i as f32), a + dir * (piece * (i + 1) as f32)];
+                    let low = ends.iter().map(|p| self.relief.height(*p)).fold(f32::MAX, f32::min);
+                    let bottom = low - s.foot;
+                    let top = self.relief.height(mid) + wall.height + jitter;
+                    let yaw = (-dir.y).atan2(dir.x);
+                    self.mason.level.solids.push(Solid {
+                        center: Vec3::new(mid.x, (top + bottom) * 0.5, mid.y),
+                        half: Vec3::new(piece * 0.5 + 0.02, (top - bottom) * 0.5, wall.thickness * 0.5),
+                        rotation: Quat::from_rotation_y(yaw),
+                        paint: wall.paint,
+                    });
+                }
+                walked += length;
+            }
+        }
+    }
+
+    fn rubble(&mut self) {
+        for heap in &self.spec.rubble {
+            for _ in 0..heap.count {
+                let angle = self.scatter.range(0.0, std::f32::consts::TAU);
+                let reach = self.scatter.range(0.0, 1.0).sqrt() * heap.radius;
+                let p = heap.at + Vec2::from_angle(angle) * reach;
+                let s = self.scatter.range(heap.size.0, heap.size.1);
+                // Larger towards the middle of the heap, so it builds up rather than scatters.
+                let swell = 1.0 + (1.0 - reach / heap.radius) * 0.6;
+                let half = Vec3::new(s, s * self.scatter.range(0.45, 0.85), s * self.scatter.range(0.7, 1.2)) * swell;
+                let rotation = Quat::from_euler(
+                    glam::EulerRot::YXZ,
+                    self.scatter.range(0.0, std::f32::consts::TAU),
+                    self.scatter.range(-0.4, 0.4),
+                    self.scatter.range(-0.4, 0.4),
+                );
+                let center = Vec3::new(p.x, self.relief.height(p) + half.y * 0.35, p.y);
+                self.mason.level.solids.push(Solid { center, half, rotation, paint: heap.paint });
+            }
+        }
+    }
+
+    fn props(&mut self) {
+        for placed in &self.spec.props {
+            let y = self.relief.height(placed.at);
+            let frame = Frame { origin: Vec3::new(placed.at.x, y, placed.at.y), rotation: Quat::from_rotation_y(placed.yaw) };
+            self.mason.place_prop(&frame, placed.prop);
+        }
+    }
+
+    fn woods(&mut self) {
+        for wood in &self.spec.woods {
+            match &wood.shape {
+                WoodShape::Line { points, spacing, jitter } => {
+                    for pair in points.windows(2) {
+                        let (a, b) = (pair[0], pair[1]);
+                        let count = (a.distance(b) / spacing).ceil().max(1.0) as u32;
+                        for i in 0..count {
+                            let p = a.lerp(b, (i as f32 + self.scatter.range(0.2, 0.8)) / count as f32);
+                            let shift = Vec2::new(self.scatter.range(-*jitter, *jitter), self.scatter.range(-*jitter, *jitter));
+                            self.tree(wood, p + shift);
+                        }
+                    }
+                }
+                WoodShape::Clump { at, half, yaw, count } => {
+                    for _ in 0..*count {
+                        let local = Vec2::new(self.scatter.range(-half.x, half.x), self.scatter.range(-half.y, half.y));
+                        self.tree(wood, *at + Vec2::from_angle(-*yaw).rotate(local));
+                    }
+                }
+                WoodShape::Rows { at, half, yaw, spacing } => {
+                    let (nx, nz) = ((half.x * 2.0 / spacing) as i32, (half.y * 2.0 / spacing) as i32);
+                    for j in 0..=nz {
+                        for i in 0..=nx {
+                            let local = Vec2::new(i as f32 * spacing - half.x, j as f32 * spacing - half.y);
+                            self.tree(wood, *at + Vec2::from_angle(-*yaw).rotate(local));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn tree(&mut self, wood: &Woodland, p: Vec2) {
+        let height = self.scatter.range(wood.height.0, wood.height.1);
+        let radius = self.scatter.range(wood.radius.0, wood.radius.1);
+        if self.relief.occupied(p) {
+            return;
+        }
+        self.mason.level.trees.push(Tree { base: Vec3::new(p.x, self.relief.height(p) - 0.25, p.y), height, radius, kind: wood.kind });
+    }
+
+    fn objectives(&mut self) {
+        for team in &self.spec.teams {
+            let spawns = team
+                .spawns
+                .iter()
+                .map(|s| SpawnPoint { pos: Vec3::new(s.at.x, self.relief.height(s.at) + 0.1, s.at.y), yaw: s.yaw })
+                .collect();
+            self.mason.level.teams.push(Team { name: team.name.clone(), spawns, base_radius: team.base_radius });
+        }
+        for point in &self.spec.capture_points {
+            self.mason.level.capture_points.push(CapturePoint {
+                name: point.name.clone(),
+                center: Vec3::new(point.at.x, self.relief.height(point.at), point.at.y),
+                radius: point.radius,
+            });
+        }
+        let sentry = self.spec.sentry;
+        self.mason.level.sentry = SpawnPoint { pos: Vec3::new(sentry.at.x, self.relief.height(sentry.at) + 0.1, sentry.at.y), yaw: sentry.yaw };
+        for pad in &self.spec.helipads {
+            self.mason.level.helipads.push(SpawnPoint { pos: Vec3::new(pad.at.x, self.relief.height(pad.at), pad.at.y), yaw: pad.yaw });
+        }
+        for &(kind, at) in &self.spec.vehicles {
+            let pos = Vec3::new(at.at.x, self.relief.height(at.at), at.at.y);
+            self.mason.level.vehicles.push(crate::VehicleSpawn { kind, pos, yaw: at.yaw });
+        }
+        if let Some(first) = self.mason.level.teams.first().and_then(|t| t.spawns.first()).copied() {
+            self.mason.level.spawn = first.pos;
+            self.mason.level.spawn_yaw = first.yaw;
+        }
+    }
+}
+
+impl Mason<'_> {
     fn solid(&mut self, frame: &Frame, center: Vec3, half: Vec3, paint: Paint) {
         self.level.solids.push(Solid { center: frame.point(center), half, rotation: frame.rotation, paint });
     }
 
-    fn compounds(&mut self) {
-        for (index, compound) in self.spec.compounds.iter().enumerate() {
-            let at = compound.at;
-            let origin = Vec3::new(at.x, self.relief.pads[index].level, at.y);
-            let frame = Frame { origin, rotation: Quat::from_rotation_y(compound.yaw) };
-            if let Some(wall) = &compound.wall {
-                self.yard_wall(&frame, compound.half, wall);
-            }
-            for building in &compound.buildings {
-                self.building(&frame, building);
-            }
-            for placed in &compound.props {
-                self.place_prop(&frame.child(placed.at, placed.yaw), placed.prop);
-            }
+    /// A compound standing on level ground at `ground`.
+    pub fn compound(&mut self, compound: &Compound, ground: f32) {
+        let at = compound.at;
+        let frame = Frame { origin: Vec3::new(at.x, ground, at.y), rotation: Quat::from_rotation_y(compound.yaw) };
+        if let Some(wall) = &compound.wall {
+            self.yard_wall(&frame, compound.half, wall);
+        }
+        for building in &compound.buildings {
+            self.building(&frame, building);
+        }
+        for placed in &compound.props {
+            self.place_prop(&frame.child(placed.at, placed.yaw), placed.prop);
         }
     }
 
@@ -245,6 +396,14 @@ impl Builder<'_> {
             self.flight(&frame, flight, storey, b.stairs);
         }
         self.place_parts(&frame, &b.fixtures);
+        for t in &b.targets {
+            let pos = frame.point(Vec3::new(t.at.x, floor + storey * t.storey as f32, t.at.y));
+            let forward = frame.direction(Vec3::new(t.facing.sin(), 0.0, t.facing.cos()));
+            // Marks go by the same index as targets, and plain targets before these may have none.
+            self.level.target_marks.resize(self.level.targets.len(), TargetMark::default());
+            self.level.targets.push(pos);
+            self.level.target_marks.push(TargetMark { yaw: forward.x.atan2(forward.z), kind: t.kind, in_room: true });
+        }
 
         match b.roof {
             Roof::Flat { paint } => {
@@ -519,145 +678,6 @@ impl Builder<'_> {
             let part = frame.child(Vec2::ZERO, yaw);
             let center = frame.point(Vec3::from(at));
             self.level.solids.push(Solid { center, half: Vec3::from(half), rotation: part.rotation, paint });
-        }
-    }
-
-    fn field_walls(&mut self) {
-        let s = *self.style;
-        for wall in &self.spec.walls {
-            let mut walked = 0.0;
-            for pair in wall.points.windows(2) {
-                let (a, b) = (pair[0], pair[1]);
-                let length = a.distance(b);
-                let dir = (b - a) / length;
-                let pieces = (length / wall.segment).ceil().max(1.0) as u32;
-                let piece = length / pieces as f32;
-                for i in 0..pieces {
-                    let from = walked + piece * i as f32;
-                    let to = from + piece;
-                    let jitter = self.scatter.range(-wall.unevenness, wall.unevenness);
-                    let stray = dir.perp() * self.scatter.range(-wall.wander, wall.wander);
-                    if wall.gaps.iter().any(|(g0, g1)| from < *g1 && to > *g0) {
-                        continue;
-                    }
-                    let mid = a + dir * (piece * (i as f32 + 0.5)) + stray;
-                    let ends = [a + dir * (piece * i as f32), a + dir * (piece * (i + 1) as f32)];
-                    let low = ends.iter().map(|p| self.relief.height(*p)).fold(f32::MAX, f32::min);
-                    let bottom = low - s.foot;
-                    let top = self.relief.height(mid) + wall.height + jitter;
-                    let yaw = (-dir.y).atan2(dir.x);
-                    self.level.solids.push(Solid {
-                        center: Vec3::new(mid.x, (top + bottom) * 0.5, mid.y),
-                        half: Vec3::new(piece * 0.5 + 0.02, (top - bottom) * 0.5, wall.thickness * 0.5),
-                        rotation: Quat::from_rotation_y(yaw),
-                        paint: wall.paint,
-                    });
-                }
-                walked += length;
-            }
-        }
-    }
-
-    fn rubble(&mut self) {
-        for heap in &self.spec.rubble {
-            for _ in 0..heap.count {
-                let angle = self.scatter.range(0.0, std::f32::consts::TAU);
-                let reach = self.scatter.range(0.0, 1.0).sqrt() * heap.radius;
-                let p = heap.at + Vec2::from_angle(angle) * reach;
-                let s = self.scatter.range(heap.size.0, heap.size.1);
-                // Larger towards the middle of the heap, so it builds up rather than scatters.
-                let swell = 1.0 + (1.0 - reach / heap.radius) * 0.6;
-                let half = Vec3::new(s, s * self.scatter.range(0.45, 0.85), s * self.scatter.range(0.7, 1.2)) * swell;
-                let rotation = Quat::from_euler(
-                    glam::EulerRot::YXZ,
-                    self.scatter.range(0.0, std::f32::consts::TAU),
-                    self.scatter.range(-0.4, 0.4),
-                    self.scatter.range(-0.4, 0.4),
-                );
-                let center = Vec3::new(p.x, self.relief.height(p) + half.y * 0.35, p.y);
-                self.level.solids.push(Solid { center, half, rotation, paint: heap.paint });
-            }
-        }
-    }
-
-    fn props(&mut self) {
-        for placed in &self.spec.props {
-            let y = self.relief.height(placed.at);
-            let frame = Frame { origin: Vec3::new(placed.at.x, y, placed.at.y), rotation: Quat::from_rotation_y(placed.yaw) };
-            self.place_prop(&frame, placed.prop);
-        }
-    }
-
-    fn woods(&mut self) {
-        for wood in &self.spec.woods {
-            match &wood.shape {
-                WoodShape::Line { points, spacing, jitter } => {
-                    for pair in points.windows(2) {
-                        let (a, b) = (pair[0], pair[1]);
-                        let count = (a.distance(b) / spacing).ceil().max(1.0) as u32;
-                        for i in 0..count {
-                            let p = a.lerp(b, (i as f32 + self.scatter.range(0.2, 0.8)) / count as f32);
-                            let shift = Vec2::new(self.scatter.range(-*jitter, *jitter), self.scatter.range(-*jitter, *jitter));
-                            self.tree(wood, p + shift);
-                        }
-                    }
-                }
-                WoodShape::Clump { at, half, yaw, count } => {
-                    for _ in 0..*count {
-                        let local = Vec2::new(self.scatter.range(-half.x, half.x), self.scatter.range(-half.y, half.y));
-                        self.tree(wood, *at + Vec2::from_angle(-*yaw).rotate(local));
-                    }
-                }
-                WoodShape::Rows { at, half, yaw, spacing } => {
-                    let (nx, nz) = ((half.x * 2.0 / spacing) as i32, (half.y * 2.0 / spacing) as i32);
-                    for j in 0..=nz {
-                        for i in 0..=nx {
-                            let local = Vec2::new(i as f32 * spacing - half.x, j as f32 * spacing - half.y);
-                            self.tree(wood, *at + Vec2::from_angle(-*yaw).rotate(local));
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fn tree(&mut self, wood: &Woodland, p: Vec2) {
-        let height = self.scatter.range(wood.height.0, wood.height.1);
-        let radius = self.scatter.range(wood.radius.0, wood.radius.1);
-        if self.relief.occupied(p) {
-            return;
-        }
-        self.level.trees.push(Tree { base: Vec3::new(p.x, self.relief.height(p) - 0.25, p.y), height, radius, kind: wood.kind });
-    }
-
-    fn objectives(&mut self) {
-        for team in &self.spec.teams {
-            let spawns = team
-                .spawns
-                .iter()
-                .map(|s| SpawnPoint { pos: Vec3::new(s.at.x, self.relief.height(s.at) + 0.1, s.at.y), yaw: s.yaw })
-                .collect();
-            self.level.teams.push(Team { name: team.name.clone(), spawns, base_radius: team.base_radius });
-        }
-        for point in &self.spec.capture_points {
-            self.level.capture_points.push(CapturePoint {
-                name: point.name.clone(),
-                center: Vec3::new(point.at.x, self.relief.height(point.at), point.at.y),
-                radius: point.radius,
-            });
-        }
-        let sentry = self.spec.sentry;
-        self.level.sentry = SpawnPoint { pos: Vec3::new(sentry.at.x, self.relief.height(sentry.at) + 0.1, sentry.at.y), yaw: sentry.yaw };
-        for pad in &self.spec.helipads {
-            self.level.helipads.push(SpawnPoint { pos: Vec3::new(pad.at.x, self.relief.height(pad.at), pad.at.y), yaw: pad.yaw });
-        }
-        for &(kind, at) in &self.spec.vehicles {
-            let pos = Vec3::new(at.at.x, self.relief.height(at.at), at.at.y);
-            self.level.vehicles.push(crate::VehicleSpawn { kind, pos, yaw: at.yaw });
-        }
-        if let Some(first) = self.level.teams.first().and_then(|t| t.spawns.first()).copied() {
-            self.level.spawn = first.pos;
-            self.level.spawn_yaw = first.yaw;
         }
     }
 }

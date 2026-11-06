@@ -3419,3 +3419,26 @@ fn bandaging_on_the_move_the_hands_keep_time_with_the_treatment_and_the_legs_kee
     assert!(seen > 100, "a treatment should have run: {seen}");
     assert!(sim.soldiers[id].dressed.arm);
 }
+
+/// A target in a room stays down long enough to see from the door what a run through has cleared, while
+/// one on the lanes is soon back up for the next shot.
+#[test]
+fn a_target_in_a_room_stays_down_longer_than_one_on_the_lanes() {
+    let world = WorldConfig::default();
+    for (in_room, down) in [(false, world.target_down_time), (true, world.room_target_down_time)] {
+        let mut sim = range(15.0);
+        sim.level.target_marks = vec![prs_level::TargetMark { in_room, ..Default::default() }];
+        let mut s = Shooter::new(&mut sim, 11);
+        s.buttons.set(Buttons::ADS, true);
+        s.aim_at_target();
+        s.wait(2.0);
+        s.buttons.set(Buttons::FIRE, true);
+        while s.sim.targets[0].hits == 0 && s.weapon().ammo > 0 {
+            s.track_tick();
+        }
+        s.buttons.set(Buttons::FIRE, false);
+        assert!(s.sim.targets[0].hits > 0, "never hit it");
+        let left = s.sim.targets[0].down_for;
+        assert!(left > down - 0.5 && left <= down, "in a room {in_room}: down for {left}, not {down}");
+    }
+}

@@ -4,6 +4,7 @@
 mod archetypes;
 mod build;
 pub mod maps;
+mod range;
 mod relief;
 pub mod spec;
 mod town;
@@ -152,6 +153,23 @@ pub struct VehicleSpawn {
     pub yaw: f32,
 }
 
+/// Whether a target is someone to shoot or someone not to.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum TargetKind {
+    #[default]
+    Hostile,
+    NoShoot,
+}
+
+/// How a target stands: which way it faces (yaw zero faces +z), what it is, and whether it is in a room,
+/// where it stays down longer so a run through the rooms can see what it has cleared.
+#[derive(Clone, Copy, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct TargetMark {
+    pub yaw: f32,
+    pub kind: TargetKind,
+    pub in_room: bool,
+}
+
 /// A place worth holding. What it means to hold it is up to the game mode.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct CapturePoint {
@@ -204,6 +222,8 @@ pub struct Level {
     pub solids: Vec<Solid>,
     pub trees: Vec<Tree>,
     pub targets: Vec<Vec3>,
+    /// How each target stands, by the same index. One missing is a plain target facing +z.
+    pub target_marks: Vec<TargetMark>,
     pub spawn: Vec3,
     pub spawn_yaw: f32,
     pub teams: Vec<Team>,
@@ -227,6 +247,10 @@ impl Level {
         MapData::find(name).ok()?.level().ok()
     }
 
+    pub fn target_mark(&self, target: usize) -> TargetMark {
+        self.target_marks.get(target).copied().unwrap_or_default()
+    }
+
     /// Flat open ground and nothing else, `size` metres across.
     pub fn flat(size: f32) -> Self {
         Level {
@@ -234,6 +258,7 @@ impl Level {
             solids: Vec::new(),
             trees: Vec::new(),
             targets: Vec::new(),
+            target_marks: Vec::new(),
             spawn: Vec3::new(0.0, 0.1, 0.0),
             spawn_yaw: 0.0,
             teams: Vec::new(),
@@ -274,7 +299,8 @@ impl Level {
     }
 
     /// A firing range looking down -Z from the spawn, with cover to practise from, a squad of
-    /// targets to prove you cannot mow them down, and a small obstacle course off to the side.
+    /// targets to prove you cannot mow them down, a small obstacle course off to the side, and the
+    /// training grounds in `range.rs`: a kill house, lane boards, rests, a window wall and a climbing lane.
     pub fn training_range() -> Self {
         let terrain = Terrain::generate(640.0, 96, range_height);
         let spawn = Vec3::new(0.0, range_height(Vec2::ZERO) + 0.1, 0.0);
@@ -283,6 +309,7 @@ impl Level {
             solids: Vec::new(),
             trees: Vec::new(),
             targets: Vec::new(),
+            target_marks: Vec::new(),
             spawn,
             spawn_yaw: 0.0,
             teams: Vec::new(),
@@ -305,6 +332,7 @@ impl Level {
         level.add_compound();
         level.add_scenery();
         level.add_sides();
+        level.add_training_grounds();
         level
     }
 
@@ -447,13 +475,19 @@ impl Level {
                 continue;
             }
             placed += 1;
+            // Whatever would stand where the training grounds are built is left out, after drawing it
+            // all the same, so the rest of the scenery stands exactly where it always did.
+            let cleared = range::CLEARINGS.iter().any(|(min, max)| x > min.x && x < max.x && z > min.y && z < max.y);
             if rng.range(0.0, 1.0) < 0.72 {
-                self.trees.push(Tree {
+                let tree = Tree {
                     base: Vec3::new(x, self.ground(x, z) - 0.1, z),
                     height: rng.range(5.0, 10.0),
                     radius: rng.range(1.4, 2.6),
                     kind: TreeKind::Fir,
-                });
+                };
+                if !cleared {
+                    self.trees.push(tree);
+                }
             } else {
                 let s = rng.range(0.5, 1.9);
                 let half = Vec3::new(s, s * rng.range(0.5, 0.9), s * rng.range(0.7, 1.2));
@@ -464,6 +498,9 @@ impl Level {
                     rng.range(-0.35, 0.35),
                 );
                 let center = Vec3::new(x, self.ground(x, z) + half.y * 0.4, z);
+                if cleared {
+                    continue;
+                }
                 self.add(center, half, rotation, Paint::Rock);
             }
         }
@@ -517,8 +554,12 @@ impl Terrain {
     }
 }
 
-/// Flat where you shoot from and at, rolling everywhere else.
+/// Flat where you shoot from and at, and where things are built, rolling everywhere else.
 fn range_height(p: Vec2) -> f32 {
+    range::flattened(p, natural_range_height)
+}
+
+fn natural_range_height(p: Vec2) -> f32 {
     let waves = (p.x * 0.021 + 1.3).sin() * 3.2
         + (p.y * 0.017 - 0.4).sin() * 3.6
         + (p.x * 0.053 + p.y * 0.041).sin() * 1.3
@@ -550,6 +591,8 @@ impl Scatter {
     }
 }
 
+#[cfg(test)]
+mod range_tests;
 #[cfg(test)]
 mod town_tests;
 
@@ -588,7 +631,8 @@ mod tests {
         let level = Level::training_range();
         let world = level.collision();
         let eye = level.spawn + Vec3::Y * 1.62;
-        for &t in &level.targets {
+        // The lane targets, that is: the ones in rooms are for going in after.
+        for (_, &t) in level.targets.iter().enumerate().filter(|(i, _)| !level.target_mark(*i).in_room) {
             let chest = t + Vec3::Y * 1.3;
             let to = chest - eye;
             let hit = world.raycast(eye, to.normalize(), to.length());

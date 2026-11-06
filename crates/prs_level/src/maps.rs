@@ -12,7 +12,7 @@ use std::cell::Cell;
 use std::fmt;
 
 use crate::spec::WoodShape;
-use crate::{CapturePoint, Doorway, Level, MapSpec, Room, Solid, SpawnPoint, Staircase, Team, Terrain, Tree, VehicleSpawn, Window};
+use crate::{CapturePoint, Doorway, Level, MapSpec, Room, Solid, SpawnPoint, Staircase, TargetMark, Team, Terrain, Tree, VehicleSpawn, Window};
 
 /// What a file says it is written for. A file for a later one is refused, not misread.
 pub const FORMAT: u32 = 1;
@@ -72,6 +72,9 @@ pub struct MapFile {
     pub trees: Vec<Tree>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub targets: Vec<Vec3>,
+    /// How each target stands, by the same index as `targets`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub target_marks: Vec<TargetMark>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub rooms: Vec<Room>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -322,6 +325,7 @@ impl MapFile {
                     solids: Vec::new(),
                     trees: Vec::new(),
                     targets: Vec::new(),
+                    target_marks: Vec::new(),
                     spawn: spawn.pos,
                     spawn_yaw: spawn.yaw,
                     teams: Vec::new(),
@@ -348,6 +352,7 @@ impl MapFile {
         level.solids.extend(self.solids);
         level.trees.extend(self.trees);
         level.targets.extend(self.targets);
+        level.target_marks.extend(self.target_marks);
         level.rooms.extend(self.rooms);
         level.doorways.extend(self.doorways);
         level.windows.extend(self.windows);
@@ -401,6 +406,7 @@ mod tests {
         list(&mut out, "solids", &file.solids);
         list(&mut out, "trees", &file.trees);
         list(&mut out, "targets", &file.targets);
+        list(&mut out, "target_marks", &file.target_marks);
         list(&mut out, "rooms", &file.rooms);
         list(&mut out, "doorways", &file.doorways);
         list(&mut out, "windows", &file.windows);
@@ -440,6 +446,7 @@ mod tests {
             solids: level.solids,
             trees: level.trees,
             targets: level.targets,
+            target_marks: level.target_marks,
             rooms: level.rooms,
             doorways: level.doorways,
             windows: level.windows,

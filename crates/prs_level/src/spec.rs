@@ -319,6 +319,18 @@ pub struct Building {
     pub flights: Vec<Flight>,
     /// Boxes fixed to it, like awnings and shutters, in its own frame with y up from the yard.
     pub fixtures: Vec<Part>,
+    /// Targets standing in its rooms.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub targets: Vec<TargetSpec>,
+}
+
+/// A target on a floor of a building, in the building's frame, turned to face `facing` (yaw zero faces +z).
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+pub struct TargetSpec {
+    pub at: Vec2,
+    pub storey: u32,
+    pub facing: f32,
+    pub kind: crate::TargetKind,
 }
 
 #[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
