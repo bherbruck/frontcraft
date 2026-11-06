@@ -50,8 +50,10 @@ pub struct MapLimits {
     pub max_terrain_work: u64,
     /// Cells in the terrain mesh, which is what it costs in memory, checked before the mesh is made.
     pub max_terrain_cells: u64,
-    /// Steps, bridges, landmarks and canals, each. Every one of these is looked at for every height.
+    /// Steps, bridges, landmarks, canals and waters, each. Every one of these is looked at for every height.
     pub max_cuts: usize,
+    /// Points round one water's shore. Every one is looked at for every height inside its bounds.
+    pub max_shore_points: usize,
     pub max_storeys: u32,
 }
 
@@ -59,7 +61,7 @@ impl Default for MapLimits {
     /// Room for a map four kilometres across at a few metres a cell, which is several times the town, and no
     /// more memory or time than such a map takes.
     fn default() -> Self {
-        Self { max_size: 8192.0, max_cells: 4096, max_splits: 6, max_items: 200_000, max_trees: 50_000, max_rubble: 20_000, max_pieces: 100_000, max_build_steps: 1_000_000, max_terrain_work: 2_000_000_000, max_terrain_cells: 4_000_000, max_cuts: 512, max_storeys: 16 }
+        Self { max_size: 8192.0, max_cells: 4096, max_splits: 6, max_items: 200_000, max_trees: 50_000, max_rubble: 20_000, max_pieces: 100_000, max_build_steps: 1_000_000, max_terrain_work: 2_000_000_000, max_terrain_cells: 4_000_000, max_cuts: 512, max_shore_points: 4096, max_storeys: 16 }
     }
 }
 
@@ -284,6 +286,16 @@ impl MapFile {
         size(terrain.size)?;
         if let Some(open) = terrain.open_tolerance {
             positive("tolerance", open)?;
+        }
+        if spec.waters.len() > limits.max_cuts {
+            return Err(format!("{} waters", spec.waters.len()));
+        }
+        for water in &spec.waters {
+            if !(3..=limits.max_shore_points).contains(&water.points.len()) {
+                return Err(format!("a water with {} points round its shore", water.points.len()));
+            }
+            // A bank of nothing would be a shore with no slope at all, which works out as no height at all.
+            positive("water bank", water.bank)?;
         }
         if let Some(survey) = &terrain.survey {
             size(survey.size)?;
@@ -714,6 +726,18 @@ mod tests {
         let few_cells = MapLimits { max_terrain_cells: 100, ..MapLimits::default() };
         assert!(town.build_limited(&few_cells).unwrap_err().contains("cells"));
         assert!(town.build_limited(&MapLimits::default()).is_ok());
+    }
+
+    #[test]
+    fn a_water_must_have_a_shore_and_a_bank() {
+        let muttrah = MapData::built_in("muttrah").unwrap().text;
+        let bank = muttrah.find("\nbank = ").map(|at| muttrah[at..at + 1 + muttrah[at + 1..].find('\n').unwrap()].to_owned()).unwrap();
+        for bad in ["\nbank = 0.0", "\nbank = -2.0"] {
+            let refused = MapData::new("muttrah", muttrah.replacen(&bank, bad, 1)).level();
+            assert!(matches!(refused, Err(MapError::TooBig { .. })), "{bad}: {refused:?}");
+        }
+        let tight = MapLimits { max_shore_points: 3, ..MapLimits::default() };
+        assert!(matches!(MapData::built_in("muttrah").unwrap().level_within(&tight), Err(MapError::TooBig { .. })));
     }
 
     #[test]
