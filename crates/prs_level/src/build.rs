@@ -59,6 +59,11 @@ struct Rect {
     max: Vec2,
 }
 
+/// How far a bridge's deck stands over the ground at its ends.
+const DECK_LIP: f32 = 0.12;
+/// The most one flat length of a bridge's deck stands above or below the next.
+const DECK_STEP: f32 = 0.15;
+
 /// How much building is left: one step for every turn of every loop the builder takes. A map that would take
 /// more stops being built, whatever its spec says, and is refused.
 pub(crate) struct Budget {
@@ -248,9 +253,13 @@ impl Builder<'_> {
                 continue;
             }
             let dir = along / length;
+            // A lip over the ground at each end, so the deck reads as the deck there and not the road.
+            let (start, end) = (self.relief.height(bridge.from) + DECK_LIP, self.relief.height(bridge.to) + DECK_LIP);
             let rotation = Quat::from_rotation_y((-dir.y).atan2(dir.x));
-            let (start, end) = (self.relief.height(bridge.from), self.relief.height(bridge.to));
-            let pieces = (length / bridge.span).ceil().max(1.0) as u32;
+            // Each span in as many flat lengths as keep the step between them small enough to walk and drive.
+            let spans = (length / bridge.span).ceil().max(1.0) as u32;
+            let per_span = ((end - start).abs() / spans as f32 / DECK_STEP).ceil().max(1.0) as u32;
+            let pieces = spans * per_span;
             let piece = length / pieces as f32;
             let (t, side) = (bridge.thickness, bridge.width * 0.5);
             let rail = self.mason.style.partition;
@@ -269,8 +278,8 @@ impl Builder<'_> {
                         self.mason.level.solids.push(solid(at(bridge.parapet * 0.5, out), Vec3::new(piece * 0.5 + 0.02, bridge.parapet * 0.5, rail * 0.5)));
                     }
                 }
-                // A pier under every join, down to whatever is below.
-                if i > 0 {
+                // A pier under every span's join, down to whatever is below.
+                if i > 0 && i % per_span == 0 {
                     let join = bridge.from + dir * (piece * i as f32);
                     let below = self.relief.height(join) - self.mason.style.foot;
                     let bottom = start + (end - start) * (i as f32 / pieces as f32) - t;

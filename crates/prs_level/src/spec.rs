@@ -92,6 +92,16 @@ pub struct TerrainSpec {
     pub paint_splits: u32,
     /// Largest height error the mesh may leave, in metres.
     pub tolerance: f32,
+    /// Somewhere other than the places in `detail`, the mesh may leave this much instead, so open country
+    /// on a big map costs fewer triangles than a town does.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub open_tolerance: Option<f32>,
+    /// The same for following changes of ground colour: how many splits it may take out there.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub open_paint_splits: Option<u32>,
+    /// Circles, (middle, radius), held to `tolerance` when `open_tolerance` is set.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub detail: Vec<(Vec2, f32)>,
     pub waves: Vec<Wave>,
     pub hills: Vec<Hill>,
     pub calm: Vec<Calm>,
@@ -497,6 +507,7 @@ pub enum Prop {
     Kiln,
     WaterTower,
     Canopy,
+    Mast,
 }
 
 /// One box of a prop: offset from the prop's origin on the ground, half size, yaw, paint.
@@ -543,7 +554,7 @@ pub struct CapturePointSpec {
 
 impl Prop {
     pub fn parts(self) -> &'static [Part] {
-        use Paint::{Brick, Canvas, Hay, Metal, Rock, Rust, Sandbag, Stone, Terracotta, Tin, Wood};
+        use Paint::{Brick, Canvas, Cement, Hay, Metal, Rock, Rust, Sandbag, Stone, Terracotta, Tin, Wood};
         match self {
             Prop::Crate => &[([0.0, 0.5, 0.0], [0.6, 0.5, 0.6], 0.0, Wood)],
             Prop::CrateStack => &[
@@ -632,6 +643,18 @@ impl Prop {
                 ([0.0, 9.4, 0.0], [1.9, 1.5, 1.9], 0.0, Terracotta),
                 ([0.0, 9.4, 0.0], [1.9, 1.5, 1.9], 0.785, Terracotta),
                 ([0.0, 11.0, 0.0], [1.4, 0.1, 1.4], 0.0, Terracotta),
+            ],
+            // A radio mast: a lattice tower, seen from across the map.
+            Prop::Mast => &[
+                ([-0.5, 12.0, -0.5], [0.08, 12.0, 0.08], 0.0, Metal),
+                ([0.5, 12.0, -0.5], [0.08, 12.0, 0.08], 0.0, Metal),
+                ([-0.5, 12.0, 0.5], [0.08, 12.0, 0.08], 0.0, Metal),
+                ([0.5, 12.0, 0.5], [0.08, 12.0, 0.08], 0.0, Metal),
+                ([0.0, 6.0, 0.0], [0.6, 0.06, 0.6], 0.0, Metal),
+                ([0.0, 12.0, 0.0], [0.6, 0.06, 0.6], 0.0, Metal),
+                ([0.0, 18.0, 0.0], [0.6, 0.06, 0.6], 0.0, Metal),
+                ([0.0, 25.0, 0.0], [0.06, 1.0, 0.06], 0.0, Terracotta),
+                ([0.0, 1.0, -1.6], [1.2, 1.0, 0.9], 0.0, Cement),
             ],
             // A canvas roof on posts, over a market alley, high enough to walk under.
             Prop::Canopy => &[

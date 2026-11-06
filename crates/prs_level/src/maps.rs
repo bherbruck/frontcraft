@@ -257,13 +257,16 @@ impl MapFile {
         let Some(spec) = &self.spec else { return Ok(()) };
         let terrain = &spec.terrain;
         size(terrain.size)?;
+        if let Some(open) = terrain.open_tolerance {
+            positive("tolerance", open)?;
+        }
         let splits = terrain.max_splits.max(terrain.paint_splits);
         let finest = (terrain.base_cells as u64).checked_shl(splits.min(63)).unwrap_or(u64::MAX);
         if terrain.base_cells == 0 || splits > limits.max_splits || finest > limits.max_cells as u64 {
             return Err(format!("{} cells split {splits} times", terrain.base_cells));
         }
         let canals = spec.ditches.iter().filter(|d| d.cuts_roads).count();
-        for (what, count) in [("flights of steps", spec.steps.len()), ("bridges", spec.bridges.len()), ("landmarks", spec.landmarks.len()), ("canals", canals)] {
+        for (what, count) in [("flights of steps", spec.steps.len()), ("bridges", spec.bridges.len()), ("landmarks", spec.landmarks.len()), ("canals", canals), ("detailed places", terrain.detail.len())] {
             if count > limits.max_cuts {
                 return Err(format!("{count} {what}"));
             }
@@ -663,6 +666,12 @@ mod tests {
         let one = "\n[[spec.steps]]\nfrom = [0.0, 0.0]\nto = [1.0, 0.0]\nwidth = 1.0\npaint = \"Concrete\"\n";
         let many = format!("{town}{}", one.repeat(MapLimits::default().max_cuts + 1));
         let refused = MapData::new("steps", many).level();
+        assert!(matches!(refused, Err(MapError::TooBig { .. })), "{refused:?}");
+        // Every cell of the mesh looks through the places kept detailed, so they are capped too.
+        let mut spec = MapSpec::town();
+        spec.terrain.detail = vec![(glam::Vec2::ZERO, 10.0); MapLimits::default().max_cuts + 1];
+        let text = toml::to_string(&MapFile { format: FORMAT, spec: Some(spec), ..MapFile::default() }).expect("a spec is plain data");
+        let refused = MapData::new("detail", text).level();
         assert!(matches!(refused, Err(MapError::TooBig { .. })), "{refused:?}");
     }
 

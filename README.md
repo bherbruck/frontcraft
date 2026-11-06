@@ -512,16 +512,21 @@ roofs, ditches and hedged fields to the west, a wash and an orchard to the east,
 Stairs, doors, walls, windows and cover heights are held to `MoveConfig` by tests
 that walk a soldier through them, in `crates/prs_level/src/town_tests.rs`.
 
-Claudabad (`PRS_MAP=claudabad`) is a dusty river town. A canal too deep to climb out of crosses it and
-parts round an island, where a terracotta sunburst stands over the square for everyone to steer by. Six
-bridges cross it, a road bridge at each end and two onto the island from each bank, with steps down to the
-water beside each. North of the canal is the old quarter, walled compounds packed round a covered bazaar,
-with a brickworks beyond; south of it is the newer town under a water tower, and a rail yard. Palm groves
-and fields line the canal outside, and a low ridge hides each base. Each side's half is the other's turned
-half way round, so the walks to the five flags match. It is written from `claudabad.rs`, and the bridges,
-steps, sunburst, canals that cut through roads, palms and new props it uses are general parts of a
-`MapSpec`. Its tests, in `claudabad_tests.rs`, walk the bridges and the steps out of the canal, check the
-whole map joins up on foot from each base, and a jeep drives from either base over the bridge to the square.
+Claudabad (`PRS_MAP=claudabad`) is four kilometres of dusty river country with a town at its heart. A
+canal too deep to climb out of crosses the town and parts round an island, where a terracotta sunburst
+stands over the square for everyone to steer by. Bridges cross it, with steps down to the water beside
+each and every 120 m between, and a low parapet along both banks in town keeps vehicles out. North of the
+canal is the old quarter, walled compounds packed round a covered bazaar, with a brickworks beyond; south
+of it is the newer town under a water tower, and a rail yard. Outside the town the canal widens into a
+river, crossed on each flank by a highway that goes over a ring road on an overpass. A hilltop fort with a
+radio mast watches over each side, dry wadis cut the open ground, hamlets stand among their orchards and
+fields, rock outcrops and wrecks give cover on the long approaches, and each base has an airstrip with
+hangars and a helipad. Each side's half is the other's turned half way round, so the walks and drives to
+the seven flags match. It is written from `claudabad.rs`, and the bridges, steps, sunburst, canals that cut
+through roads, palms, radio mast and coarser open country (`open_tolerance`, `open_paint_splits` and
+`detail` in `TerrainSpec`) are general parts of a `MapSpec`. Its tests, in `claudabad_tests.rs`, walk the
+bridges and the steps out of the canal, check the whole map joins up on foot from each base, and a jeep
+drives two kilometres from either base over the bridge to the square.
 
 The range looks down lanes with targets at 25, 50, 100, 200 and 300 m, marked by boards either side:
 a white stripe per 25 m, then a red board per 100 m. Along the firing line are sandbags, a bench to rest

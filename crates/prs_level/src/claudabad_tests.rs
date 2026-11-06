@@ -75,7 +75,7 @@ fn every_spawn_is_clear_and_on_the_ground() {
 /// A flag stands in the open, where it can be seen and fought round.
 #[test]
 fn every_capture_point_stands_on_open_ground() {
-    assert_eq!(level().capture_points.len(), 5);
+    assert_eq!(level().capture_points.len(), 7);
     for point in &level().capture_points {
         let feet = point.center + Vec3::Y * 0.1;
         assert!(world().capsule_is_clear(feet, body()), "{} is inside something", point.name);
@@ -87,7 +87,7 @@ fn every_capture_point_stands_on_open_ground() {
 #[test]
 fn each_sides_flags_mirror_the_others() {
     let points = &spec().capture_points;
-    for (a, b) in [(0, 4), (1, 3)] {
+    for (a, b) in [(0, 6), (1, 5), (2, 4)] {
         let (p, q) = (points[a].at, points[b].at);
         assert!((p + q).length() < 1.0, "{} at {p} and {} at {q} are not turned round the middle", points[a].name, points[b].name);
     }
@@ -98,7 +98,7 @@ fn each_sides_flags_mirror_the_others() {
 /// Every bridge can be walked over end to end, and the parapets keep you on it.
 #[test]
 fn every_bridge_can_be_walked_across() {
-    assert_eq!(spec().bridges.len(), 6);
+    assert_eq!(spec().bridges.len(), 10);
     for bridge in &spec().bridges {
         let dir = (bridge.to - bridge.from).normalize();
         let (from, to) = (bridge.from - dir * 4.0, bridge.to + dir * 4.0);
@@ -113,7 +113,16 @@ fn every_bridge_can_be_walked_across() {
 /// the canal is too deep to climb out of.
 #[test]
 fn the_canal_is_left_by_the_steps_and_not_up_its_sides() {
-    assert_eq!(spec().steps.len(), 12);
+    // Nowhere along the canal is far from a way out.
+    for canal in spec().ditches.iter().filter(|d| d.cuts_roads) {
+        for pair in canal.points.windows(2) {
+            for k in 0..=10 {
+                let p = pair[0].lerp(pair[1], k as f32 / 10.0);
+                let nearest = spec().steps.iter().map(|s| s.to.distance(p)).fold(f32::MAX, f32::min);
+                assert!(nearest < 95.0 || p.abs().max_element() > spec().terrain.size * 0.5 - 100.0, "{nearest:.0} m from {p} to a way out of the canal");
+            }
+        }
+    }
     for steps in &spec().steps {
         let dir = (steps.from - steps.to).normalize();
         let below = ground(steps.to + dir * -1.5);
@@ -125,7 +134,7 @@ fn the_canal_is_left_by_the_steps_and_not_up_its_sides() {
     let mut state = MoveState::new(bed + Vec3::Y * 0.05, &c);
     let mut events = Vec::new();
     for _ in 0..60 * 6 {
-        step(&mut state, &c, &MoveInput { wish: Vec2::Y, yaw: 0.0, ..MoveInput::default() }, world(), DT, &mut events);
+        step(&mut state, &c, &MoveInput { wish: Vec2::Y, yaw: std::f32::consts::PI, ..MoveInput::default() }, world(), DT, &mut events);
         events.clear();
     }
     assert!(state.pos.y < bed.y + 1.0, "walked out of the canal up its side, to {}", state.pos);
@@ -201,7 +210,7 @@ fn nothing_is_built_inside_anything_else() {
 fn the_whole_map_joins_up_on_foot() {
     let c = MoveConfig::default();
     let w = world();
-    let cell = 3.0_f32;
+    let cell = 5.0_f32;
     let half = spec().terrain.size * 0.5 - cell;
     let n = (half * 2.0 / cell) as i32;
     let index = |p: Vec2| (((p.x + half) / cell).round() as i32, ((p.y + half) / cell).round() as i32);

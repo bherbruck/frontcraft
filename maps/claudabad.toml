@@ -3,7 +3,7 @@ format = 1
 
 [spec]
 seed = 4242
-vehicles = [[0, { at = [50.0, 416.0], yaw = 0.0 }], [0, { at = [-50.0, -416.0], yaw = 3.1415927 }], [2, { at = [54.0, 416.0], yaw = 0.0 }], [2, { at = [-54.0, -416.0], yaw = 3.1415927 }], [1, { at = [60.0, 416.0], yaw = 0.0 }], [1, { at = [-60.0, -416.0], yaw = 3.1415927 }], [0, { at = [64.0, 416.0], yaw = 0.0 }], [0, { at = [-64.0, -416.0], yaw = 3.1415927 }], [2, { at = [48.0, 396.0], yaw = 0.0 }], [2, { at = [-48.0, -396.0], yaw = 3.1415927 }], [2, { at = [66.0, 396.0], yaw = 0.0 }], [2, { at = [-66.0, -396.0], yaw = 3.1415927 }]]
+vehicles = [[0, { at = [310.0, 1736.0], yaw = 0.0 }], [0, { at = [-310.0, -1736.0], yaw = 3.1415927 }], [2, { at = [314.0, 1736.0], yaw = 0.0 }], [2, { at = [-314.0, -1736.0], yaw = 3.1415927 }], [1, { at = [320.0, 1736.0], yaw = 0.0 }], [1, { at = [-320.0, -1736.0], yaw = 3.1415927 }], [0, { at = [324.0, 1736.0], yaw = 0.0 }], [0, { at = [-324.0, -1736.0], yaw = 3.1415927 }], [2, { at = [308.0, 1716.0], yaw = 0.0 }], [2, { at = [-308.0, -1716.0], yaw = 3.1415927 }], [2, { at = [326.0, 1716.0], yaw = 0.0 }], [2, { at = [-326.0, -1716.0], yaw = 3.1415927 }], [0, { at = [334.0, 1710.0], yaw = 0.0 }], [0, { at = [-334.0, -1710.0], yaw = 3.1415927 }], [1, { at = [292.0, 1710.0], yaw = 0.0 }], [1, { at = [-292.0, -1710.0], yaw = 3.1415927 }]]
 
 [[spec.bridges]]
 from = [-300.0, -24.6]
@@ -59,9 +59,50 @@ thickness = 0.6
 to = [45.0, 50.0]
 width = 3.2
 
+[[spec.bridges]]
+from = [-1150.0, -60.0]
+paint = "Cement"
+parapet = 0.9
+span = 12.0
+thickness = 0.6
+to = [-1150.0, -20.0]
+width = 8.0
+
+[[spec.bridges]]
+from = [1150.0, 60.0]
+paint = "Cement"
+parapet = 0.9
+span = 12.0
+thickness = 0.6
+to = [1150.0, 20.0]
+width = 8.0
+
+[[spec.bridges]]
+from = [-1150.0, 672.0]
+paint = "Cement"
+parapet = 0.9
+span = 12.0
+thickness = 0.6
+to = [-1150.0, 728.0]
+width = 8.0
+
+[[spec.bridges]]
+from = [1150.0, -672.0]
+paint = "Cement"
+parapet = 0.9
+span = 12.0
+thickness = 0.6
+to = [1150.0, -728.0]
+width = 8.0
+
 [[spec.capture_points]]
-at = [210.0, 230.0]
-name = "Rail Yard"
+at = [-650.0, 1150.0]
+name = "Orchard Hamlet"
+radius = 40.0
+
+[[spec.capture_points]]
+at = [900.0, 450.0]
+name = "Hill Fort"
 radius = 36.0
 
 [[spec.capture_points]]
@@ -80,183 +121,14 @@ name = "Bazaar"
 radius = 34.0
 
 [[spec.capture_points]]
-at = [-210.0, -230.0]
-name = "Brickworks"
+at = [-900.0, -450.0]
+name = "Ridge Fort"
 radius = 36.0
 
-[[spec.compounds]]
-at = [40.0, 430.0]
-ground = "Yard"
-half = [30.0, 22.0]
-lift = 0.0
-yaw = 0.0
-
-[[spec.compounds.buildings]]
-at = [-16.0, -14.0]
-fixtures = []
-flights = []
-floors = "Packed"
-half = [6.0, 4.0]
-partitions = []
-stairs = "Stone"
-storeys = 1
-walls = "Canvas"
-yaw = 0.0
-
-[[spec.compounds.buildings.openings]]
-along = 0.0
-kind = "WideDoor"
-side = "S"
-storey = 0
-
-[[spec.compounds.buildings.openings]]
-along = 0.0
-kind = "Window"
-side = "W"
-storey = 0
-
-[spec.compounds.buildings.roof.Gable]
-paint = "Canvas"
-pitch = 0.34
-
-[[spec.compounds.buildings]]
-at = [0.0, -14.0]
-fixtures = []
-flights = []
-floors = "Packed"
-half = [6.0, 4.0]
-partitions = []
-stairs = "Stone"
-storeys = 1
-walls = "Canvas"
-yaw = 0.0
-
-[[spec.compounds.buildings.openings]]
-along = 0.0
-kind = "WideDoor"
-side = "S"
-storey = 0
-
-[[spec.compounds.buildings.openings]]
-along = 0.0
-kind = "Window"
-side = "W"
-storey = 0
-
-[spec.compounds.buildings.roof.Gable]
-paint = "Canvas"
-pitch = 0.34
-
-[[spec.compounds.props]]
-at = [-21.0, 14.0]
-prop = "CrateStack"
-yaw = 0.2
-
-[[spec.compounds.props]]
-at = [-20.0, 4.0]
-prop = "Hesco"
-yaw = 1.5707964
-
-[spec.compounds.wall]
-height = 2.3
-paint = "Sandbag"
-
-[[spec.compounds.wall.gates]]
-along = 0.0
-side = "W"
-width = 7.0
-
-[[spec.compounds.wall.gates]]
-along = 16.0
-side = "N"
-width = 18.0
-
-[[spec.compounds]]
-at = [-40.0, -430.0]
-ground = "Yard"
-half = [30.0, 22.0]
-lift = 0.0
-yaw = 3.1415927
-
-[[spec.compounds.buildings]]
-at = [-16.0, -14.0]
-fixtures = []
-flights = []
-floors = "Packed"
-half = [6.0, 4.0]
-partitions = []
-stairs = "Stone"
-storeys = 1
-walls = "Canvas"
-yaw = 0.0
-
-[[spec.compounds.buildings.openings]]
-along = 0.0
-kind = "WideDoor"
-side = "S"
-storey = 0
-
-[[spec.compounds.buildings.openings]]
-along = 0.0
-kind = "Window"
-side = "W"
-storey = 0
-
-[spec.compounds.buildings.roof.Gable]
-paint = "Canvas"
-pitch = 0.34
-
-[[spec.compounds.buildings]]
-at = [0.0, -14.0]
-fixtures = []
-flights = []
-floors = "Packed"
-half = [6.0, 4.0]
-partitions = []
-stairs = "Stone"
-storeys = 1
-walls = "Canvas"
-yaw = 0.0
-
-[[spec.compounds.buildings.openings]]
-along = 0.0
-kind = "WideDoor"
-side = "S"
-storey = 0
-
-[[spec.compounds.buildings.openings]]
-along = 0.0
-kind = "Window"
-side = "W"
-storey = 0
-
-[spec.compounds.buildings.roof.Gable]
-paint = "Canvas"
-pitch = 0.34
-
-[[spec.compounds.props]]
-at = [-21.0, 14.0]
-prop = "CrateStack"
-yaw = 0.2
-
-[[spec.compounds.props]]
-at = [-20.0, 4.0]
-prop = "Hesco"
-yaw = 1.5707964
-
-[spec.compounds.wall]
-height = 2.3
-paint = "Sandbag"
-
-[[spec.compounds.wall.gates]]
-along = 0.0
-side = "W"
-width = 7.0
-
-[[spec.compounds.wall.gates]]
-along = 16.0
-side = "N"
-width = 18.0
+[[spec.capture_points]]
+at = [650.0, -1150.0]
+name = "Kiln Hamlet"
+radius = 40.0
 
 [[spec.compounds]]
 at = [0.0, 0.0]
@@ -1473,6 +1345,1516 @@ to = [-0.64, 4.2]
 
 [spec.compounds.buildings.roof.Flat]
 paint = "Packed"
+
+[[spec.compounds]]
+at = [300.0, 1750.0]
+ground = "Yard"
+half = [30.0, 22.0]
+lift = 0.0
+yaw = 0.0
+
+[[spec.compounds.buildings]]
+at = [-16.0, -14.0]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [6.0, 4.0]
+partitions = []
+stairs = "Stone"
+storeys = 1
+walls = "Canvas"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "WideDoor"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[spec.compounds.buildings.roof.Gable]
+paint = "Canvas"
+pitch = 0.34
+
+[[spec.compounds.buildings]]
+at = [0.0, -14.0]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [6.0, 4.0]
+partitions = []
+stairs = "Stone"
+storeys = 1
+walls = "Canvas"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "WideDoor"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[spec.compounds.buildings.roof.Gable]
+paint = "Canvas"
+pitch = 0.34
+
+[[spec.compounds.props]]
+at = [-21.0, 14.0]
+prop = "CrateStack"
+yaw = 0.2
+
+[[spec.compounds.props]]
+at = [-20.0, 4.0]
+prop = "Hesco"
+yaw = 1.5707964
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Sandbag"
+
+[[spec.compounds.wall.gates]]
+along = 0.0
+side = "W"
+width = 7.0
+
+[[spec.compounds.wall.gates]]
+along = 16.0
+side = "N"
+width = 18.0
+
+[[spec.compounds.wall.gates]]
+along = 0.0
+side = "E"
+width = 7.0
+
+[[spec.compounds]]
+at = [420.0, 1740.0]
+ground = "Yard"
+half = [60.0, 18.0]
+lift = 0.0
+yaw = 0.0
+
+[[spec.compounds.buildings]]
+at = [-30.0, -4.0]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [14.0, 9.0]
+partitions = []
+stairs = "Stone"
+storey_height = 4.2
+storeys = 1
+walls = "Tin"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -2.8
+kind = "WideDoor"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.8
+kind = "WideDoor"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 8.400001
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -8.400001
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[spec.compounds.buildings.roof.Gable]
+paint = "Tin"
+pitch = 0.55
+
+[[spec.compounds.buildings]]
+at = [2.0, -4.0]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [14.0, 9.0]
+partitions = []
+stairs = "Stone"
+storey_height = 4.2
+storeys = 1
+walls = "Tin"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -2.8
+kind = "WideDoor"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.8
+kind = "WideDoor"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 8.400001
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -8.400001
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[spec.compounds.buildings.roof.Gable]
+paint = "Tin"
+pitch = 0.55
+
+[[spec.compounds.buildings]]
+at = [40.0, -6.0]
+fixtures = []
+floors = "FloorTile"
+half = [2.9, 4.4]
+partitions = []
+stairs = "Stone"
+storeys = 3
+walls = "Cement"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-1.98, 2.8999999]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.flights]]
+ascent = "S"
+foot = [1.98, -2.8999999]
+from = 1
+to = 2
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-1.98, 2.8999999]
+from = 2
+to = 3
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 1.98
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "N"
+storey = 2
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "S"
+storey = 2
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 2
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Cement"
+
+[[spec.compounds.props]]
+at = [24.0, 10.0]
+prop = "Drums"
+yaw = 0.3
+
+[[spec.compounds.props]]
+at = [50.0, 10.0]
+prop = "Truck"
+yaw = 0.0
+
+[[spec.compounds]]
+at = [660.0, 1800.0]
+buildings = []
+ground = "Paving"
+half = [300.0, 15.0]
+lift = 0.0
+props = []
+yaw = 0.0
+
+[[spec.compounds]]
+at = [900.0, 450.0]
+ground = "Yard"
+half = [26.0, 20.0]
+lift = 0.0
+yaw = 0.3
+
+[[spec.compounds.buildings]]
+at = [-18.0, -12.0]
+fixtures = []
+floors = "FloorTile"
+half = [2.9, 4.4]
+partitions = []
+stairs = "Stone"
+storeys = 3
+walls = "Stone"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-1.98, 2.8999999]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.flights]]
+ascent = "S"
+foot = [1.98, -2.8999999]
+from = 1
+to = 2
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-1.98, 2.8999999]
+from = 2
+to = 3
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 1.98
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "N"
+storey = 2
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "S"
+storey = 2
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 2
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Cement"
+
+[[spec.compounds.buildings]]
+at = [18.0, 12.0]
+fixtures = []
+floors = "FloorTile"
+half = [2.9, 4.4]
+partitions = []
+stairs = "Stone"
+storeys = 3
+walls = "Stone"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-1.98, 2.8999999]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.flights]]
+ascent = "S"
+foot = [1.98, -2.8999999]
+from = 1
+to = 2
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-1.98, 2.8999999]
+from = 2
+to = 3
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 1.98
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "N"
+storey = 2
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "S"
+storey = 2
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 2
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Cement"
+
+[[spec.compounds.buildings]]
+at = [-10.0, 10.0]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [6.0, 3.8]
+stairs = "Stone"
+storeys = 1
+walls = "Stone"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.6999998
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.3000002
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.0
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.3000002
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.5]
+from = [0.90000004, -3.5]
+storey = 0
+to = [0.90000004, 3.5]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [8.0, -10.0]
+prop = "Mast"
+yaw = 0.0
+
+[[spec.compounds.props]]
+at = [-2.0, 4.0]
+prop = "Sandbags"
+yaw = 0.0
+
+[[spec.compounds.props]]
+at = [12.0, 4.0]
+prop = "Hesco"
+yaw = 1.5707964
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Stone"
+
+[[spec.compounds.wall.gates]]
+along = 0.0
+side = "N"
+width = 4.0
+
+[[spec.compounds.wall.gates]]
+along = -8.0
+side = "S"
+width = 3.0
+
+[[spec.compounds]]
+at = [-650.0, 1150.0]
+ground = "Yard"
+half = [16.0, 14.0]
+lift = 0.0
+yaw = 0.1
+
+[[spec.compounds.buildings]]
+at = [0.0, -8.0]
+fixtures = []
+floors = "Planks"
+half = [8.0, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-7.08, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 4.0
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.4
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.0
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -4.0
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 4.0
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -4.0
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 4.0
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.64, -4.2]
+storey = 0
+to = [-0.64, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.64, -4.2]
+storey = 1
+to = [-0.64, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [-6.0, 6.0]
+prop = "Well"
+yaw = 0.0
+
+[[spec.compounds.props]]
+at = [6.0, 5.0]
+prop = "Stall"
+yaw = 0.2
+
+[[spec.compounds]]
+at = [1300.0, 1250.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.2
+
+[[spec.compounds.buildings]]
+at = [0.0, -6.0]
+fixtures = []
+floors = "Packed"
+half = [7.0, 4.0]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [7.63, 2.3000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -3.1499999
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.8500001
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.8500001
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.7]
+from = [1.0500001, -3.7]
+storey = 0
+to = [1.0500001, 3.7]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [-4.0, 6.0]
+prop = "Well"
+yaw = 0.0
+
+[[spec.compounds]]
+at = [-300.0, -1750.0]
+ground = "Yard"
+half = [30.0, 22.0]
+lift = 0.0
+yaw = 3.1415927
+
+[[spec.compounds.buildings]]
+at = [-16.0, -14.0]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [6.0, 4.0]
+partitions = []
+stairs = "Stone"
+storeys = 1
+walls = "Canvas"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "WideDoor"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[spec.compounds.buildings.roof.Gable]
+paint = "Canvas"
+pitch = 0.34
+
+[[spec.compounds.buildings]]
+at = [0.0, -14.0]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [6.0, 4.0]
+partitions = []
+stairs = "Stone"
+storeys = 1
+walls = "Canvas"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "WideDoor"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[spec.compounds.buildings.roof.Gable]
+paint = "Canvas"
+pitch = 0.34
+
+[[spec.compounds.props]]
+at = [-21.0, 14.0]
+prop = "CrateStack"
+yaw = 0.2
+
+[[spec.compounds.props]]
+at = [-20.0, 4.0]
+prop = "Hesco"
+yaw = 1.5707964
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Sandbag"
+
+[[spec.compounds.wall.gates]]
+along = 0.0
+side = "W"
+width = 7.0
+
+[[spec.compounds.wall.gates]]
+along = 16.0
+side = "N"
+width = 18.0
+
+[[spec.compounds.wall.gates]]
+along = 0.0
+side = "E"
+width = 7.0
+
+[[spec.compounds]]
+at = [-420.0, -1740.0]
+ground = "Yard"
+half = [60.0, 18.0]
+lift = 0.0
+yaw = 3.1415927
+
+[[spec.compounds.buildings]]
+at = [-30.0, -4.0]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [14.0, 9.0]
+partitions = []
+stairs = "Stone"
+storey_height = 4.2
+storeys = 1
+walls = "Tin"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -2.8
+kind = "WideDoor"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.8
+kind = "WideDoor"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 8.400001
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -8.400001
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[spec.compounds.buildings.roof.Gable]
+paint = "Tin"
+pitch = 0.55
+
+[[spec.compounds.buildings]]
+at = [2.0, -4.0]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [14.0, 9.0]
+partitions = []
+stairs = "Stone"
+storey_height = 4.2
+storeys = 1
+walls = "Tin"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -2.8
+kind = "WideDoor"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.8
+kind = "WideDoor"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 8.400001
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -8.400001
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[spec.compounds.buildings.roof.Gable]
+paint = "Tin"
+pitch = 0.55
+
+[[spec.compounds.buildings]]
+at = [40.0, -6.0]
+fixtures = []
+floors = "FloorTile"
+half = [2.9, 4.4]
+partitions = []
+stairs = "Stone"
+storeys = 3
+walls = "Cement"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-1.98, 2.8999999]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.flights]]
+ascent = "S"
+foot = [1.98, -2.8999999]
+from = 1
+to = 2
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-1.98, 2.8999999]
+from = 2
+to = 3
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 1.98
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "N"
+storey = 2
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "S"
+storey = 2
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 2
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Cement"
+
+[[spec.compounds.props]]
+at = [24.0, 10.0]
+prop = "Drums"
+yaw = 0.3
+
+[[spec.compounds.props]]
+at = [50.0, 10.0]
+prop = "Truck"
+yaw = 0.0
+
+[[spec.compounds]]
+at = [-660.0, -1800.0]
+buildings = []
+ground = "Paving"
+half = [300.0, 15.0]
+lift = 0.0
+props = []
+yaw = 3.1415927
+
+[[spec.compounds]]
+at = [-900.0, -450.0]
+ground = "Yard"
+half = [26.0, 20.0]
+lift = 0.0
+yaw = 3.4415927
+
+[[spec.compounds.buildings]]
+at = [-18.0, -12.0]
+fixtures = []
+floors = "FloorTile"
+half = [2.9, 4.4]
+partitions = []
+stairs = "Stone"
+storeys = 3
+walls = "Stone"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-1.98, 2.8999999]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.flights]]
+ascent = "S"
+foot = [1.98, -2.8999999]
+from = 1
+to = 2
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-1.98, 2.8999999]
+from = 2
+to = 3
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 1.98
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "N"
+storey = 2
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "S"
+storey = 2
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 2
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Cement"
+
+[[spec.compounds.buildings]]
+at = [18.0, 12.0]
+fixtures = []
+floors = "FloorTile"
+half = [2.9, 4.4]
+partitions = []
+stairs = "Stone"
+storeys = 3
+walls = "Stone"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-1.98, 2.8999999]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.flights]]
+ascent = "S"
+foot = [1.98, -2.8999999]
+from = 1
+to = 2
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-1.98, 2.8999999]
+from = 2
+to = 3
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 1.98
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "N"
+storey = 2
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "S"
+storey = 2
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 2
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Cement"
+
+[[spec.compounds.buildings]]
+at = [-10.0, 10.0]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [6.0, 3.8]
+stairs = "Stone"
+storeys = 1
+walls = "Stone"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.6999998
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.3000002
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.0
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.3000002
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.5]
+from = [0.90000004, -3.5]
+storey = 0
+to = [0.90000004, 3.5]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [8.0, -10.0]
+prop = "Mast"
+yaw = 0.0
+
+[[spec.compounds.props]]
+at = [-2.0, 4.0]
+prop = "Sandbags"
+yaw = 0.0
+
+[[spec.compounds.props]]
+at = [12.0, 4.0]
+prop = "Hesco"
+yaw = 1.5707964
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Stone"
+
+[[spec.compounds.wall.gates]]
+along = 0.0
+side = "N"
+width = 4.0
+
+[[spec.compounds.wall.gates]]
+along = -8.0
+side = "S"
+width = 3.0
+
+[[spec.compounds]]
+at = [650.0, -1150.0]
+ground = "Yard"
+half = [16.0, 14.0]
+lift = 0.0
+yaw = 3.2415926
+
+[[spec.compounds.buildings]]
+at = [0.0, -8.0]
+fixtures = []
+floors = "Planks"
+half = [8.0, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-7.08, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 4.0
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.4
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.0
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -4.0
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 4.0
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -4.0
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 4.0
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.64, -4.2]
+storey = 0
+to = [-0.64, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.64, -4.2]
+storey = 1
+to = [-0.64, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [-6.0, 6.0]
+prop = "Well"
+yaw = 0.0
+
+[[spec.compounds.props]]
+at = [6.0, 5.0]
+prop = "Stall"
+yaw = 0.2
+
+[[spec.compounds]]
+at = [-1300.0, -1250.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 2.9415927
+
+[[spec.compounds.buildings]]
+at = [0.0, -6.0]
+fixtures = []
+floors = "Packed"
+half = [7.0, 4.0]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [7.63, 2.3000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -3.1499999
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.8500001
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.8500001
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.7]
+from = [1.0500001, -3.7]
+storey = 0
+to = [1.0500001, 3.7]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [-4.0, 6.0]
+prop = "Well"
+yaw = 0.0
 
 [[spec.compounds]]
 at = [-150.0, -193.0]
@@ -8699,6 +10081,7378 @@ along = 0.6
 side = "E"
 width = 2.4
 
+[[spec.compounds]]
+at = [-756.0, 1072.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.019037176
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [6.6457763, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -2.9905992
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.655177
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.3228881
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.655177
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.99686646, -4.2]
+storey = 0
+to = [0.99686646, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 2.2272973
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [-724.0, 1072.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.026653469
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [7.0833607, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -3.1875122
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.8958485
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.5416803
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.8958485
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.0625042, -4.2]
+storey = 0
+to = [1.0625042, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-692.0, 1072.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.004001349
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [6.0532136, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -2.723946
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.3292675
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.0266068
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.3292675
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.90798205, -4.2]
+storey = 0
+to = [0.90798205, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [1.7476964, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Limewash"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-596.0, 1072.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = 0.028301816
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [6.211104, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [6.841104, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -2.7949967
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.4161072
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.105552
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.4161072
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.9316656, -4.2]
+storey = 0
+to = [0.9316656, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [-1.9286208, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Ochre"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-564.0, 1072.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.0113563575
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [7.7725816, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-6.8525815, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.8862908
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.3317745
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.8862908
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.8862908
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.8862908
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.8862908
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.8862908
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.6218065, -4.2]
+storey = 0
+to = [-0.6218065, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.6218065, -4.2]
+storey = 1
+to = [-0.6218065, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [0.99039507, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Ochre"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [-756.0, 1100.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.035659105
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [6.6661687, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-5.7461686, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.3330843
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.9998506
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.3330843
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.3330843
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.3330843
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.3330843
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.3330843
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.5332935, -4.2]
+storey = 0
+to = [-0.5332935, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.5332935, -4.2]
+storey = 1
+to = [-0.5332935, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [2.3916435, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [-692.0, 1100.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.0175847
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [7.7134576, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-6.7934575, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.8567288
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.3140373
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.8567288
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.8567288
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.8567288
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.8567288
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.8567288
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.6170766, -4.2]
+storey = 0
+to = [-0.6170766, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.6170766, -4.2]
+storey = 1
+to = [-0.6170766, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 2.925675
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-564.0, 1100.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.048713736
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [7.9952025, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-7.0752025, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.9976013
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.3985608
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.9976013
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.9976013
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.9976013
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.9976013
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.9976013
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.6396162, -4.2]
+storey = 0
+to = [-0.6396162, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.6396162, -4.2]
+storey = 1
+to = [-0.6396162, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [-1.3551545, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 0.64803314
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [-756.0, 1128.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = 0.0478323
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [7.82238, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-6.90238, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.91119
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.346714
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.91119
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.91119
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.91119
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.91119
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.91119
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.6257904, -4.2]
+storey = 0
+to = [-0.6257904, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.6257904, -4.2]
+storey = 1
+to = [-0.6257904, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [-2.4021971, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-692.0, 1128.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.015340082
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [7.8424063, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -3.5290828
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.3133235
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.9212031
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.3133235
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.176361, -4.2]
+storey = 0
+to = [1.176361, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 0.31089252
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-564.0, 1128.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.05017704
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [6.338335, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -2.8522506
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.4860845
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.1691675
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.4860845
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.9507503, -4.2]
+storey = 0
+to = [0.9507503, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 1.6374862
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [-724.0, 1156.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = 0.048058596
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [6.557876, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-5.637876, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.278938
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.9673629
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.278938
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.278938
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.278938
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.278938
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.278938
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.52463007, -4.2]
+storey = 0
+to = [-0.52463007, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.52463007, -4.2]
+storey = 1
+to = [-0.52463007, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [-724.0, 1184.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.011245895
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [7.4843683, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-6.5643682, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.7421842
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.2453105
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.7421842
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.7421842
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.7421842
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.7421842
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.7421842
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.59874946, -4.2]
+storey = 0
+to = [-0.59874946, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.59874946, -4.2]
+storey = 1
+to = [-0.59874946, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [4.363349, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 2.460859
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Limewash"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-692.0, 1184.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.053611074
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [6.328859, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [6.958859, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -2.8479865
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.4808724
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.1644294
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.4808724
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.94932884, -4.2]
+storey = 0
+to = [0.94932884, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [1.1190581, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 1.5525088
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Ochre"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-660.0, 1184.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.04983148
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [7.668027, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-6.748027, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.8340135
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.3004081
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.8340135
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.8340135
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.8340135
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.8340135
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.8340135
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.6134421, -4.2]
+storey = 0
+to = [-0.6134421, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.6134421, -4.2]
+storey = 1
+to = [-0.6134421, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 1.6426375
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Ochre"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-628.0, 1184.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.044615004
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [7.5232058, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [8.153206, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -3.3854425
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.137763
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.7616029
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.137763
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.1284809, -4.2]
+storey = 0
+to = [1.1284809, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 1.2116084
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Ochre"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [-596.0, 1184.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.04333464
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [7.680065, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-6.760065, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.8400326
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.3040197
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.8400326
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.8400326
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.8400326
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.8400326
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.8400326
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.6144052, -4.2]
+storey = 0
+to = [-0.6144052, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.6144052, -4.2]
+storey = 1
+to = [-0.6144052, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [-564.0, 1184.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.00795823
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [7.5732946, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Ochre"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-6.6532946, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.7866473
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.2719884
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.7866473
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.7866473
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.7866473
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.7866473
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.7866473
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.6058636, -4.2]
+storey = 0
+to = [-0.6058636, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.6058636, -4.2]
+storey = 1
+to = [-0.6058636, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [4.0018635, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 1.6767564
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Ochre"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-660.0, 1212.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = 0.04365943
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [7.5963554, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -3.4183598
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.1779957
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.7981777
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.1779957
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.1394534, -4.2]
+storey = 0
+to = [1.1394534, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-596.0, 1212.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.028570946
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [7.719767, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [8.349767, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -3.473895
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.245872
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.8598835
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.245872
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.1579651, -4.2]
+storey = 0
+to = [1.1579651, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 1.0602195
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [576.0, -1228.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.03740434
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [7.950067, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -3.5775301
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.372537
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.9750335
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.372537
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.1925101, -4.2]
+storey = 0
+to = [1.1925101, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [-2.105838, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 2.2035863
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Ochre"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [608.0, -1228.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.037722506
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [6.569643, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -2.9563394
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.6133037
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.2848215
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.6133037
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.9854465, -4.2]
+storey = 0
+to = [0.9854465, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 1.4810007
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Ochre"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [640.0, -1228.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.044847008
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [7.4742517, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-6.5542517, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.7371259
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.2422757
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.7371259
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.7371259
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.7371259
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.7371259
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.7371259
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.59794015, -4.2]
+storey = 0
+to = [-0.59794015, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.59794015, -4.2]
+storey = 1
+to = [-0.59794015, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [-0.056164265, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 1.1865792
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [672.0, -1228.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = 0.010196786
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [6.942268, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-6.022268, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.471134
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.0826805
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.471134
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.471134
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.471134
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.471134
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.471134
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.5553814, -4.2]
+storey = 0
+to = [-0.5553814, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.5553814, -4.2]
+storey = 1
+to = [-0.5553814, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [1.8952398, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Ochre"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [736.0, -1228.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = 0.023949321
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [7.065157, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -3.1793206
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.8858364
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.5325785
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.8858364
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.0597736, -4.2]
+storey = 0
+to = [1.0597736, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [608.0, -1200.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.006241888
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [7.129361, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [7.7593613, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -3.2082124
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.9211488
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.5646806
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.9211488
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.0694042, -4.2]
+storey = 0
+to = [1.0694042, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [0.6990347, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 2.6847553
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [640.0, -1200.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = 0.001331348
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [6.5047936, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [7.1347938, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -2.9271572
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.5776365
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.2523968
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.5776365
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.9757191, -4.2]
+storey = 0
+to = [0.9757191, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Limewash"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [704.0, -1200.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.052217823
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [6.4553847, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -2.904923
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.5504618
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.2276924
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.5504618
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.96830773, -4.2]
+storey = 0
+to = [0.96830773, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [1.6063671, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [736.0, -1200.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.050893046
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [6.584855, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [7.214855, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -2.9631846
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.6216705
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.2924275
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.6216705
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.9877283, -4.2]
+storey = 0
+to = [0.9877283, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 0.50060016
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [544.0, -1172.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.018921725
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [6.4744353, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [7.1044354, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -2.9134958
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.5609396
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.2372177
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.5609396
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.97116536, -4.2]
+storey = 0
+to = [0.97116536, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [2.9193182, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 2.240277
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [608.0, -1172.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.03565326
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [6.187554, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [6.817554, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -2.7843993
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.4031546
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.093777
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.4031546
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.92813313, -4.2]
+storey = 0
+to = [0.92813313, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 0.338638
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [704.0, -1172.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = 0.005542483
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [6.3555803, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-5.4355803, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.1777902
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.9066741
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.1777902
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.1777902
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.1777902
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.1777902
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.1777902
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.5084464, -4.2]
+storey = 0
+to = [-0.5084464, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.5084464, -4.2]
+storey = 1
+to = [-0.5084464, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [544.0, -1144.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.008079778
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [6.2409453, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [6.8709455, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -2.8084254
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.43252
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.1204727
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.43252
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.93614185, -4.2]
+storey = 0
+to = [0.93614185, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 1.4962094
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [704.0, -1144.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.013925958
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [7.478378, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -3.36527
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.1131077
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.739189
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.1131077
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.1217567, -4.2]
+storey = 0
+to = [1.1217567, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 2.2182493
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [736.0, -1144.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.030842513
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [6.5282793, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-5.608279, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.2641397
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.9584838
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.2641397
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.2641397
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.2641397
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.2641397
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.2641397
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.52226233, -4.2]
+storey = 0
+to = [-0.52226233, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.52226233, -4.2]
+storey = 1
+to = [-0.52226233, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Limewash"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [576.0, -1116.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.052827436
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [7.8246355, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [8.454636, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -3.521086
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.30355
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.9123178
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.30355
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.1736953, -4.2]
+storey = 0
+to = [1.1736953, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 0.26861322
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [608.0, -1116.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.050100066
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [6.924157, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-6.004157, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.4620786
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.0772471
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.4620786
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.4620786
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.4620786
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.4620786
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.4620786
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.55393255, -4.2]
+storey = 0
+to = [-0.55393255, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.55393255, -4.2]
+storey = 1
+to = [-0.55393255, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [-1.7052321, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Limewash"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [704.0, -1116.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.03416567
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [6.198021, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-5.278021, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.0990105
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.8594064
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.0990105
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.0990105
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.0990105
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.0990105
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.0990105
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.49584165, -4.2]
+storey = 0
+to = [-0.49584165, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.49584165, -4.2]
+storey = 1
+to = [-0.49584165, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Ochre"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [736.0, -1116.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.04962941
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [7.617711, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [8.247711, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -3.42797
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.189741
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.8088555
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.189741
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.1426567, -4.2]
+storey = 0
+to = [1.1426567, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [-4.928367, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 1.6481506
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Limewash"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [544.0, -1088.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.037987456
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [6.6616526, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -2.9977436
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.663909
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.3308263
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.663909
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.9992479, -4.2]
+storey = 0
+to = [0.9992479, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 1.7068652
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [576.0, -1088.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.054518957
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [6.3179836, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [6.9479837, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -2.8430924
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.4748912
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.1589918
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.4748912
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.9476976, -4.2]
+storey = 0
+to = [0.9476976, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 0.89084655
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Limewash"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [608.0, -1088.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.049729593
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [6.1615934, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [6.7915936, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -2.772717
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.3888764
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.0807967
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.3888764
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.92423904, -4.2]
+storey = 0
+to = [0.92423904, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [704.0, -1088.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.016107596
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [6.8692923, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -3.0911815
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.7781107
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.4346461
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.7781107
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.0303938, -4.2]
+storey = 0
+to = [1.0303938, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Limewash"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [1288.0, 1192.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.012522105
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [7.2317853, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -3.2543032
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.977482
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.6158926
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.977482
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.0847678, -4.2]
+storey = 0
+to = [1.0847678, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 2.8850021
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [1320.0, 1192.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = 0.050942454
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [6.3762794, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Ochre"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-5.4562793, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.1881397
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.9128839
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.1881397
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.1881397
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.1881397
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.1881397
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.1881397
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.51010233, -4.2]
+storey = 0
+to = [-0.51010233, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.51010233, -4.2]
+storey = 1
+to = [-0.51010233, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [1.8639894, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Limewash"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [1224.0, 1220.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.03791647
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [6.670665, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [7.300665, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -3.001799
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.6688657
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.3353324
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.6688657
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.0005997, -4.2]
+storey = 0
+to = [1.0005997, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Ochre"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [1288.0, 1220.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.023140296
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [6.8802757, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -3.096124
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.7841518
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.4401379
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.7841518
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.0320414, -4.2]
+storey = 0
+to = [1.0320414, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [1.7066388, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 0.835487
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Limewash"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [1224.0, 1248.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = 0.004943993
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [7.352837, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -3.3087766
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.0440607
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.6764185
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.0440607
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.1029257, -4.2]
+storey = 0
+to = [1.1029257, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [-3.3941646, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [1256.0, 1248.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = 0.028899942
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [6.870014, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-5.950014, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.435007
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.0610044
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.435007
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.435007
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.435007
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.435007
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.435007
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.54960114, -4.2]
+storey = 0
+to = [-0.54960114, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.54960114, -4.2]
+storey = 1
+to = [-0.54960114, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Ochre"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [1352.0, 1248.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.05993372
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [7.6074286, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -3.4233427
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.184086
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.8037143
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.184086
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.1411144, -4.2]
+storey = 0
+to = [1.1411144, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [4.4302177, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 0.65982556
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Limewash"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [1256.0, 1276.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.05351137
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [7.580519, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [8.210519, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -3.4112337
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.169286
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.7902596
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.169286
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.1370779, -4.2]
+storey = 0
+to = [1.1370779, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [4.909955, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 0.9597128
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [1352.0, 1276.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.04466447
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [7.1751146, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [7.8051147, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -3.2288015
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.9463131
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.5875573
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.9463131
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.0762672, -4.2]
+storey = 0
+to = [1.0762672, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [1.6785831, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 1.1989124
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Ochre"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [1224.0, 1304.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.05237651
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [7.717643, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -3.4729393
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.244704
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.8588214
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.244704
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.1576464, -4.2]
+storey = 0
+to = [1.1576464, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [1256.0, 1304.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.0073157363
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [6.6524906, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -2.9936206
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.65887
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.3262453
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.65887
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.9978736, -4.2]
+storey = 0
+to = [0.9978736, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [1352.0, 1304.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.059942182
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [6.6313972, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-5.711397, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.3156986
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.9894192
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.3156986
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.3156986
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.3156986
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.3156986
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.3156986
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.5305118, -4.2]
+storey = 0
+to = [-0.5305118, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.5305118, -4.2]
+storey = 1
+to = [-0.5305118, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 2.1023688
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-1376.0, -1308.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.03627096
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [7.9859943, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [8.615994, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -3.5936973
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.392297
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.9929972
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.392297
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.1978992, -4.2]
+storey = 0
+to = [1.1978992, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [1.0312757, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-1344.0, -1280.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.0020069778
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [7.7328467, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -3.479781
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.2530656
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.8664234
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.2530656
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.159927, -4.2]
+storey = 0
+to = [1.159927, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [-3.8090973, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 0.18895161
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-1248.0, -1280.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.052516807
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [7.3578568, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Ochre"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -3.3110354
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.046821
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.6789284
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.046821
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.1036786, -4.2]
+storey = 0
+to = [1.1036786, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-1344.0, -1252.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.045272663
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [6.147318, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [6.777318, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -2.766293
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.3810248
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.073659
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.3810248
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [0.92209774, -4.2]
+storey = 0
+to = [0.92209774, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [-1376.0, -1224.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.013558138
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [6.1079617, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Ochre"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-5.1879616, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.0539808
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.8323885
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.0539808
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.0539808
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.0539808
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.0539808
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.0539808
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.4886369, -4.2]
+storey = 0
+to = [-0.4886369, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.4886369, -4.2]
+storey = 1
+to = [-0.4886369, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 2.6523767
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-1344.0, -1224.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = 0.010669138
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [7.1510224, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [7.7810225, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -3.2179601
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.9330623
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.5755112
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.9330623
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.0726534, -4.2]
+storey = 0
+to = [1.0726534, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [2.2143831, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 0.8597594
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Ochre"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-1248.0, -1224.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.0055594817
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [7.852624, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.openings]]
+along = -3.5336807
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.318943
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.926312
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 4.318943
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.1778936, -4.2]
+storey = 0
+to = [1.1778936, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [3.3837395, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "W"
+width = 2.4
+
+[[spec.compounds]]
+at = [-1344.0, -1196.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+props = []
+yaw = -0.04037065
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Packed"
+half = [7.131268, 4.5]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [7.761268, 1.8000002]
+to = 1
+
+[spec.compounds.buildings.flights.finish.Landing]
+exit = "W"
+
+[[spec.compounds.buildings.openings]]
+along = -3.2090704
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.9221976
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.565634
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.9221976
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [1.0696902, -4.2]
+storey = 0
+to = [1.0696902, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [-2.9530072, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Mudbrick"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Mudbrick"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
+[[spec.compounds]]
+at = [-1280.0, -1196.0]
+ground = "Yard"
+half = [14.0, 12.0]
+lift = 0.0
+yaw = -0.038813237
+
+[[spec.compounds.buildings]]
+at = [-2.0, -5.9]
+fixtures = []
+floors = "Planks"
+half = [6.758631, 4.5]
+stairs = "Wood"
+storeys = 2
+walls = "Limewash"
+yaw = 0.0
+
+[[spec.compounds.buildings.flights]]
+ascent = "N"
+foot = [-5.838631, 2.9999998]
+from = 0
+to = 1
+
+[spec.compounds.buildings.flights.finish.Through]
+open_left = false
+open_right = true
+
+[[spec.compounds.buildings.openings]]
+along = 3.3793156
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.0275896
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 3.3793156
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -1.35
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -3.3793156
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.3793156
+kind = "Window"
+side = "S"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = -3.3793156
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 3.3793156
+kind = "Window"
+side = "N"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 1
+
+[[spec.compounds.buildings.openings]]
+along = 2.0249999
+kind = "Window"
+side = "W"
+storey = 1
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.5406905, -4.2]
+storey = 0
+to = [-0.5406905, 4.2]
+
+[[spec.compounds.buildings.partitions]]
+doors = [4.2]
+from = [-0.5406905, -4.2]
+storey = 1
+to = [-0.5406905, 4.2]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.buildings]]
+at = [-4.585197, 6.7999997]
+fixtures = []
+flights = []
+floors = "Packed"
+half = [5.0, 3.6]
+stairs = "Stone"
+storeys = 1
+walls = "Limewash"
+yaw = 3.1415927
+
+[[spec.compounds.buildings.openings]]
+along = -2.25
+kind = "Door"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "S"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = -2.5
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 2.75
+kind = "Window"
+side = "N"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "W"
+storey = 0
+
+[[spec.compounds.buildings.openings]]
+along = 0.0
+kind = "Window"
+side = "E"
+storey = 0
+
+[[spec.compounds.buildings.partitions]]
+doors = [3.3]
+from = [0.75, -3.3]
+storey = 0
+to = [0.75, 3.3]
+
+[spec.compounds.buildings.roof.Flat]
+paint = "Packed"
+
+[[spec.compounds.props]]
+at = [11.5, 0.5]
+prop = "Drums"
+yaw = 2.5648901
+
+[spec.compounds.wall]
+height = 2.3
+paint = "Limewash"
+
+[[spec.compounds.wall.gates]]
+along = 0.6
+side = "E"
+width = 2.4
+
 [[spec.ditches]]
 bed_width = 12.5
 cuts_roads = true
@@ -8730,6 +17484,22 @@ depth = 3.6
 ground = "Water"
 points = [[95.0, -0.0], [60.0, 36.0], [-0.0, 44.0], [-60.0, 36.0], [-95.0, -0.0]]
 width = 16.0
+
+[[spec.ditches]]
+bed_width = 22.0
+cuts_roads = true
+depth = 4.2
+ground = "Water"
+points = [[-520.0, -34.0], [-900.0, -60.0], [-1400.0, -20.0], [-1800.0, 30.0], [-2100.0, 40.0]]
+width = 30.0
+
+[[spec.ditches]]
+bed_width = 22.0
+cuts_roads = true
+depth = 4.2
+ground = "Water"
+points = [[520.0, 34.0], [900.0, 60.0], [1400.0, 20.0], [1800.0, -30.0], [2100.0, -40.0]]
+width = 30.0
 
 [[spec.ditches]]
 bed_width = 1.4
@@ -8787,12 +17557,54 @@ ground = "DitchBed"
 points = [[400.0, -0.0], [410.0, -110.0]]
 width = 4.8
 
+[[spec.ditches]]
+bed_width = 8.0
+depth = 4.0
+ground = "Shingle"
+points = [[-1900.0, 1450.0], [-1500.0, 1150.0], [-1100.0, 900.0], [-800.0, 520.0], [-600.0, 180.0], [-580.0, 10.0]]
+width = 24.0
+
+[[spec.ditches]]
+bed_width = 8.0
+depth = 4.0
+ground = "Shingle"
+points = [[1900.0, -1450.0], [1500.0, -1150.0], [1100.0, -900.0], [800.0, -520.0], [600.0, -180.0], [580.0, -10.0]]
+width = 24.0
+
+[[spec.ditches]]
+bed_width = 8.0
+depth = 4.0
+ground = "Shingle"
+points = [[1900.0, 1550.0], [1550.0, 1250.0], [1250.0, 1000.0], [1150.0, 750.0], [700.0, 300.0], [610.0, 80.0]]
+width = 24.0
+
+[[spec.ditches]]
+bed_width = 8.0
+depth = 4.0
+ground = "Shingle"
+points = [[-1900.0, -1550.0], [-1550.0, -1250.0], [-1250.0, -1000.0], [-1150.0, -750.0], [-700.0, -300.0], [-610.0, -80.0]]
+width = 24.0
+
+[[spec.ditches]]
+bed_width = 8.0
+depth = 4.0
+ground = "Shingle"
+points = [[-1100.0, 900.0], [-700.0, 1000.0], [-400.0, 900.0]]
+width = 24.0
+
+[[spec.ditches]]
+bed_width = 8.0
+depth = 4.0
+ground = "Shingle"
+points = [[1100.0, -900.0], [700.0, -1000.0], [400.0, -900.0]]
+width = 24.0
+
 [[spec.helipads]]
-at = [60.0, 432.0]
+at = [420.0, 1800.0]
 yaw = 0.0
 
 [[spec.helipads]]
-at = [-60.0, -432.0]
+at = [-420.0, -1800.0]
 yaw = 3.1415927
 
 [[spec.landmarks]]
@@ -8850,17 +17662,139 @@ at = [-260.0, -40.0]
 prop = "Wreck"
 yaw = 4.5415926
 
+[[spec.props]]
+at = [-1145.0, 1000.0]
+prop = "Wreck"
+yaw = 0.2
+
+[[spec.props]]
+at = [1145.0, -1000.0]
+prop = "Wreck"
+yaw = 3.3415928
+
+[[spec.props]]
+at = [-1165.0, 380.0]
+prop = "Truck"
+yaw = 3.0
+
+[[spec.props]]
+at = [1165.0, -380.0]
+prop = "Truck"
+yaw = 6.141593
+
+[[spec.props]]
+at = [-300.0, 690.0]
+prop = "Wreck"
+yaw = 1.7
+
+[[spec.props]]
+at = [300.0, -690.0]
+prop = "Wreck"
+yaw = 4.841593
+
+[[spec.props]]
+at = [500.0, 735.0]
+prop = "Wreck"
+yaw = 1.5
+
+[[spec.props]]
+at = [-500.0, -735.0]
+prop = "Wreck"
+yaw = 4.641593
+
+[[spec.props]]
+at = [-1150.0, 820.0]
+prop = "Barrier"
+yaw = 0.1
+
+[[spec.props]]
+at = [1150.0, -820.0]
+prop = "Barrier"
+yaw = 3.2415926
+
 [[spec.roads]]
 ground = "Road"
-points = [[55.0, 404.0], [55.0, 300.0], [30.0, 160.0], [-30.0, 72.0], [-30.0, 52.0]]
+points = [[316.0, 1724.0], [300.0, 1500.0], [200.0, 1150.0], [110.0, 800.0], [60.0, 520.0], [55.0, 300.0], [30.0, 160.0], [-30.0, 72.0], [-30.0, 52.0]]
 shoulder = 5.0
 width = 7.0
 
 [[spec.roads]]
 ground = "Road"
-points = [[-55.0, -404.0], [-55.0, -300.0], [-30.0, -160.0], [30.0, -72.0], [30.0, -52.0]]
+points = [[-316.0, -1724.0], [-300.0, -1500.0], [-200.0, -1150.0], [-110.0, -800.0], [-60.0, -520.0], [-55.0, -300.0], [-30.0, -160.0], [30.0, -72.0], [30.0, -52.0]]
 shoulder = 5.0
 width = 7.0
+
+[[spec.roads]]
+ground = "Road"
+points = [[-1100.0, 1960.0], [-1150.0, 1200.0], [-1150.0, 700.0], [-1160.0, 200.0], [-1150.0, -40.0], [-1180.0, -900.0], [-1120.0, -1960.0]]
+shoulder = 5.0
+width = 9.0
+
+[[spec.roads]]
+ground = "Road"
+points = [[1100.0, -1960.0], [1150.0, -1200.0], [1150.0, -700.0], [1160.0, -200.0], [1150.0, 40.0], [1180.0, 900.0], [1120.0, 1960.0]]
+shoulder = 5.0
+width = 9.0
+
+[[spec.roads]]
+ground = "Road"
+points = [[-1960.0, 720.0], [-1150.0, 700.0], [-600.0, 680.0], [110.0, 760.0], [900.0, 700.0], [1960.0, 690.0]]
+shoulder = 5.0
+width = 7.0
+
+[[spec.roads]]
+ground = "Road"
+points = [[1960.0, -720.0], [1150.0, -700.0], [600.0, -680.0], [-110.0, -760.0], [-900.0, -700.0], [-1960.0, -690.0]]
+shoulder = 5.0
+width = 7.0
+
+[[spec.roads]]
+ground = "Track"
+points = [[-600.0, 680.0], [-650.0, 1100.0]]
+shoulder = 5.0
+width = 4.0
+
+[[spec.roads]]
+ground = "Track"
+points = [[600.0, -680.0], [650.0, -1100.0]]
+shoulder = 5.0
+width = 4.0
+
+[[spec.roads]]
+ground = "Track"
+points = [[900.0, 700.0], [900.0, 560.0]]
+shoulder = 5.0
+width = 4.0
+
+[[spec.roads]]
+ground = "Track"
+points = [[-900.0, -700.0], [-900.0, -560.0]]
+shoulder = 5.0
+width = 4.0
+
+[[spec.roads]]
+ground = "Track"
+points = [[1150.0, 1250.0], [900.0, 700.0]]
+shoulder = 5.0
+width = 4.0
+
+[[spec.roads]]
+ground = "Track"
+points = [[-1150.0, -1250.0], [-900.0, -700.0]]
+shoulder = 5.0
+width = 4.0
+
+[[spec.roads]]
+ground = "Track"
+points = [[340.0, 1750.0], [420.0, 1780.0]]
+shoulder = 5.0
+width = 5.0
+
+[[spec.roads]]
+ground = "Track"
+points = [[-340.0, -1750.0], [-420.0, -1780.0]]
+shoulder = 5.0
+width = 5.0
 
 [[spec.roads]]
 ground = "Road"
@@ -9004,8 +17938,134 @@ paint = "Limewash"
 radius = 3.0
 size = [0.3, 0.8]
 
+[[spec.rubble]]
+at = [400.0, 1200.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [-400.0, -1200.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [-200.0, 1000.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [200.0, -1000.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [700.0, 900.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [-700.0, -900.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [-1000.0, 1300.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [1000.0, -1300.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [1400.0, 600.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [-1400.0, -600.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [-400.0, 600.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [400.0, -600.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [1100.0, 200.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [-1100.0, -200.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [-1300.0, 300.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [1300.0, -300.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [200.0, 600.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
+[[spec.rubble]]
+at = [-200.0, -600.0]
+count = 10
+paint = "Rock"
+radius = 25.0
+size = [0.7, 1.8]
+
 [spec.sentry]
-at = [14.0, 430.0]
+at = [264.0, 1750.0]
 yaw = 1.5707964
 
 [[spec.steps]]
@@ -9080,6 +18140,390 @@ paint = "Stone"
 to = [51.1, 42.0]
 width = 2.4
 
+[[spec.steps]]
+from = [-469.33035, -38.38096]
+paint = "Stone"
+to = [-469.88794, -32.40692]
+width = 2.4
+
+[[spec.steps]]
+from = [-471.18893, -18.467506]
+paint = "Stone"
+to = [-470.63135, -24.441542]
+width = 2.4
+
+[[spec.steps]]
+from = [-230.467, -16.469309]
+paint = "Stone"
+to = [-230.94547, -10.488417]
+width = 2.4
+
+[[spec.steps]]
+from = [-232.0619, 3.4669971]
+paint = "Stone"
+to = [-231.58344, -2.5138948]
+width = 2.4
+
+[[spec.steps]]
+from = [-111.52408, -10.0]
+paint = "Stone"
+to = [-111.52408, -4.0]
+width = 2.4
+
+[[spec.steps]]
+from = [-111.52408, 10.0]
+paint = "Stone"
+to = [-111.52408, 4.0]
+width = 2.4
+
+[[spec.steps]]
+from = [469.33035, 38.38096]
+paint = "Stone"
+to = [469.88794, 32.40692]
+width = 2.4
+
+[[spec.steps]]
+from = [471.18893, 18.467506]
+paint = "Stone"
+to = [470.63135, 24.441542]
+width = 2.4
+
+[[spec.steps]]
+from = [230.467, 16.469309]
+paint = "Stone"
+to = [230.94547, 10.488417]
+width = 2.4
+
+[[spec.steps]]
+from = [232.0619, -3.4669971]
+paint = "Stone"
+to = [231.58344, 2.5138948]
+width = 2.4
+
+[[spec.steps]]
+from = [111.52408, 10.0]
+paint = "Stone"
+to = [111.52408, 4.0]
+width = 2.4
+
+[[spec.steps]]
+from = [111.52408, -10.0]
+paint = "Stone"
+to = [111.52408, -4.0]
+width = 2.4
+
+[[spec.steps]]
+from = [-581.0205, -21.13534]
+paint = "Stone"
+to = [-580.45734, -29.366096]
+width = 2.4
+
+[[spec.steps]]
+from = [-578.6996, -55.056038]
+paint = "Stone"
+to = [-579.26276, -46.82528]
+width = 2.4
+
+[[spec.steps]]
+from = [-700.7406, -29.326715]
+paint = "Stone"
+to = [-700.1774, -37.557472]
+width = 2.4
+
+[[spec.steps]]
+from = [-698.4197, -63.247414]
+paint = "Stone"
+to = [-698.98285, -55.016655]
+width = 2.4
+
+[[spec.steps]]
+from = [-820.46075, -37.51809]
+paint = "Stone"
+to = [-819.8976, -45.748848]
+width = 2.4
+
+[[spec.steps]]
+from = [-818.13983, -71.43879]
+paint = "Stone"
+to = [-818.703, -63.20803]
+width = 2.4
+
+[[spec.steps]]
+from = [-937.63135, -39.93518]
+paint = "Stone"
+to = [-938.28925, -48.158905]
+width = 2.4
+
+[[spec.steps]]
+from = [-940.34265, -73.8269]
+paint = "Stone"
+to = [-939.68475, -65.60317]
+width = 2.4
+
+[[spec.steps]]
+from = [-1057.2491, -30.365751]
+paint = "Stone"
+to = [-1057.9071, -38.589478]
+width = 2.4
+
+[[spec.steps]]
+from = [-1059.9606, -64.25747]
+paint = "Stone"
+to = [-1059.3026, -56.033745]
+width = 2.4
+
+[[spec.steps]]
+from = [-1176.867, -20.796328]
+paint = "Stone"
+to = [-1177.5249, -29.020054]
+width = 2.4
+
+[[spec.steps]]
+from = [-1179.5784, -54.68805]
+paint = "Stone"
+to = [-1178.9204, -46.46432]
+width = 2.4
+
+[[spec.steps]]
+from = [-1296.4849, -11.226898]
+paint = "Stone"
+to = [-1297.1428, -19.450624]
+width = 2.4
+
+[[spec.steps]]
+from = [-1299.1963, -45.118618]
+paint = "Stone"
+to = [-1298.5383, -36.89489]
+width = 2.4
+
+[[spec.steps]]
+from = [-1415.2703, -0.9589138]
+paint = "Stone"
+to = [-1416.2936, -9.1452055]
+width = 2.4
+
+[[spec.steps]]
+from = [-1419.4875, -34.696358]
+paint = "Stone"
+to = [-1418.4642, -26.510067]
+width = 2.4
+
+[[spec.steps]]
+from = [-1534.3436, 13.925255]
+paint = "Stone"
+to = [-1535.367, 5.738963]
+width = 2.4
+
+[[spec.steps]]
+from = [-1538.5609, -19.812191]
+paint = "Stone"
+to = [-1537.5376, -11.625899]
+width = 2.4
+
+[[spec.steps]]
+from = [-1653.417, 28.809423]
+paint = "Stone"
+to = [-1654.4403, 20.62313]
+width = 2.4
+
+[[spec.steps]]
+from = [-1657.6343, -4.9280224]
+paint = "Stone"
+to = [-1656.611, 3.2582693]
+width = 2.4
+
+[[spec.steps]]
+from = [-1772.4902, 43.69359]
+paint = "Stone"
+to = [-1773.5135, 35.507298]
+width = 2.4
+
+[[spec.steps]]
+from = [-1776.7075, 9.956144]
+paint = "Stone"
+to = [-1775.6842, 18.142437]
+width = 2.4
+
+[[spec.steps]]
+from = [-1893.7825, 50.135525]
+paint = "Stone"
+to = [-1894.0574, 41.890106]
+width = 2.4
+
+[[spec.steps]]
+from = [-1894.9153, 16.1544]
+paint = "Stone"
+to = [-1894.6404, 24.399818]
+width = 2.4
+
+[[spec.steps]]
+from = [-2013.7158, 54.133305]
+paint = "Stone"
+to = [-2013.9907, 45.887886]
+width = 2.4
+
+[[spec.steps]]
+from = [-2014.8486, 20.15218]
+paint = "Stone"
+to = [-2014.5737, 28.397598]
+width = 2.4
+
+[[spec.steps]]
+from = [581.0205, 21.13534]
+paint = "Stone"
+to = [580.45734, 29.366096]
+width = 2.4
+
+[[spec.steps]]
+from = [578.6996, 55.056038]
+paint = "Stone"
+to = [579.26276, 46.82528]
+width = 2.4
+
+[[spec.steps]]
+from = [700.7406, 29.326715]
+paint = "Stone"
+to = [700.1774, 37.557472]
+width = 2.4
+
+[[spec.steps]]
+from = [698.4197, 63.247414]
+paint = "Stone"
+to = [698.98285, 55.016655]
+width = 2.4
+
+[[spec.steps]]
+from = [820.46075, 37.51809]
+paint = "Stone"
+to = [819.8976, 45.748848]
+width = 2.4
+
+[[spec.steps]]
+from = [818.13983, 71.43879]
+paint = "Stone"
+to = [818.703, 63.20803]
+width = 2.4
+
+[[spec.steps]]
+from = [937.63135, 39.93518]
+paint = "Stone"
+to = [938.28925, 48.158905]
+width = 2.4
+
+[[spec.steps]]
+from = [940.34265, 73.8269]
+paint = "Stone"
+to = [939.68475, 65.60317]
+width = 2.4
+
+[[spec.steps]]
+from = [1057.2491, 30.365751]
+paint = "Stone"
+to = [1057.9071, 38.589478]
+width = 2.4
+
+[[spec.steps]]
+from = [1059.9606, 64.25747]
+paint = "Stone"
+to = [1059.3026, 56.033745]
+width = 2.4
+
+[[spec.steps]]
+from = [1176.867, 20.796328]
+paint = "Stone"
+to = [1177.5249, 29.020054]
+width = 2.4
+
+[[spec.steps]]
+from = [1179.5784, 54.68805]
+paint = "Stone"
+to = [1178.9204, 46.46432]
+width = 2.4
+
+[[spec.steps]]
+from = [1296.4849, 11.226898]
+paint = "Stone"
+to = [1297.1428, 19.450624]
+width = 2.4
+
+[[spec.steps]]
+from = [1299.1963, 45.118618]
+paint = "Stone"
+to = [1298.5383, 36.89489]
+width = 2.4
+
+[[spec.steps]]
+from = [1415.2703, 0.9589138]
+paint = "Stone"
+to = [1416.2936, 9.1452055]
+width = 2.4
+
+[[spec.steps]]
+from = [1419.4875, 34.696358]
+paint = "Stone"
+to = [1418.4642, 26.510067]
+width = 2.4
+
+[[spec.steps]]
+from = [1534.3436, -13.925255]
+paint = "Stone"
+to = [1535.367, -5.738963]
+width = 2.4
+
+[[spec.steps]]
+from = [1538.5609, 19.812191]
+paint = "Stone"
+to = [1537.5376, 11.625899]
+width = 2.4
+
+[[spec.steps]]
+from = [1653.417, -28.809423]
+paint = "Stone"
+to = [1654.4403, -20.62313]
+width = 2.4
+
+[[spec.steps]]
+from = [1657.6343, 4.9280224]
+paint = "Stone"
+to = [1656.611, -3.2582693]
+width = 2.4
+
+[[spec.steps]]
+from = [1772.4902, -43.69359]
+paint = "Stone"
+to = [1773.5135, -35.507298]
+width = 2.4
+
+[[spec.steps]]
+from = [1776.7075, -9.956144]
+paint = "Stone"
+to = [1775.6842, -18.142437]
+width = 2.4
+
+[[spec.steps]]
+from = [1893.7825, -50.135525]
+paint = "Stone"
+to = [1894.0574, -41.890106]
+width = 2.4
+
+[[spec.steps]]
+from = [1894.9153, -16.1544]
+paint = "Stone"
+to = [1894.6404, -24.399818]
+width = 2.4
+
+[[spec.steps]]
+from = [2013.7158, -54.133305]
+paint = "Stone"
+to = [2013.9907, -45.887886]
+width = 2.4
+
+[[spec.steps]]
+from = [2014.8486, -20.15218]
+paint = "Stone"
+to = [2014.5737, -28.397598]
+width = 2.4
+
 [spec.style]
 awning_depth = 1.3
 awning_height = 2.75
@@ -9120,51 +18564,51 @@ base_radius = 60.0
 name = "South"
 
 [[spec.teams.spawns]]
-at = [31.25, 428.0]
+at = [291.25, 1748.0]
 yaw = 0.0
 
 [[spec.teams.spawns]]
-at = [34.75, 428.0]
+at = [294.75, 1748.0]
 yaw = 0.0
 
 [[spec.teams.spawns]]
-at = [38.25, 428.0]
+at = [298.25, 1748.0]
 yaw = 0.0
 
 [[spec.teams.spawns]]
-at = [41.75, 428.0]
+at = [301.75, 1748.0]
 yaw = 0.0
 
 [[spec.teams.spawns]]
-at = [45.25, 428.0]
+at = [305.25, 1748.0]
 yaw = 0.0
 
 [[spec.teams.spawns]]
-at = [48.75, 428.0]
+at = [308.75, 1748.0]
 yaw = 0.0
 
 [[spec.teams.spawns]]
-at = [31.25, 431.5]
+at = [291.25, 1751.5]
 yaw = 0.0
 
 [[spec.teams.spawns]]
-at = [34.75, 431.5]
+at = [294.75, 1751.5]
 yaw = 0.0
 
 [[spec.teams.spawns]]
-at = [38.25, 431.5]
+at = [298.25, 1751.5]
 yaw = 0.0
 
 [[spec.teams.spawns]]
-at = [41.75, 431.5]
+at = [301.75, 1751.5]
 yaw = 0.0
 
 [[spec.teams.spawns]]
-at = [45.25, 431.5]
+at = [305.25, 1751.5]
 yaw = 0.0
 
 [[spec.teams.spawns]]
-at = [48.75, 431.5]
+at = [308.75, 1751.5]
 yaw = 0.0
 
 [[spec.teams]]
@@ -9172,65 +18616,68 @@ base_radius = 60.0
 name = "North"
 
 [[spec.teams.spawns]]
-at = [-48.75, -431.5]
+at = [-308.75, -1751.5]
 yaw = 3.1415927
 
 [[spec.teams.spawns]]
-at = [-45.25, -431.5]
+at = [-305.25, -1751.5]
 yaw = 3.1415927
 
 [[spec.teams.spawns]]
-at = [-41.75, -431.5]
+at = [-301.75, -1751.5]
 yaw = 3.1415927
 
 [[spec.teams.spawns]]
-at = [-38.25, -431.5]
+at = [-298.25, -1751.5]
 yaw = 3.1415927
 
 [[spec.teams.spawns]]
-at = [-34.75, -431.5]
+at = [-294.75, -1751.5]
 yaw = 3.1415927
 
 [[spec.teams.spawns]]
-at = [-31.25, -431.5]
+at = [-291.25, -1751.5]
 yaw = 3.1415927
 
 [[spec.teams.spawns]]
-at = [-48.75, -428.0]
+at = [-308.75, -1748.0]
 yaw = 3.1415927
 
 [[spec.teams.spawns]]
-at = [-45.25, -428.0]
+at = [-305.25, -1748.0]
 yaw = 3.1415927
 
 [[spec.teams.spawns]]
-at = [-41.75, -428.0]
+at = [-301.75, -1748.0]
 yaw = 3.1415927
 
 [[spec.teams.spawns]]
-at = [-38.25, -428.0]
+at = [-298.25, -1748.0]
 yaw = 3.1415927
 
 [[spec.teams.spawns]]
-at = [-34.75, -428.0]
+at = [-294.75, -1748.0]
 yaw = 3.1415927
 
 [[spec.teams.spawns]]
-at = [-31.25, -428.0]
+at = [-291.25, -1748.0]
 yaw = 3.1415927
 
 [spec.terrain]
-base_cells = 64
-max_splits = 3
-paint_splits = 3
-size = 1024.0
+base_cells = 128
+detail = [[[0.0, 0.0], 400.0], [[-0.0, -0.0], 400.0], [[-650.0, 1150.0], 140.0], [[650.0, -1150.0], 140.0], [[900.0, 450.0], 90.0], [[-900.0, -450.0], 90.0], [[1300.0, 1250.0], 110.0], [[-1300.0, -1250.0], 110.0], [[300.0, 1750.0], 90.0], [[-300.0, -1750.0], 90.0], [[420.0, 1750.0], 90.0], [[-420.0, -1750.0], 90.0]]
+max_splits = 4
+open_paint_splits = 2
+open_tolerance = 0.9
+paint_splits = 4
+size = 4096.0
 tolerance = 0.16
 
 [[spec.terrain.calm]]
 at = [0.0, 0.0]
-fade = 380.0
+fade = 600.0
 keep = 0.12
-radius = 260.0
+radius = 330.0
 
 [[spec.terrain.hills]]
 at = [0.0, 305.0]
@@ -9280,6 +18727,78 @@ height = 7.0
 radius = [70.0, 55.0]
 yaw = -0.4
 
+[[spec.terrain.hills]]
+at = [900.0, 450.0]
+height = 30.0
+radius = [170.0, 140.0]
+yaw = 0.4
+
+[[spec.terrain.hills]]
+at = [-900.0, -450.0]
+height = 30.0
+radius = [170.0, 140.0]
+yaw = 0.4
+
+[[spec.terrain.hills]]
+at = [-1500.0, 600.0]
+height = 26.0
+radius = [260.0, 180.0]
+yaw = 0.3
+
+[[spec.terrain.hills]]
+at = [1500.0, -600.0]
+height = 26.0
+radius = [260.0, 180.0]
+yaw = 0.3
+
+[[spec.terrain.hills]]
+at = [1100.0, 1500.0]
+height = 20.0
+radius = [220.0, 140.0]
+yaw = -0.2
+
+[[spec.terrain.hills]]
+at = [-1100.0, -1500.0]
+height = 20.0
+radius = [220.0, 140.0]
+yaw = -0.2
+
+[[spec.terrain.hills]]
+at = [-300.0, 1450.0]
+height = 16.0
+radius = [200.0, 120.0]
+yaw = 0.1
+
+[[spec.terrain.hills]]
+at = [300.0, -1450.0]
+height = 16.0
+radius = [200.0, 120.0]
+yaw = 0.1
+
+[[spec.terrain.hills]]
+at = [-1150.0, 655.0]
+height = 6.0
+radius = [14.0, 40.0]
+yaw = 0.0
+
+[[spec.terrain.hills]]
+at = [-1150.0, 745.0]
+height = 6.0
+radius = [14.0, 40.0]
+yaw = 0.0
+
+[[spec.terrain.hills]]
+at = [1150.0, -745.0]
+height = 6.0
+radius = [14.0, 40.0]
+yaw = 0.0
+
+[[spec.terrain.hills]]
+at = [1150.0, -655.0]
+height = 6.0
+radius = [14.0, 40.0]
+yaw = 0.0
+
 [spec.terrain.rim]
 face = 12.0
 face_height = 16.0
@@ -9301,6 +18820,16 @@ phase = 1.7
 frequency = [0.047, 0.035]
 height = 0.5
 phase = 3.1
+
+[[spec.terrain.waves]]
+frequency = [0.0021, 0.0017]
+height = 9.0
+phase = 0.9
+
+[[spec.terrain.waves]]
+frequency = [0.0013, 0.0031]
+height = 7.0
+phase = 2.3
 
 [[spec.walls]]
 gaps = []
@@ -9399,6 +18928,256 @@ paint = "Metal"
 points = [[255.0, 230.75], [470.0, 244.75]]
 segment = 6.0
 thickness = 0.12
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[-263.29883, -18.466694], [-261.30728, -18.28286], [-259.31573, -18.099026], [-257.32422, -17.915192], [-255.3327, -17.73136], [-253.34116, -17.547525], [-251.34961, -17.363691], [-249.35808, -17.179857], [-247.47665, -17.027525], [-245.48302, -16.868034], [-243.4894, -16.708544], [-241.49576, -16.549053], [-239.50212, -16.389563], [-237.5085, -16.230072], [-235.51486, -16.070581]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[-225.5467, -15.273129], [-223.55309, -15.11364], [-221.55945, -14.954149], [-219.56583, -14.794659], [-217.57219, -14.635168], [-215.57857, -14.4756775], [-213.58493, -14.316187], [-211.5913, -14.156696], [-209.59767, -13.997206], [-207.60403, -13.837715], [-205.61041, -13.6782255], [-203.61678, -13.518735], [-201.62315, -13.359244], [-199.62952, -13.199754], [-197.63588, -13.040263], [-195.64226, -12.880774], [-193.64862, -12.721283], [-191.655, -12.561792], [-189.66136, -12.402302], [-187.66774, -12.242811], [-185.6741, -12.083321], [-183.68047, -11.92383], [-181.68684, -11.764339], [-179.69322, -11.604849], [-177.69958, -11.445358], [-175.70595, -11.285869], [-173.71233, -11.126378], [-171.71869, -10.966887], [-169.72505, -10.807397], [-167.73143, -10.647907], [-165.73781, -10.488417], [-163.74417, -10.328926], [-161.75053, -10.1694355], [-159.75691, -10.009945], [-157.76328, -9.850454], [-155.76964, -9.690964], [-153.77602, -9.531473], [-151.7824, -9.371983], [-149.78876, -9.212492], [-148.52408, -9.2], [-146.52408, -9.2], [-144.52408, -9.2], [-142.52408, -9.2], [-140.52408, -9.2], [-138.52408, -9.2], [-136.52408, -9.2], [-134.52408, -9.2], [-132.52408, -9.2], [-130.52408, -9.2], [-128.52408, -9.2], [-126.52408, -9.2], [-124.52408, -9.2], [-122.52408, -9.2], [-120.52408, -9.2], [-118.52408, -9.2], [-116.52408, -9.2]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[-106.52408, -9.2], [-104.52408, -9.2], [-102.52408, -9.2], [-100.52408, -9.2], [-98.52408, -9.2], [-96.52408, -9.2]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[-264.9901, -0.14458942], [-262.99857, 0.03924465], [-261.00702, 0.22307873], [-259.0155, 0.4069128], [-257.024, 0.5907459], [-255.03244, 0.77458], [-253.0409, 0.9584141], [-251.04936, 1.1422482], [-248.94397, 1.3138757], [-246.95033, 1.4733658], [-244.95671, 1.6328564], [-242.96307, 1.792347], [-240.96944, 1.9518371], [-238.97581, 2.1113276], [-236.98218, 2.2708182]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[-227.01402, 3.0682707], [-225.0204, 3.2277608], [-223.02676, 3.3872514], [-221.03314, 3.5467415], [-219.0395, 3.706232], [-217.04588, 3.8657227], [-215.05225, 4.0252132], [-213.05861, 4.184704], [-211.06499, 4.344194], [-209.07135, 4.5036845], [-207.07773, 4.6631746], [-205.08409, 4.822665], [-203.09047, 4.982156], [-201.09683, 5.1416464], [-199.1032, 5.301137], [-197.10957, 5.460627], [-195.11594, 5.6201177], [-193.12231, 5.7796082], [-191.12868, 5.9390984], [-189.13506, 6.098589], [-187.14142, 6.2580795], [-185.14778, 6.41757], [-183.15416, 6.57706], [-181.16054, 6.736551], [-179.1669, 6.8960414], [-177.17326, 7.0555315], [-175.17964, 7.215022], [-173.186, 7.3745127], [-171.19237, 7.5340033], [-169.19875, 7.6934934], [-167.20512, 7.852984], [-165.21149, 8.012474], [-163.21785, 8.171965], [-161.22423, 8.331455], [-159.23059, 8.490946], [-157.23695, 8.650436], [-155.24333, 8.809927], [-153.24971, 8.969418], [-151.25607, 9.128908], [-148.52408, 9.2], [-146.52408, 9.2], [-144.52408, 9.2], [-142.52408, 9.2], [-140.52408, 9.2], [-138.52408, 9.2], [-136.52408, 9.2], [-134.52408, 9.2], [-132.52408, 9.2], [-130.52408, 9.2], [-128.52408, 9.2], [-126.52408, 9.2], [-124.52408, 9.2], [-122.52408, 9.2], [-120.52408, 9.2], [-118.52408, 9.2], [-116.52408, 9.2]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[-106.52408, 9.2], [-104.52408, 9.2], [-102.52408, 9.2], [-100.52408, 9.2], [-98.52408, 9.2], [-96.52408, 9.2]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[263.29883, 18.466694], [261.30728, 18.28286], [259.31573, 18.099026], [257.32422, 17.915192], [255.3327, 17.73136], [253.34116, 17.547525], [251.34961, 17.363691], [249.35808, 17.179857], [247.47665, 17.027525], [245.48302, 16.868034], [243.4894, 16.708544], [241.49576, 16.549053], [239.50212, 16.389563], [237.5085, 16.230072], [235.51486, 16.070581]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[225.5467, 15.273129], [223.55309, 15.11364], [221.55945, 14.954149], [219.56583, 14.794659], [217.57219, 14.635168], [215.57857, 14.4756775], [213.58493, 14.316187], [211.5913, 14.156696], [209.59767, 13.997206], [207.60403, 13.837715], [205.61041, 13.6782255], [203.61678, 13.518735], [201.62315, 13.359244], [199.62952, 13.199754], [197.63588, 13.040263], [195.64226, 12.880774], [193.64862, 12.721283], [191.655, 12.561792], [189.66136, 12.402302], [187.66774, 12.242811], [185.6741, 12.083321], [183.68047, 11.92383], [181.68684, 11.764339], [179.69322, 11.604849], [177.69958, 11.445358], [175.70595, 11.285869], [173.71233, 11.126378], [171.71869, 10.966887], [169.72505, 10.807397], [167.73143, 10.647907], [165.73781, 10.488417], [163.74417, 10.328926], [161.75053, 10.1694355], [159.75691, 10.009945], [157.76328, 9.850454], [155.76964, 9.690964], [153.77602, 9.531473], [151.7824, 9.371983], [149.78876, 9.212492], [148.52408, 9.2], [146.52408, 9.2], [144.52408, 9.2], [142.52408, 9.2], [140.52408, 9.2], [138.52408, 9.2], [136.52408, 9.2], [134.52408, 9.2], [132.52408, 9.2], [130.52408, 9.2], [128.52408, 9.2], [126.52408, 9.2], [124.52408, 9.2], [122.52408, 9.2], [120.52408, 9.2], [118.52408, 9.2], [116.52408, 9.2]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[106.52408, 9.2], [104.52408, 9.2], [102.52408, 9.2], [100.52408, 9.2], [98.52408, 9.2], [96.52408, 9.2]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[264.9901, 0.14458942], [262.99857, -0.03924465], [261.00702, -0.22307873], [259.0155, -0.4069128], [257.024, -0.5907459], [255.03244, -0.77458], [253.0409, -0.9584141], [251.04936, -1.1422482], [248.94397, -1.3138757], [246.95033, -1.4733658], [244.95671, -1.6328564], [242.96307, -1.792347], [240.96944, -1.9518371], [238.97581, -2.1113276], [236.98218, -2.2708182]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[227.01402, -3.0682707], [225.0204, -3.2277608], [223.02676, -3.3872514], [221.03314, -3.5467415], [219.0395, -3.706232], [217.04588, -3.8657227], [215.05225, -4.0252132], [213.05861, -4.184704], [211.06499, -4.344194], [209.07135, -4.5036845], [207.07773, -4.6631746], [205.08409, -4.822665], [203.09047, -4.982156], [201.09683, -5.1416464], [199.1032, -5.301137], [197.10957, -5.460627], [195.11594, -5.6201177], [193.12231, -5.7796082], [191.12868, -5.9390984], [189.13506, -6.098589], [187.14142, -6.2580795], [185.14778, -6.41757], [183.15416, -6.57706], [181.16054, -6.736551], [179.1669, -6.8960414], [177.17326, -7.0555315], [175.17964, -7.215022], [173.186, -7.3745127], [171.19237, -7.5340033], [169.19875, -7.6934934], [167.20512, -7.852984], [165.21149, -8.012474], [163.21785, -8.171965], [161.22423, -8.331455], [159.23059, -8.490946], [157.23695, -8.650436], [155.24333, -8.809927], [153.24971, -8.969418], [151.25607, -9.128908], [148.52408, -9.2], [146.52408, -9.2], [144.52408, -9.2], [142.52408, -9.2], [140.52408, -9.2], [138.52408, -9.2], [136.52408, -9.2], [134.52408, -9.2], [132.52408, -9.2], [130.52408, -9.2], [128.52408, -9.2], [126.52408, -9.2], [124.52408, -9.2], [122.52408, -9.2], [120.52408, -9.2], [118.52408, -9.2], [116.52408, -9.2]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[106.52408, -9.2], [104.52408, -9.2], [102.52408, -9.2], [100.52408, -9.2], [98.52408, -9.2], [96.52408, -9.2]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[-100.89928, -7.130116], [-99.50512, -8.564106], [-98.11096, -9.998096], [-96.716805, -11.432086], [-95.32265, -12.8660755], [-93.92849, -14.300066], [-92.53433, -15.7340555], [-91.140175, -17.168045], [-89.74602, -18.602036], [-88.35186, -20.036026], [-86.9577, -21.470015], [-85.563545, -22.904003], [-84.169395, -24.337994], [-82.77523, -25.771984], [-81.38108, -27.205975], [-79.98692, -28.639965], [-78.592766, -30.073956], [-77.19861, -31.507946], [-75.80445, -32.941933], [-74.41029, -34.375923], [-73.016136, -35.809914], [-71.62198, -37.243904], [-70.22782, -38.67789], [-68.83367, -40.11188], [-67.439514, -41.54587], [-60.432404, -45.223766], [-58.449944, -45.48809], [-56.46749, -45.75242], [-54.48503, -46.016747], [-52.50258, -46.281075], [-50.52012, -46.545403]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[-32.678017, -48.924347], [-30.695562, -49.188675], [-28.713106, -49.453003], [-26.73065, -49.71733], [-24.748194, -49.98166], [-22.765738, -50.245987], [-20.783285, -50.51031], [-18.800829, -50.77464], [-16.818373, -51.038967], [-14.8359165, -51.303295], [-12.85346, -51.567623], [-10.871004, -51.83195], [-8.888548, -52.09628], [-6.9060917, -52.360607], [-4.9236355, -52.62493], [-2.9411793, -52.88926], [1.4730906, -53.085007], [3.4555464, -52.82068], [5.438002, -52.55635], [7.4204583, -52.292023], [9.402914, -52.027695], [11.38537, -51.76337], [13.3678255, -51.499043], [15.350282, -51.234715], [17.332737, -50.970387], [19.315193, -50.70606], [21.29765, -50.44173], [23.280106, -50.177402]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[43.10466, -47.53413], [45.08712, -47.269802], [47.069572, -47.005474], [49.052032, -46.741146], [51.034485, -46.476818], [53.016945, -46.212494], [54.999397, -45.948166], [56.981857, -45.683838], [58.96431, -45.41951], [60.94677, -45.15518], [67.80125, -41.173805], [69.1954, -39.739815], [70.589554, -38.305824], [71.98371, -36.871838], [73.37787, -35.437847], [74.772026, -34.003857], [76.16618, -32.569866], [77.56034, -31.135876], [78.9545, -29.701885], [80.348656, -28.267899], [81.742805, -26.833908], [83.13697, -25.399918], [84.53112, -23.965927], [85.92528, -22.531937], [87.319435, -21.097946], [88.71359, -19.66396], [90.10775, -18.229969], [91.50191, -16.795979], [92.896065, -15.361989], [94.29022, -13.927999], [95.68438, -12.494008], [97.07854, -11.0600195], [98.472694, -9.626027], [99.866844, -8.19204], [101.26101, -6.75805]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[-87.70657, 5.6961265], [-86.312416, 4.2621365], [-84.91826, 2.8281465], [-83.5241, 1.3941565], [-82.129944, -0.03983307], [-80.73579, -1.4738231], [-79.34163, -2.907813], [-77.94747, -4.3418026], [-76.553314, -5.775793], [-75.15916, -7.2097826], [-73.765, -8.643772], [-72.37084, -10.077762], [-70.97669, -11.511752], [-69.58253, -12.945743], [-68.18838, -14.379731], [-66.79422, -15.813722], [-65.40006, -17.247711], [-64.005905, -18.681702], [-62.611748, -20.115692], [-61.21759, -21.549683], [-59.823433, -22.983673], [-58.429276, -24.41766], [-57.03512, -25.85165], [-55.64096, -27.28564], [-54.246803, -28.719631], [-58.000587, -26.985172], [-56.018135, -27.249496], [-54.035675, -27.513824], [-52.053223, -27.778152], [-50.070763, -28.04248]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[-34.21112, -30.1571], [-32.22866, -30.421429], [-30.246206, -30.685753], [-28.26375, -30.95008], [-26.281294, -31.214409], [-24.298838, -31.478737], [-22.316381, -31.743065], [-20.333925, -32.007393], [-18.351473, -32.271717], [-16.369017, -32.536045], [-14.38656, -32.800373], [-12.404104, -33.0647], [-10.421648, -33.32903], [-8.439192, -33.593357], [-6.4567356, -33.857685], [-4.4742794, -34.122013], [-2.4918232, -34.386337], [-0.509367, -34.650665], [-0.9587217, -34.846413], [1.0237341, -34.582085], [3.0061898, -34.317757], [4.988646, -34.05343], [6.9711018, -33.7891], [8.953558, -33.524776], [10.936013, -33.26045], [12.918469, -32.99612], [14.900925, -32.731792], [16.88338, -32.467464], [18.865837, -32.203136], [20.848293, -31.938808], [22.830748, -31.674484]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[44.637764, -28.76688], [46.620216, -28.502552], [48.602676, -28.238224], [50.58513, -27.9739], [52.56759, -27.709572], [54.55004, -27.445244], [56.5325, -27.180916], [58.514954, -26.916588], [54.608536, -28.347565], [56.002693, -26.913574], [57.39685, -25.479584], [58.791008, -24.045593], [60.185165, -22.611603], [61.579323, -21.177616], [62.97348, -19.743626], [64.36764, -18.309635], [65.761795, -16.875645], [67.15595, -15.441655], [68.5501, -14.007665], [69.94427, -12.573674], [71.33842, -11.139686], [72.732574, -9.705695], [74.12673, -8.271705], [75.52089, -6.837716], [76.91505, -5.4037256], [78.309204, -3.9697351], [79.70336, -2.5357466], [81.09752, -1.1017561], [82.49168, 0.33223438], [83.88583, 1.766223], [85.27999, 3.2002153], [86.67414, 4.634202], [88.068306, 6.0681925]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[100.89928, 7.130116], [99.50512, 8.564106], [98.11096, 9.998096], [96.716805, 11.432086], [95.32265, 12.8660755], [93.92849, 14.300066], [92.53433, 15.7340555], [91.140175, 17.168045], [89.74602, 18.602036], [88.35186, 20.036026], [86.9577, 21.470015], [85.563545, 22.904003], [84.169395, 24.337994], [82.77523, 25.771984], [81.38108, 27.205975], [79.98692, 28.639965], [78.592766, 30.073956], [77.19861, 31.507946], [75.80445, 32.941933], [74.41029, 34.375923], [73.016136, 35.809914], [71.62198, 37.243904], [70.22782, 38.67789], [68.83367, 40.11188], [67.439514, 41.54587], [60.432404, 45.223766], [58.449944, 45.48809], [56.46749, 45.75242]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[40.60784, 47.86704], [38.62538, 48.131367], [36.64293, 48.395695], [34.660477, 48.660023], [32.678017, 48.924347], [30.695562, 49.188675], [28.713106, 49.453003], [26.73065, 49.71733], [24.748194, 49.98166], [22.765738, 50.245987], [20.783285, 50.51031], [18.800829, 50.77464], [16.818373, 51.038967], [14.8359165, 51.303295], [12.85346, 51.567623], [10.871004, 51.83195], [8.888548, 52.09628], [6.9060917, 52.360607], [4.9236355, 52.62493], [2.9411793, 52.88926], [-1.4730906, 53.085007], [-3.4555464, 52.82068], [-5.438002, 52.55635], [-7.4204583, 52.292023], [-9.402914, 52.027695], [-11.38537, 51.76337], [-13.3678255, 51.499043], [-15.350282, 51.234715]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[-37.157295, 48.32711], [-39.139755, 48.062786], [-41.122208, 47.79846], [-43.10466, 47.53413], [-45.08712, 47.269802], [-47.069572, 47.005474], [-49.052032, 46.741146], [-51.034485, 46.476818], [-53.016945, 46.212494], [-54.999397, 45.948166], [-56.981857, 45.683838], [-58.96431, 45.41951], [-60.94677, 45.15518], [-67.80125, 41.173805], [-69.1954, 39.739815], [-70.589554, 38.305824], [-71.98371, 36.871838], [-73.37787, 35.437847], [-74.772026, 34.003857], [-76.16618, 32.569866], [-77.56034, 31.135876], [-78.9545, 29.701885], [-80.348656, 28.267899], [-81.742805, 26.833908], [-83.13697, 25.399918], [-84.53112, 23.965927], [-85.92528, 22.531937], [-87.319435, 21.097946], [-88.71359, 19.66396], [-90.10775, 18.229969], [-91.50191, 16.795979], [-92.896065, 15.361989], [-94.29022, 13.927999], [-95.68438, 12.494008], [-97.07854, 11.0600195], [-98.472694, 9.626027], [-99.866844, 8.19204], [-101.26101, 6.75805]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[87.70657, -5.6961265], [86.312416, -4.2621365], [84.91826, -2.8281465], [83.5241, -1.3941565], [82.129944, 0.03983307], [80.73579, 1.4738231], [79.34163, 2.907813], [77.94747, 4.3418026], [76.553314, 5.775793], [75.15916, 7.2097826], [73.765, 8.643772], [72.37084, 10.077762], [70.97669, 11.511752], [69.58253, 12.945743], [68.18838, 14.379731], [66.79422, 15.813722], [65.40006, 17.247711], [64.005905, 18.681702], [62.611748, 20.115692], [61.21759, 21.549683], [59.823433, 22.983673], [58.429276, 24.41766], [57.03512, 25.85165]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[58.000587, 26.985172], [56.018135, 27.249496]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[40.158485, 29.364117], [38.176033, 29.628445], [36.193573, 29.892773], [34.21112, 30.1571], [32.22866, 30.421429], [30.246206, 30.685753], [28.26375, 30.95008], [26.281294, 31.214409], [24.298838, 31.478737], [22.316381, 31.743065], [20.333925, 32.007393], [18.351473, 32.271717], [16.369017, 32.536045], [14.38656, 32.800373], [12.404104, 33.0647], [10.421648, 33.32903], [8.439192, 33.593357], [6.4567356, 33.857685], [4.4742794, 34.122013], [2.4918232, 34.386337], [0.509367, 34.650665], [0.9587217, 34.846413], [-1.0237341, 34.582085], [-3.0061898, 34.317757], [-4.988646, 34.05343], [-6.9711018, 33.7891], [-8.953558, 33.524776], [-10.936013, 33.26045], [-12.918469, 32.99612], [-14.900925, 32.731792], [-16.88338, 32.467464]]
+segment = 3.6
+thickness = 0.4
+unevenness = 0.0
+wander = 0.0
+
+[[spec.walls]]
+gaps = []
+height = 0.85
+paint = "Stone"
+points = [[-36.70794, 29.824192], [-38.69039, 29.559864], [-40.67285, 29.295536], [-42.655304, 29.031208], [-44.637764, 28.76688], [-46.620216, 28.502552], [-48.602676, 28.238224], [-50.58513, 27.9739], [-52.56759, 27.709572], [-54.55004, 27.445244], [-56.5325, 27.180916], [-58.514954, 26.916588], [-54.608536, 28.347565], [-56.002693, 26.913574], [-57.39685, 25.479584], [-58.791008, 24.045593], [-60.185165, 22.611603], [-61.579323, 21.177616], [-62.97348, 19.743626], [-64.36764, 18.309635], [-65.761795, 16.875645], [-67.15595, 15.441655], [-68.5501, 14.007665], [-69.94427, 12.573674], [-71.33842, 11.139686], [-72.732574, 9.705695], [-74.12673, 8.271705], [-75.52089, 6.837716], [-76.91505, 5.4037256], [-78.309204, 3.9697351], [-79.70336, 2.5357466], [-81.09752, 1.1017561], [-82.49168, -0.33223438], [-83.88583, -1.766223], [-85.27999, -3.2002153], [-86.67414, -4.634202], [-88.068306, -6.0681925]]
+segment = 3.6
+thickness = 0.4
 unevenness = 0.0
 wander = 0.0
 
@@ -9529,6 +19308,182 @@ half = [25.0, 40.0]
 yaw = 0.3
 
 [[spec.woods]]
+height = [9.0, 13.0]
+kind = "Palm"
+radius = [2.2, 3.0]
+
+[spec.woods.shape.Clump]
+at = [-800.0, -100.0]
+count = 60
+half = [120.0, 35.0]
+yaw = 0.3
+
+[[spec.woods]]
+height = [9.0, 13.0]
+kind = "Palm"
+radius = [2.2, 3.0]
+
+[spec.woods.shape.Clump]
+at = [800.0, 100.0]
+count = 60
+half = [120.0, 35.0]
+yaw = 0.3
+
+[[spec.woods]]
+height = [9.0, 13.0]
+kind = "Palm"
+radius = [2.2, 3.0]
+
+[spec.woods.shape.Clump]
+at = [-1300.0, 20.0]
+count = 70
+half = [150.0, 40.0]
+yaw = 0.3
+
+[[spec.woods]]
+height = [9.0, 13.0]
+kind = "Palm"
+radius = [2.2, 3.0]
+
+[spec.woods.shape.Clump]
+at = [1300.0, -20.0]
+count = 70
+half = [150.0, 40.0]
+yaw = 0.3
+
+[[spec.woods]]
+height = [9.0, 13.0]
+kind = "Palm"
+radius = [2.2, 3.0]
+
+[spec.woods.shape.Clump]
+at = [-1750.0, 80.0]
+count = 50
+half = [120.0, 40.0]
+yaw = 0.3
+
+[[spec.woods]]
+height = [9.0, 13.0]
+kind = "Palm"
+radius = [2.2, 3.0]
+
+[spec.woods.shape.Clump]
+at = [1750.0, -80.0]
+count = 50
+half = [120.0, 40.0]
+yaw = 0.3
+
+[[spec.woods]]
+height = [9.0, 13.0]
+kind = "Palm"
+radius = [2.2, 3.0]
+
+[spec.woods.shape.Clump]
+at = [-1000.0, 40.0]
+count = 30
+half = [80.0, 25.0]
+yaw = 0.3
+
+[[spec.woods]]
+height = [9.0, 13.0]
+kind = "Palm"
+radius = [2.2, 3.0]
+
+[spec.woods.shape.Clump]
+at = [1000.0, -40.0]
+count = 30
+half = [80.0, 25.0]
+yaw = 0.3
+
+[[spec.woods]]
+height = [4.0, 5.5]
+kind = "Fruit"
+radius = [1.6, 2.2]
+
+[spec.woods.shape.Rows]
+at = [-560.0, 1150.0]
+half = [40.0, 60.0]
+spacing = 9.0
+yaw = 0.1
+
+[[spec.woods]]
+height = [4.0, 5.5]
+kind = "Fruit"
+radius = [1.6, 2.2]
+
+[spec.woods.shape.Rows]
+at = [560.0, -1150.0]
+half = [40.0, 60.0]
+spacing = 9.0
+yaw = 3.2415926
+
+[[spec.woods]]
+height = [4.0, 5.5]
+kind = "Fruit"
+radius = [1.6, 2.2]
+
+[spec.woods.shape.Rows]
+at = [1300.0, 1150.0]
+half = [50.0, 30.0]
+spacing = 9.0
+yaw = 0.1
+
+[[spec.woods]]
+height = [4.0, 5.5]
+kind = "Fruit"
+radius = [1.6, 2.2]
+
+[spec.woods.shape.Rows]
+at = [-1300.0, -1150.0]
+half = [50.0, 30.0]
+spacing = 9.0
+yaw = 3.2415926
+
+[[spec.woods]]
+height = [8.0, 12.0]
+kind = "Broadleaf"
+radius = [2.6, 3.8]
+
+[spec.woods.shape.Clump]
+at = [-1500.0, 650.0]
+count = 90
+half = [200.0, 100.0]
+yaw = 0.3
+
+[[spec.woods]]
+height = [8.0, 12.0]
+kind = "Broadleaf"
+radius = [2.6, 3.8]
+
+[spec.woods.shape.Clump]
+at = [1500.0, -650.0]
+count = 90
+half = [200.0, 100.0]
+yaw = 0.3
+
+[[spec.woods]]
+height = [8.0, 12.0]
+kind = "Broadleaf"
+radius = [2.6, 3.8]
+
+[spec.woods.shape.Clump]
+at = [1100.0, 1520.0]
+count = 60
+half = [160.0, 70.0]
+yaw = 0.3
+
+[[spec.woods]]
+height = [8.0, 12.0]
+kind = "Broadleaf"
+radius = [2.6, 3.8]
+
+[spec.woods.shape.Clump]
+at = [-1100.0, -1520.0]
+count = 60
+half = [160.0, 70.0]
+yaw = 0.3
+
+[[spec.woods]]
 height = [8.0, 12.0]
 kind = "Broadleaf"
 radius = [2.6, 3.8]
@@ -9574,8 +19529,62 @@ yaw = 0.3
 
 [[spec.zones]]
 at = [0.0, 0.0]
+ground = "Scrub"
+half = [2048.0, 2048.0]
+yaw = 0.0
+
+[[spec.zones]]
+at = [0.0, 0.0]
 ground = "Dirt"
 half = [270.0, 230.0]
+yaw = 0.0
+
+[[spec.zones]]
+at = [420.0, 1800.0]
+ground = "Paving"
+half = [40.0, 18.0]
+yaw = 0.0
+
+[[spec.zones]]
+at = [-420.0, -1800.0]
+ground = "Paving"
+half = [40.0, 18.0]
+yaw = 0.0
+
+[[spec.zones]]
+at = [-650.0, 1290.0]
+ground = "Wheat"
+half = [140.0, 50.0]
+yaw = 0.0
+
+[[spec.zones]]
+at = [650.0, -1290.0]
+ground = "Wheat"
+half = [140.0, 50.0]
+yaw = 0.0
+
+[[spec.zones]]
+at = [-820.0, 1150.0]
+ground = "Plough"
+half = [50.0, 110.0]
+yaw = 0.0
+
+[[spec.zones]]
+at = [820.0, -1150.0]
+ground = "Plough"
+half = [50.0, 110.0]
+yaw = 0.0
+
+[[spec.zones]]
+at = [1300.0, 1360.0]
+ground = "Pasture"
+half = [110.0, 40.0]
+yaw = 0.0
+
+[[spec.zones]]
+at = [-1300.0, -1360.0]
+ground = "Pasture"
+half = [110.0, 40.0]
 yaw = 0.0
 
 [[spec.zones]]

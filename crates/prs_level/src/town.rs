@@ -153,6 +153,9 @@ fn land() -> TerrainSpec {
         max_splits: 3,
         paint_splits: 3,
         tolerance: 0.16,
+        open_tolerance: None,
+        open_paint_splits: None,
+        detail: Vec::new(),
         waves: vec![
             wave(0.021, 0.006, 0.7, 1.9),
             wave(0.007, 0.019, 2.1, 2.3),

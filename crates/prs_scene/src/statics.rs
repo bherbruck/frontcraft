@@ -21,6 +21,12 @@ const FOOT_MIN_HEIGHT: f32 = 1.0;
 const FOOT_MIN_WIDTH: f32 = 0.7;
 /// How near a room a box must be to count as part of its building.
 const BUILDING_REACH: f32 = 11.0;
+/// How deep water stands over a canal's bed, how far over the wet ground beside it a corner may stand and still be
+/// bed, and its colour.
+const WATER_DEPTH: f32 = 0.5;
+const WATER_FLAT: f32 = 0.35;
+const WATER_COLOR: Vec3 = Vec3::new(0.24, 0.42, 0.44);
+const WATER_ALPHA: f32 = 0.78;
 /// How many fronds a palm's crown has.
 const PALM_FRONDS: usize = 5;
 const CANOPY_SIDES: usize = 7;
@@ -138,8 +144,10 @@ fn chunk_of(chunks: &mut Chunks, at: Vec3) -> &mut Batch {
 pub(crate) struct StaticMeshes {
     pub terrain: Chunks,
     pub solids: Chunks,
-    /// Tree canopies are the one thing you can see and pass through.
+    /// Tree canopies are one thing you can see and pass through.
     pub canopies: Chunks,
+    /// Water is the other: a surface over the bed of a canal or river, waded through.
+    pub water: Chunks,
 }
 
 pub(crate) fn static_meshes(level: &Level, bake: Bake) -> StaticMeshes {
@@ -153,7 +161,37 @@ pub(crate) fn static_meshes(level: &Level, bake: Bake) -> StaticMeshes {
         add_trunk(chunk_of(&mut solids, tree.base), tree, &light);
         add_canopy(chunk_of(&mut canopies, tree.base), tree, &light);
     }
-    StaticMeshes { terrain: terrain_chunks(&level.terrain), solids, canopies }
+    StaticMeshes { terrain: terrain_chunks(&level.terrain), solids, canopies, water: water_chunks(&level.terrain) }
+}
+
+/// A flat surface a little over each stretch of bed under water. Only the bed, so the surface stops where
+/// the bank rises out of it, which reads as the water's edge.
+fn water_chunks(terrain: &Terrain) -> Chunks {
+    let water = |v: u32| terrain.ground[v as usize] == Ground::Water;
+    let wet = |tri: &[u32; 3]| tri.iter().any(|&v| water(v));
+    // The bed: every wet corner with nothing beside it much lower. A bank's corners all have.
+    let mut lowest_beside = vec![f32::MAX; terrain.vertices.len()];
+    for tri in terrain.indices.iter().filter(|tri| wet(tri)) {
+        for &v in tri {
+            for &w in tri {
+                lowest_beside[v as usize] = lowest_beside[v as usize].min(terrain.vertices[w as usize].y);
+            }
+        }
+    }
+    let bed = |v: u32| water(v) && terrain.vertices[v as usize].y - lowest_beside[v as usize] <= WATER_FLAT;
+    let mut chunks = Chunks::new();
+    for tri in terrain.indices.iter().filter(|tri| wet(tri)) {
+        // Level with its lowest corner, if that is on the bed: where a bank rises through it the ground hides it.
+        let low = *tri.iter().min_by(|a, b| terrain.vertices[**a as usize].y.total_cmp(&terrain.vertices[**b as usize].y)).expect("three corners");
+        if !bed(low) {
+            continue;
+        }
+        let level = terrain.vertices[low as usize].y + WATER_DEPTH;
+        let corners = tri.map(|v| terrain.vertices[v as usize]);
+        let surface = corners.map(|c| Vec3::new(c.x, level, c.z));
+        chunk_of(&mut chunks, (corners[0] + corners[1] + corners[2]) / 3.0).triangle(surface, [WATER_COLOR; 3]);
+    }
+    chunks
 }
 
 pub(crate) fn spawn_level(
@@ -163,7 +201,14 @@ pub(crate) fn spawn_level(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let StaticMeshes { mut terrain, mut solids, canopies } = static_meshes(&sim.0.level, atmosphere.bake);
+    let StaticMeshes { mut terrain, mut solids, canopies, water } = static_meshes(&sim.0.level, atmosphere.bake);
+    let wet = materials.add(StandardMaterial {
+        base_color: Color::srgba(1.0, 1.0, 1.0, WATER_ALPHA),
+        alpha_mode: AlphaMode::Blend,
+        perceptual_roughness: 0.15,
+        reflectance: 0.5,
+        ..default()
+    });
     let ground = materials.add(StandardMaterial {
         base_color: Color::WHITE,
         perceptual_roughness: 1.0,
@@ -189,6 +234,9 @@ pub(crate) fn spawn_level(
     }
     for batch in solids.into_values() {
         commands.spawn((Mesh3d(meshes.add(batch.mesh())), MeshMaterial3d(painted.clone())));
+    }
+    for batch in water.into_values() {
+        commands.spawn((Mesh3d(meshes.add(batch.mesh())), MeshMaterial3d(wet.clone()), bevy::light::NotShadowCaster));
     }
 }
 
@@ -453,7 +501,7 @@ fn ground_color(ground: Ground, at: Vec3, height: f32, steep: f32, grain: f32) -
         Ground::Paving => Vec3::new(0.62, 0.59, 0.52) + tint * 0.5,
         Ground::DitchBed => Vec3::new(0.38, 0.31, 0.19) + tint,
         Ground::Shingle => Vec3::new(0.62, 0.58, 0.5).lerp(Vec3::new(0.56, 0.52, 0.44), drift) + tint * 0.6,
-        Ground::Scrub => Vec3::new(0.5, 0.43, 0.24).lerp(Vec3::new(0.4, 0.42, 0.2), drift) + tint,
+        Ground::Scrub => Vec3::new(0.56, 0.47, 0.29).lerp(Vec3::new(0.5, 0.45, 0.27), drift) + tint,
         Ground::Water => Vec3::new(0.25, 0.35, 0.33).lerp(Vec3::new(0.22, 0.32, 0.31), drift) + tint * 0.3,
     };
     base.lerp(dirt, steep)

@@ -115,6 +115,8 @@ const STEP_CUT_MARGIN: f32 = 0.6;
 const STEP_CUT_DEPTH: f32 = 0.3;
 /// Nothing grows this close to a road or a compound.
 const GROWING_CLEARANCE: f32 = 1.0;
+/// How far round a flight of steps nothing grows, so there is room to step on and off.
+const STEP_CLEARANCE: f32 = 2.5;
 
 pub(crate) struct Relief<'a> {
     spec: &'a MapSpec,
@@ -179,7 +181,8 @@ impl<'a> Relief<'a> {
             add(&mut near, turned_bounds(pad.at, pad.axis, pad.half, fade), &|cell| cell.pads.push(i as u32));
         }
         for (i, steps) in spec.steps.iter().enumerate() {
-            let reach = steps.width * 0.5 + STEP_CUT_MARGIN;
+            // Room to get on and off reaches half a flight past each end.
+            let reach = steps.width * 0.5 + STEP_CUT_MARGIN.max(STEP_CLEARANCE) + steps.from.distance(steps.to) * 0.5;
             add(&mut near, (steps.from.min(steps.to) - reach, steps.from.max(steps.to) + reach), &|cell| cell.steps.push(i as u32));
         }
         for (i, zone) in spec.zones.iter().enumerate() {
@@ -348,12 +351,26 @@ impl<'a> Relief<'a> {
             || near.pads.iter().any(|&i| self.pads[i as usize].outside(p) < GROWING_CLEARANCE)
             || by_line(&near.roads).any(|(i, run)| nearest(&spec.roads[i].points, run, p).is_some_and(|(_, d)| d < spec.roads[i].width * 0.5 + GROWING_CLEARANCE))
             || by_line(&near.ditches).any(|(i, run)| nearest(&spec.ditches[i].points, run, p).is_some_and(|(_, d)| d < spec.ditches[i].width * 0.5))
+            || near.steps.iter().map(|&i| &spec.steps[i as usize]).any(|s| {
+                // The steps, and room to get on and off them at either end.
+                let along = s.to - s.from;
+                let t = ((p - s.from).dot(along) / along.length_squared().max(1e-6)).clamp(-0.5, 1.5);
+                (s.from + along * t).distance(p) < s.width * 0.5 + STEP_CLEARANCE
+            })
     }
 
     /// The mesh, unless it would be more than `max_cells` cells or shaping it would take more than allowed.
     pub fn terrain(&self, max_cells: u64) -> Result<Terrain, String> {
         let t = &self.spec.terrain;
-        let terrain = Terrain::adaptive(t.size, t.base_cells, t.max_splits, t.paint_splits, t.tolerance, max_cells, |p| self.height(p), |p| self.ground(p))?;
+        let detail = |p: Vec2| {
+            // Past the limit, everywhere is detailed: the strict tolerance, and no more looking.
+            let open = self.spend(t.detail.len()) && !t.detail.iter().any(|(at, radius)| at.distance(p) < *radius);
+            match (open, t.open_tolerance) {
+                (true, Some(tolerance)) => (tolerance, t.open_paint_splits.unwrap_or(t.paint_splits).min(t.paint_splits)),
+                _ => (t.tolerance, t.paint_splits),
+            }
+        };
+        let terrain = Terrain::adaptive(t.size, t.base_cells, t.max_splits, detail, max_cells, |p| self.height(p), |p| self.ground(p))?;
         if self.spent() {
             return Err(format!("more than {} looks at the land to shape it", self.limit));
         }
@@ -377,8 +394,7 @@ impl Terrain {
         size: f32,
         base_cells: u32,
         max_splits: u32,
-        paint_splits: u32,
-        tolerance: f32,
+        detail: impl Fn(Vec2) -> (f32, u32),
         max_cells: u64,
         height: impl Fn(Vec2) -> f32,
         ground: impl Fn(Vec2) -> Ground,
@@ -388,7 +404,7 @@ impl Terrain {
         let base = 1 << max_splits;
         for j in 0..base_cells {
             for i in 0..base_cells {
-                grid.refine(&mut depth, i * base, j * base, base, 0, max_splits, paint_splits, tolerance);
+                grid.refine(&mut depth, i * base, j * base, base, 0, max_splits, &detail);
             }
         }
         balance(&mut depth, grid.n, max_splits);
@@ -434,13 +450,16 @@ impl<H: Fn(Vec2) -> f32, G: Fn(Vec2) -> Ground> Grid<H, G> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn refine(&self, depth: &mut [u8], i: u32, j: u32, cell: u32, level: u32, max_splits: u32, paint_splits: u32, tolerance: f32) {
+    /// `detail` says, for a place, the height error a cell there may leave and how many times it may split to
+    /// follow the ground's colour.
+    fn refine(&self, depth: &mut [u8], i: u32, j: u32, cell: u32, level: u32, max_splits: u32, detail: &impl Fn(Vec2) -> (f32, u32)) {
+        let (tolerance, paint_splits) = detail(self.point(i + cell / 2, j + cell / 2));
         let split = level < max_splits
             && (self.height_error(i, j, cell) > tolerance || (level < paint_splits && self.paint_changes(i, j, cell, level + 1 < paint_splits)));
         if split {
             let half = cell / 2;
             for (a, b) in [(0, 0), (half, 0), (0, half), (half, half)] {
-                self.refine(depth, i + a, j + b, half, level + 1, max_splits, paint_splits, tolerance);
+                self.refine(depth, i + a, j + b, half, level + 1, max_splits, detail);
             }
         } else {
             for b in j..j + cell {
