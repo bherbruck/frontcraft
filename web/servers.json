@@ -1,7 +1,7 @@
 [
   { "name": "Town", "path": "", "blurb": "Advance and secure, the main game" },
   { "name": "Shooting Range", "path": "/range", "blurb": "Practise with whoever else is there" },
-  { "name": "Claudabad", "path": "/claudabad", "blurb": "" },
-  { "name": "Muttrah", "path": "/muttrah", "blurb": "" },
-  { "name": "Fallujah", "path": "/fallujah", "blurb": "" }
+  { "name": "Claudabad", "path": "/claudabad", "blurb": "4 km river town under the sunburst, airstrips and hill forts" },
+  { "name": "Muttrah", "path": "/muttrah", "blurb": "2 km port quarter on the real hills of Muscat" },
+  { "name": "Fallujah", "path": "/fallujah", "blurb": "4 km city on the Euphrates, real terrain" }
 ]
