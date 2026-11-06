@@ -305,17 +305,17 @@ fn town(spec: &MapSpec) -> Vec<Compound> {
     site.reserve(Vec2::new(-950.0, -700.0), 0.0, Vec2::new(60.0, 10.0));
     let quarters = [
         // The souq: blocks shoulder to shoulder from the corniche back to the back street.
-        Quarter { at: Vec2::new(0.0, -590.0), yaw: 0.0, half: Vec2::new(140.0, 92.0), block: Vec2::new(30.0, 22.0), street: 5.0, kind: Kind::Souq, density: 0.9, drop: 2.5, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Ochre, Paint::Limewash] },
+        Quarter { at: Vec2::new(0.0, -590.0), yaw: 0.0, half: Vec2::new(230.0, 100.0), block: Vec2::new(30.0, 22.0), street: 5.0, kind: Kind::Souq, density: 0.9, drop: 2.5, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Ochre, Paint::Limewash] },
         // Warehouses on the port.
         Quarter { at: Vec2::new(-690.0, -680.0), yaw: 0.0, half: Vec2::new(110.0, 80.0), block: Vec2::new(44.0, 30.0), street: 9.0, kind: Kind::Works, density: 1.0, drop: 2.5, heart: None, paints: &[Paint::Cement, Paint::Concrete, Paint::Brick] },
         // The old quarter, walled houses up the foot of the hills.
-        Quarter { at: Vec2::new(-470.0, -470.0), yaw: 0.05, half: Vec2::new(180.0, 150.0), block: Vec2::new(26.0, 22.0), street: 6.0, kind: Kind::Courtyard, density: 0.45, drop: 3.0, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Ochre, Paint::Stone] },
-        Quarter { at: Vec2::new(-80.0, -330.0), yaw: -0.04, half: Vec2::new(230.0, 110.0), block: Vec2::new(26.0, 22.0), street: 6.0, kind: Kind::Courtyard, density: 0.35, drop: 3.0, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Ochre, Paint::Stone] },
-        Quarter { at: Vec2::new(-450.0, -170.0), yaw: 0.1, half: Vec2::new(150.0, 80.0), block: Vec2::new(26.0, 22.0), street: 8.0, kind: Kind::Courtyard, density: 0.35, drop: 4.0, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Stone] },
+        Quarter { at: Vec2::new(-470.0, -470.0), yaw: 0.05, half: Vec2::new(180.0, 150.0), block: Vec2::new(26.0, 22.0), street: 6.0, kind: Kind::Courtyard, density: 0.7, drop: 3.0, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Ochre, Paint::Stone] },
+        Quarter { at: Vec2::new(-80.0, -330.0), yaw: -0.04, half: Vec2::new(230.0, 110.0), block: Vec2::new(26.0, 22.0), street: 6.0, kind: Kind::Courtyard, density: 0.6, drop: 3.0, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Ochre, Paint::Stone] },
+        Quarter { at: Vec2::new(-450.0, -170.0), yaw: 0.1, half: Vec2::new(150.0, 80.0), block: Vec2::new(26.0, 22.0), street: 8.0, kind: Kind::Courtyard, density: 0.5, drop: 4.0, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Stone] },
         // The wadi, and the east end behind the dhow harbour.
-        Quarter { at: Vec2::new(300.0, -170.0), yaw: 0.3, half: Vec2::new(110.0, 170.0), block: Vec2::new(26.0, 22.0), street: 7.0, kind: Kind::Courtyard, density: 0.4, drop: 3.5, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Ochre] },
-        Quarter { at: Vec2::new(720.0, -480.0), yaw: -0.1, half: Vec2::new(120.0, 140.0), block: Vec2::new(26.0, 22.0), street: 7.0, kind: Kind::Courtyard, density: 0.3, drop: 3.5, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Ochre] },
-        Quarter { at: Vec2::new(600.0, -650.0), yaw: 0.0, half: Vec2::new(100.0, 60.0), block: Vec2::new(30.0, 22.0), street: 6.0, kind: Kind::Souq, density: 0.5, drop: 2.5, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Ochre] },
+        Quarter { at: Vec2::new(300.0, -170.0), yaw: 0.3, half: Vec2::new(110.0, 170.0), block: Vec2::new(26.0, 22.0), street: 7.0, kind: Kind::Courtyard, density: 0.6, drop: 3.5, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Ochre] },
+        Quarter { at: Vec2::new(720.0, -480.0), yaw: -0.1, half: Vec2::new(120.0, 140.0), block: Vec2::new(26.0, 22.0), street: 7.0, kind: Kind::Courtyard, density: 0.5, drop: 3.5, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Ochre] },
+        Quarter { at: Vec2::new(600.0, -650.0), yaw: 0.0, half: Vec2::new(100.0, 60.0), block: Vec2::new(30.0, 22.0), street: 6.0, kind: Kind::Souq, density: 0.8, drop: 2.5, heart: None, paints: &[Paint::Limewash, Paint::Plaster, Paint::Ochre] },
         Quarter { at: Vec2::new(760.0, -815.0), yaw: -0.1, half: Vec2::new(45.0, 30.0), block: Vec2::new(40.0, 26.0), street: 6.0, kind: Kind::Works, density: 1.0, drop: 3.0, heart: None, paints: &[Paint::Cement, Paint::Brick] },
     ];
     for quarter in &quarters {
