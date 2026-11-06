@@ -61,6 +61,12 @@ const STEP_CUT_DEPTH: f32 = 0.3;
 
 pub(crate) struct Relief<'a> {
     spec: &'a MapSpec,
+    /// Features looked at so far in working out heights and ground, and how many may be. Past that every
+    /// question gets a flat answer at once, and whoever is building gives up.
+    work: std::cell::Cell<u64>,
+    limit: u64,
+    /// What one look along every road and ditch, and at every pad, costs.
+    lines_cost: usize,
     roads: Vec<Line<'a>>,
     ditches: Vec<Line<'a>>,
     pub pads: Vec<Pad>,
@@ -69,10 +75,18 @@ pub(crate) struct Relief<'a> {
 }
 
 impl<'a> Relief<'a> {
+    #[cfg(test)]
     pub fn new(spec: &'a MapSpec) -> Self {
+        Self::within(spec, u64::MAX)
+    }
+
+    /// One that gives up past `limit` features looked at, whatever the spec asks for.
+    pub fn within(spec: &'a MapSpec, limit: u64) -> Self {
         let roads = spec.roads.iter().map(|r| Line::new(&r.points, r.width * 0.5 + r.shoulder)).collect();
         let ditches = spec.ditches.iter().map(|d| Line::new(&d.points, d.width * 0.5)).collect();
-        let mut relief = Self { spec, roads, ditches, pads: Vec::new(), step_ends: Vec::new() };
+        let lines_cost = spec.roads.iter().map(|r| r.points.len()).sum::<usize>() + spec.ditches.iter().map(|d| d.points.len()).sum::<usize>() + spec.compounds.len();
+        let work = std::cell::Cell::new(0);
+        let mut relief = Self { spec, work, limit, lines_cost, roads, ditches, pads: Vec::new(), step_ends: Vec::new() };
         relief.pads = spec.compounds.iter().map(|c| relief.pad(c)).collect();
         relief.step_ends = spec.steps.iter().map(|s| (relief.uncut(s.from), relief.uncut(s.to))).collect();
         relief
@@ -88,9 +102,24 @@ impl<'a> Relief<'a> {
         }
     }
 
+    /// Counts the cost of a question. False once past the limit.
+    fn spend(&self, cost: usize) -> bool {
+        let work = self.work.get().saturating_add(cost as u64 + 1);
+        self.work.set(work);
+        work <= self.limit
+    }
+
+    /// Whether working out the land took more than it was allowed.
+    pub fn spent(&self) -> bool {
+        self.work.get() > self.limit
+    }
+
     /// The land before anything is cut into it or levelled on it.
     fn natural(&self, p: Vec2) -> f32 {
         let terrain = &self.spec.terrain;
+        if !self.spend(terrain.calm.len() + terrain.waves.len() + terrain.hills.len()) {
+            return 0.0;
+        }
         let quiet = terrain.calm.iter().map(|c| c.keep + (1.0 - c.keep) * smoothstep(c.radius, c.fade, c.at.distance(p))).fold(1.0, f32::min);
         let waves: f32 = terrain.waves.iter().map(|w| (w.frequency.dot(p) + w.phase).sin() * w.height).sum();
         let hills: f32 = terrain.hills.iter().map(|h| hill(h, p)).sum();
@@ -110,6 +139,9 @@ impl<'a> Relief<'a> {
     }
 
     pub fn height(&self, p: Vec2) -> f32 {
+        if !self.spend(self.spec.steps.len()) {
+            return 0.0;
+        }
         let mut h = self.uncut(p);
         // Steps are let into a bank, so no tread is buried under a slope steeper than they are.
         for (steps, &(start, end)) in self.spec.steps.iter().zip(&self.step_ends) {
@@ -129,6 +161,9 @@ impl<'a> Relief<'a> {
     }
 
     fn uncut(&self, p: Vec2) -> f32 {
+        if !self.spend(self.lines_cost) {
+            return 0.0;
+        }
         let natural = self.natural(p);
         let mut h = natural;
         let cut = |spec: &Ditch, d: f32| {
@@ -170,6 +205,9 @@ impl<'a> Relief<'a> {
     }
 
     pub fn ground(&self, p: Vec2) -> Ground {
+        if !self.spend(self.lines_cost + self.spec.zones.len()) {
+            return Ground::Meadow;
+        }
         for pad in &self.pads {
             if pad.outside(p) < 0.5 {
                 return pad.ground;
@@ -202,14 +240,21 @@ impl<'a> Relief<'a> {
 
     /// Whether something growing at `p` would be in the way of a road, a ditch or a compound.
     pub fn occupied(&self, p: Vec2) -> bool {
-        self.pads.iter().any(|pad| pad.outside(p) < 1.0)
+        // Past the limit, everywhere is taken, so nothing more is put anywhere.
+        !self.spend(self.lines_cost)
+            || self.pads.iter().any(|pad| pad.outside(p) < 1.0)
             || self.spec.roads.iter().zip(&self.roads).any(|(s, l)| l.nearest(p).is_some_and(|(_, d)| d < s.width * 0.5 + 1.0))
             || self.spec.ditches.iter().zip(&self.ditches).any(|(s, l)| l.nearest(p).is_some_and(|(_, d)| d < s.width * 0.5))
     }
 
-    pub fn terrain(&self) -> Terrain {
+    /// The mesh, unless it would be more than `max_cells` cells or shaping it would take more than allowed.
+    pub fn terrain(&self, max_cells: u64) -> Result<Terrain, String> {
         let t = &self.spec.terrain;
-        Terrain::adaptive(t.size, t.base_cells, t.max_splits, t.paint_splits, t.tolerance, |p| self.height(p), |p| self.ground(p))
+        let terrain = Terrain::adaptive(t.size, t.base_cells, t.max_splits, t.paint_splits, t.tolerance, max_cells, |p| self.height(p), |p| self.ground(p))?;
+        if self.spent() {
+            return Err(format!("more than {} looks at the land to shape it", self.limit));
+        }
+        Ok(terrain)
     }
 }
 
@@ -222,16 +267,19 @@ fn hill(hill: &Hill, p: Vec2) -> f32 {
 impl Terrain {
     /// A mesh that is coarse where the land is smooth and fine where it is not: cells split until
     /// they follow `height` to within `tolerance`, and to follow changes of `ground`. Neighbouring
-    /// cells differ by one split at most, and larger ones fan out to meet them without any crack.
+    /// cells differ by one split at most, and larger ones fan out to meet them without any crack. Refused if
+    /// that comes to more than `max_cells` cells, before any of the mesh is made.
+    #[allow(clippy::too_many_arguments)]
     pub fn adaptive(
         size: f32,
         base_cells: u32,
         max_splits: u32,
         paint_splits: u32,
         tolerance: f32,
+        max_cells: u64,
         height: impl Fn(Vec2) -> f32,
         ground: impl Fn(Vec2) -> Ground,
-    ) -> Self {
+    ) -> Result<Self, String> {
         let grid = Grid::new(size, base_cells, max_splits, height, ground);
         let mut depth = vec![0u8; (grid.n * grid.n) as usize];
         let base = 1 << max_splits;
@@ -241,7 +289,12 @@ impl Terrain {
             }
         }
         balance(&mut depth, grid.n, max_splits);
-        grid.mesh(&depth, max_splits)
+        // Each finest cell is a share of the cell that covers it: a quarter of it for each split short of the finest.
+        let cells: f64 = depth.iter().map(|&d| 0.25_f64.powi((max_splits - (d as u32).min(max_splits)) as i32)).sum();
+        if !(cells <= max_cells as f64) {
+            return Err(format!("ground of {cells:.0} cells"));
+        }
+        Ok(grid.mesh(&depth, max_splits))
     }
 }
 

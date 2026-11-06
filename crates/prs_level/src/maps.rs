@@ -43,16 +43,21 @@ pub struct MapLimits {
     pub max_pieces: u64,
     /// Turns of the builder's loops in all. However a spec gets past the rest, building stops here.
     pub max_build_steps: u64,
-    /// Work in shaping the ground: the points of the finest grid times the hills, roads, ditches and the rest
-    /// that every height has to look at.
+    /// Work in shaping the ground: every hill, wave, road and ditch point, pad, step and zone looked at for
+    /// every height and colour asked for, counted as it goes. Shaping stops here whatever the spec says.
     pub max_terrain_work: u64,
+    /// Cells in the terrain mesh, which is what it costs in memory, checked before the mesh is made.
+    pub max_terrain_cells: u64,
+    /// Steps, bridges, landmarks and canals, each. Every one of these is looked at for every height.
+    pub max_cuts: usize,
     pub max_storeys: u32,
 }
 
 impl Default for MapLimits {
-    /// Several times the town in each, which is itself a kilometre across.
+    /// Room for a map four kilometres across at a few metres a cell, which is several times the town, and no
+    /// more memory or time than such a map takes.
     fn default() -> Self {
-        Self { max_size: 4096.0, max_cells: 2048, max_splits: 6, max_items: 200_000, max_trees: 50_000, max_rubble: 20_000, max_pieces: 100_000, max_build_steps: 1_000_000, max_terrain_work: 400_000_000, max_storeys: 16 }
+        Self { max_size: 8192.0, max_cells: 4096, max_splits: 6, max_items: 200_000, max_trees: 50_000, max_rubble: 20_000, max_pieces: 100_000, max_build_steps: 1_000_000, max_terrain_work: 2_000_000_000, max_terrain_cells: 4_000_000, max_cuts: 512, max_storeys: 16 }
     }
 }
 
@@ -257,7 +262,14 @@ impl MapFile {
         if terrain.base_cells == 0 || splits > limits.max_splits || finest > limits.max_cells as u64 {
             return Err(format!("{} cells split {splits} times", terrain.base_cells));
         }
-        // Every height asked for goes through each of these, and roads twice.
+        let canals = spec.ditches.iter().filter(|d| d.cuts_roads).count();
+        for (what, count) in [("flights of steps", spec.steps.len()), ("bridges", spec.bridges.len()), ("landmarks", spec.landmarks.len()), ("canals", canals)] {
+            if count > limits.max_cuts {
+                return Err(format!("{count} {what}"));
+            }
+        }
+        // A quick first look: the real work is counted as the land is shaped. Every height goes through each of
+        // these, and roads twice.
         let lines = |n: usize| n as u64;
         let features = terrain.waves.len() as u64
             + terrain.hills.len() as u64
@@ -357,7 +369,7 @@ impl MapFile {
         }
         let incomplete = |missing| MapError::Incomplete { name: name.to_owned(), missing };
         let mut level = match (self.spec, self.terrain) {
-            (Some(spec), _) => spec.build_within(limits.max_build_steps).map_err(|what| MapError::TooBig { name: name.to_owned(), what })?,
+            (Some(spec), _) => spec.build_limited(limits).map_err(|what| MapError::TooBig { name: name.to_owned(), what })?,
             (None, Some(grid)) => {
                 let row = grid.cells as usize + 1;
                 let expected = row.checked_mul(row).ok_or_else(|| incomplete("a grid it can hold"))?;
@@ -646,6 +658,27 @@ mod tests {
         for name in ["town", "claudabad", "range"] {
             assert!(MapData::built_in(name).unwrap().level().is_ok(), "{name} fits");
         }
+    }
+
+    /// However the work of shaping the land was underestimated, it is counted as it is done and stopped.
+    #[test]
+    fn shaping_the_land_stops_at_its_budget_whatever_the_estimate() {
+        let town = MapSpec::town();
+        let tight = MapLimits { max_terrain_work: 100_000, ..MapLimits::default() };
+        let error = town.build_limited(&tight).unwrap_err();
+        assert!(error.contains("looks at the land"), "{error}");
+        let few_cells = MapLimits { max_terrain_cells: 100, ..MapLimits::default() };
+        assert!(town.build_limited(&few_cells).unwrap_err().contains("cells"));
+        assert!(town.build_limited(&MapLimits::default()).is_ok());
+    }
+
+    #[test]
+    fn too_many_of_anything_cut_into_the_land_is_refused() {
+        let town = MapData::built_in("town").unwrap().text;
+        let one = "\n[[spec.steps]]\nfrom = [0.0, 0.0]\nto = [1.0, 0.0]\nwidth = 1.0\npaint = \"Concrete\"\n";
+        let many = format!("{town}{}", one.repeat(MapLimits::default().max_cuts + 1));
+        let refused = MapData::new("steps", many).level();
+        assert!(matches!(refused, Err(MapError::TooBig { .. })), "{refused:?}");
     }
 
     /// Whatever a spec gets past the checks with, the builder itself stops at its budget.

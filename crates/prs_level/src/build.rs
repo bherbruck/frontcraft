@@ -1,6 +1,7 @@
 //! Turns a [`MapSpec`] into a [`Level`]: walls with their openings cut out, floors with their
 //! stairwells, roofs, stairs, trees and everything else as plain boxes.
 
+use crate::maps::MapLimits;
 use crate::relief::Relief;
 use crate::spec::*;
 use crate::{CapturePoint, Doorway, Level, Paint, Room, Scatter, Solid, SpawnPoint, Staircase, TargetMark, Team, Tree, Window};
@@ -89,8 +90,16 @@ impl MapSpec {
 
     /// The level, unless building it would take more than `steps`.
     pub fn build_within(&self, steps: u64) -> Result<Level, String> {
-        let relief = Relief::new(self);
-        let terrain = relief.terrain();
+        let limits = MapLimits { max_build_steps: steps, max_terrain_work: u64::MAX, max_terrain_cells: u64::MAX, ..MapLimits::default() };
+        self.build_limited(&limits)
+    }
+
+    /// The level, unless shaping its land or building on it would take more than the limits allow, whatever
+    /// the spec says.
+    pub fn build_limited(&self, limits: &MapLimits) -> Result<Level, String> {
+        let steps = limits.max_build_steps;
+        let relief = Relief::within(self, limits.max_terrain_work);
+        let terrain = relief.terrain(limits.max_terrain_cells)?;
         let mut level = Level {
             terrain,
             solids: Vec::new(),
@@ -123,6 +132,9 @@ impl MapSpec {
         builder.objectives();
         if builder.mason.budget.spent {
             return Err(format!("more than {steps} steps to build"));
+        }
+        if relief.spent() {
+            return Err(format!("more than {} looks at the land to build on it", limits.max_terrain_work));
         }
         Ok(level)
     }
