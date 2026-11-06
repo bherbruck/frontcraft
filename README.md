@@ -501,8 +501,10 @@ How far you see is `View distance` in the Esc menu, saved with the other setting
 (4 km on desktop for helicopters, 2.5 km on the web). It sets `ViewReach`, which the far plane, fog and sky follow.
 The level's detail falls off with distance and stops at it:
 each 128 m chunk shows its full terrain, boxes and trees near you, then a coarser grid, plain boxes and one shape
-per tree, and beyond `far_from` a whole 512 m block's ground is one mesh. Only drawing changes; what stops a bullet is the
-same everywhere. The distances are `view.detail` in a mod (`Detail` in `crates/prs_scene/src/lod.rs`).
+per tree, and beyond `far_from` a whole 512 m block's ground is one mesh. Full detail is only built for chunks near
+you, a few milliseconds a frame (`build_ms_per_frame`), and dropped once you are well past, so a map with more
+buildings does not need more memory; looking through a scope counts as nearer in the direction you look. Only
+drawing changes; what stops a bullet is the same everywhere. The distances are `view.detail` in a mod (`Detail` in `crates/prs_scene/src/lod.rs`).
 
 The game carries only the town and the range inside it, for playing alone. The bigger maps stay files in
 `maps/`: a server plays them from its maps folder (`PRS_MAPS_DIR`, or `maps` beside it), and a program run
@@ -645,7 +647,8 @@ cargo test -p prs_ai match_report -- --ignored --nocapture
 ## Checking without playing
 
 `PRS_BENCH=1 PRS_MODE=practice cargo run --release`, or `?bench=1&mode=practice` on the web, flies the camera
-over the map once it is drawn: a turn at head height, a circle at helicopter height and a low pass. It prints
+over the map once it is drawn: a turn at head height, a circle at helicopter height, a fast low pass, a drive
+and a helicopter flight. It prints
 one `BENCH` line with load time, frame times and what was drawn on each leg, and exits (on the web the line is
 the page title). `PRS_BENCH_SHOTS=<folder>` also saves a screenshot from each leg. A release build finds the big maps
 with `PRS_MAPS_DIR=maps`. The software renderer

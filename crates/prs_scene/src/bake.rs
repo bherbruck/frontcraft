@@ -16,7 +16,8 @@ const CLOSE_UP: f32 = 0.5;
 /// Shortest stretch worth a tile of its own, in metres.
 const MIN_TILE: f32 = 1.4;
 
-struct Opening {
+#[derive(Clone)]
+pub(crate) struct Opening {
     at: Vec3,
     outward: Vec3,
     area: f32,
@@ -25,16 +26,28 @@ struct Opening {
 /// The rooms of a level with the openings to outside that light them.
 pub(crate) struct RoomLight<'a> {
     rooms: &'a [Room],
-    openings: Vec<Vec<Opening>>,
+    openings: std::borrow::Cow<'a, [Vec<Opening>]>,
     bake: Bake,
 }
 
 impl<'a> RoomLight<'a> {
+    #[cfg(test)]
     pub fn new(level: &'a Level, bake: Bake) -> Self {
+        Self { rooms: &level.rooms, openings: std::borrow::Cow::Owned(Self::openings(level)), bake }
+    }
+
+    /// With openings worked out before by [`RoomLight::openings`], which is the slow part, so that pieces
+    /// of a level can be lit one at a time as they are needed.
+    pub fn with_openings(level: &'a Level, bake: Bake, openings: &'a [Vec<Opening>]) -> Self {
+        Self { rooms: &level.rooms, openings: std::borrow::Cow::Borrowed(openings), bake }
+    }
+
+    /// The openings to outside in each room's outer walls.
+    pub fn openings(level: &Level) -> Vec<Vec<Opening>> {
         let doors = level.doorways.iter().map(|d| Opening { at: d.at + Vec3::Y * DOOR_HEIGHT * 0.5, outward: d.outward, area: d.width * DOOR_HEIGHT });
         let windows = level.windows.iter().map(|w| Opening { at: w.at, outward: w.outward, area: w.width * w.height });
         let all: Vec<Opening> = doors.chain(windows).collect();
-        let openings = level
+        level
             .rooms
             .iter()
             .map(|room| {
@@ -50,13 +63,12 @@ impl<'a> RoomLight<'a> {
                     .map(|o| Opening { at: o.at, outward: o.outward, area: o.area })
                     .collect()
             })
-            .collect();
-        Self { rooms: &level.rooms, openings, bake }
+            .collect()
     }
 
     /// The same bake with no rooms in it, for things that stand outside whatever is nearby.
     pub fn outdoors(other: &RoomLight<'a>) -> Self {
-        Self { rooms: &[], openings: Vec::new(), bake: other.bake }
+        Self { rooms: &[], openings: std::borrow::Cow::Owned(Vec::new()), bake: other.bake }
     }
 
     pub fn bake(&self) -> &Bake {

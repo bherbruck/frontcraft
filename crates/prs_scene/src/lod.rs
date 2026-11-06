@@ -12,14 +12,20 @@
 //! own middle, and whether a block stands in for its chunks from the block's middle. So the pieces of
 //! one chunk always agree, and a block and its chunks are never drawn together or missing together.
 //!
+//! Full detail for boxes and trees is only built for chunks near the camera, a few at a time within
+//! a budget of milliseconds per frame, and dropped again once the camera has gone well past, so what a
+//! map stores stays about the same however many buildings it has. Until a chunk's full detail is ready
+//! its plain boxes and far trees stand in. Looking through a scope counts as being nearer, along the
+//! direction you look.
+//!
 //! Wherever a soldier or a vehicle stands, the ground under it is the full mesh at any distance, and its
 //! block never stands in for its chunks. A coarse grid can sit up to a metre off the true ground, which
 //! through a scope would show someone floating or sunk to the knees.
 
 use bevy::prelude::*;
-use prs_atmosphere::Bake;
 use prs_level::{Level, Paint, Solid, Terrain, Tree, TreeKind};
-use prs_view::{ViewDistance, WorldCamera};
+use bevy::platform::time::Instant;
+use prs_view::{ViewDistance, ViewSettings, WorldCamera};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::bake::RoomLight;
@@ -51,6 +57,12 @@ pub struct Detail {
     pub far_terrain_error: f32,
     /// How far a coarse grid's edge reaches down, to hide cracks where it meets a finer neighbour.
     pub skirt: f32,
+    /// Full detail is built this much before it is needed, and dropped this much farther out again, so
+    /// that a chunk at the edge is not built and dropped over and over.
+    pub full_build_ahead: f32,
+    pub full_drop_behind: f32,
+    /// Milliseconds a frame may spend building full detail. The first fill after loading has no limit.
+    pub build_ms_per_frame: f32,
 }
 
 impl Default for Detail {
@@ -68,6 +80,9 @@ impl Default for Detail {
             far_terrain_cells: vec![64.0, 32.0, 16.0],
             far_terrain_error: 2.5,
             skirt: 6.0,
+            full_build_ahead: 150.0,
+            full_drop_behind: 250.0,
+            build_ms_per_frame: 2.0,
         }
     }
 }
@@ -108,12 +123,15 @@ pub(crate) struct Blocks {
 }
 
 /// Whether a piece shows, given its own distance and whether its block stands in for it.
-fn shows(role: Role, distance: f32, block_far: bool, detail: &Detail, view: f32) -> bool {
+///
+/// `away` is how far off it really is, which decides whether it is drawn at all. `distance` is how near it
+/// looks, which decides its detail: less than `away` when it is under a scope.
+fn shows(role: Role, away: f32, distance: f32, block_far: bool, detail: &Detail, view: f32) -> bool {
     let reach = CHUNK * std::f32::consts::FRAC_1_SQRT_2;
     if role == Role::Block {
         return block_far;
     }
-    if distance > view + reach {
+    if away > view + reach {
         return false;
     }
     // A block stands in for its chunks' ground only. Plain boxes and far trees exist once, per chunk.
@@ -138,45 +156,248 @@ fn block_is_far(distance: f32, radius: f32, detail: &Detail, view: f32) -> bool 
     distance >= detail.far_from && distance <= view + radius
 }
 
+/// Where the camera is and how it looks, for how near each piece looks from it.
+pub(crate) struct Eye {
+    at: Vec3,
+    forward: Vec3,
+    /// Pieces within this cone of the view direction count as nearer by `zoom`.
+    cone_cos: f32,
+    zoom: f32,
+}
+
+impl Eye {
+    fn new(camera: &GlobalTransform, projection: &Projection, settings: &ViewSettings) -> Self {
+        let (fov, base) = match projection {
+            Projection::Perspective(p) => (p.fov, settings.fov().to_radians()),
+            _ => (1.0, 1.0),
+        };
+        let zoom = ((fov * 0.5).tan() / (base * 0.5).tan().max(1e-3)).clamp(0.01, 1.0);
+        // Generous, so the edge of a scope's picture and a quick turn are covered too.
+        Self { at: camera.translation(), forward: camera.forward().as_vec3(), cone_cos: fov.min(1.5).cos(), zoom }
+    }
+
+    fn away(&self, p: Vec3) -> f32 {
+        p.distance(self.at)
+    }
+
+    /// How near something looks: its distance, divided by the scope's magnification if it is in view.
+    fn near(&self, p: Vec3) -> f32 {
+        let d = self.away(p);
+        if self.zoom < 1.0 && d > f32::EPSILON && (p - self.at).dot(self.forward) / d >= self.cone_cos {
+            d * self.zoom
+        } else {
+            d
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn choose_detail(
     detail: Res<Detail>,
     distance: Res<ViewDistance>,
     blocks: Res<Blocks>,
+    settings: Res<ViewSettings>,
     sim: Res<prs_runtime::SimResource>,
-    camera: Query<&GlobalTransform, With<WorldCamera>>,
+    camera: Query<(&GlobalTransform, &Projection), With<WorldCamera>>,
     mut pieces: Query<(&Piece, &mut Visibility)>,
     mut far: Local<Vec<bool>>,
     mut occupied: Local<HashSet<Key>>,
+    mut built: Local<(HashSet<Key>, HashSet<Key>)>,
 ) {
-    let Ok(camera) = camera.single() else {
+    let Ok((camera, projection)) = camera.single() else {
         return;
     };
-    let eye = camera.translation();
+    let eye = Eye::new(camera, projection, &settings);
     let view = distance.metres;
     let sim = &sim.0;
     occupied.clear();
     let standing = sim.soldiers.iter().map(|s| s.body.pos).chain(sim.vehicles.iter().map(|v| v.pos)).chain(sim.helicopters.iter().map(|h| h.state.pos));
     occupied.extend(standing.map(chunk_key));
     far.clear();
-    far.extend(blocks.middles.iter().map(|m| block_is_far(m.distance(eye), blocks.radius, &detail, view)));
+    far.extend(blocks.middles.iter().map(|m| block_is_far(eye.near(*m), blocks.radius, &detail, view) && eye.away(*m) <= view + blocks.radius));
     // A block with anyone in it is drawn as its chunks, so their ground can be the full mesh.
-    for piece in pieces.iter().map(|(p, _)| p).filter(|p| p.role == Role::TerrainFull && occupied.contains(&p.chunk)) {
-        if let Some(f) = far.get_mut(piece.block) {
-            *f = false;
+    // Which chunks have their full detail built, for their plain boxes and far trees to stand in until then.
+    let (solids_built, trees_built) = &mut *built;
+    solids_built.clear();
+    trees_built.clear();
+    for (piece, _) in &pieces {
+        match piece.role {
+            Role::TerrainFull if occupied.contains(&piece.chunk) => {
+                if let Some(f) = far.get_mut(piece.block) {
+                    *f = false;
+                }
+            }
+            Role::SolidsFull => {
+                solids_built.insert(piece.chunk);
+            }
+            Role::TreesFull => {
+                trees_built.insert(piece.chunk);
+            }
+            _ => {}
         }
     }
+    let reach = CHUNK * std::f32::consts::FRAC_1_SQRT_2;
     for (piece, mut visibility) in &mut pieces {
         let block_far = far.get(piece.block).copied().unwrap_or(false);
-        let mut show = shows(piece.role, piece.middle.distance(eye), block_far, &detail, view);
-        if occupied.contains(&piece.chunk) && !block_far && piece.middle.distance(eye) <= view + CHUNK {
-            match piece.role {
-                Role::TerrainFull => show = true,
-                Role::TerrainCoarse => show = false,
-                _ => {}
-            }
+        let (away, near) = (eye.away(piece.middle), eye.near(piece.middle));
+        let mut show = shows(piece.role, away, near, block_far, &detail, view);
+        let in_view = away <= view + reach;
+        match piece.role {
+            Role::TerrainFull if occupied.contains(&piece.chunk) && !block_far && in_view => show = true,
+            Role::TerrainCoarse if occupied.contains(&piece.chunk) && !block_far => show = false,
+            Role::SolidsPlain if !solids_built.contains(&piece.chunk) => show = in_view,
+            Role::TreesFar if !trees_built.contains(&piece.chunk) => show = in_view && near < detail.trees_until,
+            _ => {}
         }
         visibility.set_if_neq(if show { Visibility::Inherited } else { Visibility::Hidden });
+    }
+}
+
+/// What a chunk's full detail is built from when the camera comes near: which boxes and trees, where
+/// its middle is, and what lights it.
+#[derive(Resource)]
+pub(crate) struct FullParts {
+    solids: HashMap<Key, Vec<u32>>,
+    trees: HashMap<Key, Vec<u32>>,
+    places: HashMap<Key, (Vec3, usize)>,
+    openings: Vec<Vec<crate::bake::Opening>>,
+    pub(crate) material: Handle<StandardMaterial>,
+}
+
+/// The chunks whose full detail is built, and the entities it is drawn by.
+#[derive(Resource, Default)]
+pub(crate) struct Resident {
+    chunks: HashMap<Key, Vec<Entity>>,
+    /// A chunk part way through being built, so that no frame spends much more than its budget.
+    pending: Option<Pending>,
+    filled: bool,
+}
+
+struct Pending {
+    key: Key,
+    solids: Batch,
+    trees: Batch,
+    next_solid: usize,
+    next_tree: usize,
+}
+
+/// How building full detail is going, for reports.
+#[derive(Resource, Default, Debug, Clone, Copy)]
+pub struct DetailStats {
+    /// Chunks built and dropped so far.
+    pub built: u32,
+    pub dropped: u32,
+    /// The most milliseconds one frame spent building, after the first fill.
+    pub worst_frame_ms: f32,
+    /// How long the first fill after loading took.
+    pub first_fill_ms: f32,
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn build_near(
+    mut commands: Commands,
+    detail: Res<Detail>,
+    settings: Res<ViewSettings>,
+    sim: Res<prs_runtime::SimResource>,
+    atmosphere: Res<prs_atmosphere::Atmosphere>,
+    parts: Res<FullParts>,
+    mut resident: ResMut<Resident>,
+    mut stats: ResMut<DetailStats>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    camera: Query<(&GlobalTransform, &Projection), With<WorldCamera>>,
+) {
+    let Ok((camera, projection)) = camera.single() else {
+        return;
+    };
+    let eye = Eye::new(camera, projection, &settings);
+    let build_within = detail.solids_full_until.max(detail.trees_full_until.min(detail.trees_until)) + detail.full_build_ahead;
+    let drop_beyond = build_within + detail.full_drop_behind.max(0.0);
+    let near = |k: &Key| parts.places.get(k).map_or(f32::INFINITY, |(middle, _)| eye.near(*middle));
+
+    let gone: Vec<Key> = resident.chunks.keys().filter(|k| near(k) > drop_beyond).copied().collect();
+    for key in gone {
+        for entity in resident.chunks.remove(&key).unwrap_or_default() {
+            commands.entity(entity).despawn();
+        }
+        stats.dropped += 1;
+    }
+    if resident.pending.as_ref().is_some_and(|p| near(&p.key) > drop_beyond) {
+        resident.pending = None;
+    }
+    let pending_key = resident.pending.as_ref().map(|p| p.key);
+    let mut wanted: Vec<(f32, Key)> = parts
+        .places
+        .keys()
+        .filter(|k| !resident.chunks.contains_key(k) && Some(**k) != pending_key)
+        .map(|k| (near(k), *k))
+        .filter(|(d, _)| *d < build_within)
+        .collect();
+    if wanted.is_empty() && resident.pending.is_none() {
+        resident.filled = true;
+        return;
+    }
+    // Nearest last, to pop.
+    wanted.sort_by(|a, b| b.0.total_cmp(&a.0));
+    let level = &sim.0.level;
+    let light = RoomLight::with_openings(level, atmosphere.bake, &parts.openings);
+    let started = Instant::now();
+    let budget = detail.build_ms_per_frame.max(0.0);
+    let over_budget = |filled: bool| filled && started.elapsed().as_secs_f32() * 1000.0 >= budget;
+    let none: &[u32] = &[];
+    loop {
+        let mut pending = match resident.pending.take() {
+            Some(pending) => pending,
+            None => match wanted.pop() {
+                Some((_, key)) => Pending { key, solids: Batch::default(), trees: Batch::default(), next_solid: 0, next_tree: 0 },
+                None => break,
+            },
+        };
+        let solids = parts.solids.get(&pending.key).map_or(none, |v| v.as_slice());
+        let trees = parts.trees.get(&pending.key).map_or(none, |v| v.as_slice());
+        // One box or tree at a time, looking at the clock between them.
+        while pending.next_solid < solids.len() || pending.next_tree < trees.len() {
+            if over_budget(resident.filled) {
+                break;
+            }
+            if let Some(&i) = solids.get(pending.next_solid) {
+                statics::add_solid(&mut pending.solids, &level.solids[i as usize], &light);
+                pending.next_solid += 1;
+            } else {
+                let tree = &level.trees[trees[pending.next_tree] as usize];
+                statics::add_trunk(&mut pending.trees, tree, &light);
+                statics::add_canopy(&mut pending.trees, tree, &light);
+                pending.next_tree += 1;
+            }
+        }
+        if pending.next_solid < solids.len() || pending.next_tree < trees.len() {
+            resident.pending = Some(pending);
+            break;
+        }
+        let (middle, block) = parts.places[&pending.key];
+        let mut entities = Vec::new();
+        for (mut batch, role) in [(pending.solids, Role::SolidsFull), (pending.trees, Role::TreesFull)] {
+            if batch.indices.is_empty() {
+                continue;
+            }
+            if atmosphere.bake.face_tint > 0.0 {
+                batch.tint_by_face(|normal| atmosphere.face_tint(normal));
+            }
+            let triangles = crate::Triangles(batch.indices.len() as u32 / 3);
+            let piece = Piece { role, middle, chunk: pending.key, block };
+            entities.push(commands.spawn((Mesh3d(meshes.add(batch.mesh())), MeshMaterial3d(parts.material.clone()), triangles, piece, Visibility::Hidden)).id());
+        }
+        resident.chunks.insert(pending.key, entities);
+        stats.built += 1;
+        if over_budget(resident.filled) {
+            break;
+        }
+    }
+    let spent = started.elapsed().as_secs_f32() * 1000.0;
+    if resident.filled {
+        stats.worst_frame_ms = stats.worst_frame_ms.max(spent);
+    } else {
+        stats.first_fill_ms += spent;
+        resident.filled = resident.pending.is_none();
     }
 }
 
@@ -185,6 +406,7 @@ pub(crate) struct Detailed {
     pub terrain: Vec<(Batch, Piece)>,
     pub solids: Vec<(Batch, Piece)>,
     pub water: Vec<(Batch, Piece)>,
+    pub parts: FullParts,
     pub blocks: Blocks,
 }
 
@@ -194,8 +416,7 @@ fn chunk_key(at: Vec3) -> Key {
     ((at.x / CHUNK).floor() as i32, (at.z / CHUNK).floor() as i32)
 }
 
-pub(crate) fn detailed_meshes(level: &Level, bake: Bake, detail: &Detail) -> Detailed {
-    let light = RoomLight::new(level, bake);
+pub(crate) fn detailed_meshes(level: &Level, detail: &Detail) -> Detailed {
     let sampler = TerrainSampler::new(&level.terrain);
     let block = (detail.far_block / CHUNK).round().max(1.0) * CHUNK;
     let per_block = (block / CHUNK) as i32;
@@ -235,21 +456,21 @@ pub(crate) fn detailed_meshes(level: &Level, bake: Bake, detail: &Detail) -> Det
         terrain.push((batch, piece(Role::TerrainCoarse, k, &mut index_of)));
     }
 
-    let (mut full, mut plain) = (Chunks::new(), Chunks::new());
-    for solid in &level.solids {
-        statics::add_solid(statics::chunk_of(&mut full, solid.center), solid, &light);
+    let mut plain = Chunks::new();
+    let (mut solid_parts, mut tree_parts): (HashMap<Key, Vec<u32>>, HashMap<Key, Vec<u32>>) = Default::default();
+    for (i, solid) in level.solids.iter().enumerate() {
+        solid_parts.entry(chunk_key(solid.center)).or_default().push(i as u32);
         if !is_small(solid, detail.small_solid) {
             add_plain_box(statics::chunk_of(&mut plain, solid.center), solid);
         }
     }
-    let (mut trees_full, mut trees_far) = (Chunks::new(), Chunks::new());
-    for tree in &level.trees {
-        let batch = statics::chunk_of(&mut trees_full, tree.base);
-        statics::add_trunk(batch, tree, &light);
-        statics::add_canopy(batch, tree, &light);
+    let mut trees_far = Chunks::new();
+    for (i, tree) in level.trees.iter().enumerate() {
+        tree_parts.entry(chunk_key(tree.base)).or_default().push(i as u32);
         add_far_tree(statics::chunk_of(&mut trees_far, tree.base), tree);
     }
-    for (chunks, role) in [(full, Role::SolidsFull), (plain, Role::SolidsPlain), (trees_full, Role::TreesFull), (trees_far, Role::TreesFar)] {
+    let places = solid_parts.keys().chain(tree_parts.keys()).map(|&k| (k, (chunk_middle(k), index_of(block_of(k))))).collect();
+    for (chunks, role) in [(plain, Role::SolidsPlain), (trees_far, Role::TreesFar)] {
         for (k, batch) in chunks {
             if !batch.indices.is_empty() {
                 solids.push((batch, piece(role, k, &mut index_of)));
@@ -276,7 +497,8 @@ pub(crate) fn detailed_meshes(level: &Level, bake: Bake, detail: &Detail) -> Det
             piece.middle = middles[piece.block];
         }
     }
-    Detailed { terrain, solids, water, blocks: Blocks { middles, radius: block * std::f32::consts::FRAC_1_SQRT_2 } }
+    let parts = FullParts { solids: solid_parts, trees: tree_parts, places, openings: RoomLight::openings(level), material: Handle::default() };
+    Detailed { terrain, solids, water, parts, blocks: Blocks { middles, radius: block * std::f32::consts::FRAC_1_SQRT_2 } }
 }
 
 /// Whether a box is too small to be worth drawing from far away.
@@ -705,11 +927,23 @@ mod tests {
                 let past_view = chunk_distance > view + CHUNK * std::f32::consts::FRAC_1_SQRT_2 && !far;
                 // A chunk has either a full and a coarse mesh, or only its full mesh kept for every distance.
                 for set in [&[Role::TerrainFull, Role::TerrainCoarse, Role::Block][..], &[Role::TerrainKept, Role::Block][..]] {
-                    let shown = set.iter().filter(|&&role| shows(role, chunk_distance, far, &detail, view)).count();
+                    let shown = set.iter().filter(|&&role| shows(role, chunk_distance, chunk_distance, far, &detail, view)).count();
                     assert_eq!(shown, usize::from(!past_view), "{chunk_distance} m, block at {block_distance} m, {set:?}");
                 }
             }
         }
+    }
+
+    /// Through a scope, what is in front looks as near as the magnification makes it, and what is
+    /// behind or off to the side does not.
+    #[test]
+    fn a_scope_brings_detail_nearer_only_where_you_look() {
+        let eye = Eye { at: Vec3::ZERO, forward: Vec3::NEG_Z, cone_cos: 0.5_f32.cos(), zoom: 0.25 };
+        assert!((eye.near(Vec3::new(0.0, 0.0, -800.0)) - 200.0).abs() < 1e-3);
+        assert_eq!(eye.near(Vec3::new(0.0, 0.0, 800.0)), 800.0);
+        assert_eq!(eye.near(Vec3::new(800.0, 0.0, 0.0)), 800.0);
+        let unzoomed = Eye { zoom: 1.0, ..eye };
+        assert_eq!(unzoomed.near(Vec3::new(0.0, 0.0, -800.0)), 800.0);
     }
 
     #[test]
@@ -718,7 +952,7 @@ mod tests {
         let far = block_is_far(9000.0, 362.0, &detail, 1000.0);
         assert!(!far);
         for role in [Role::TerrainCoarse, Role::SolidsPlain, Role::TreesFar] {
-            assert!(!shows(role, 1200.0, false, &detail, 1000.0));
+            assert!(!shows(role, 1200.0, 1200.0, false, &detail, 1000.0));
         }
     }
 }

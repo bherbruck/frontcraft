@@ -22,7 +22,7 @@ const MAX_DEBRIS: usize = 220;
 #[derive(Component, Clone, Copy)]
 pub struct Triangles(pub u32);
 
-pub use lod::Detail;
+pub use lod::{Detail, DetailStats};
 
 pub struct ScenePlugin;
 
@@ -33,9 +33,11 @@ impl Plugin for ScenePlugin {
             .insert_resource(prs_runtime::prs_sim::prs_mods::tuned("view.climb_hint", climb_hint::ClimbHintLook::default()))
             .init_resource::<climb_hint::ClimbHint>()
             .insert_resource(prs_runtime::prs_sim::prs_mods::tuned("view.detail", lod::Detail::default()))
+            .init_resource::<lod::DetailStats>()
             .add_systems(
                 PostUpdate,
-                lod::choose_detail
+                (lod::build_near, lod::choose_detail)
+                    .chain()
                     .after(bevy::transform::TransformSystems::Propagate)
                     .before(bevy::camera::visibility::VisibilitySystems::VisibilityPropagate)
                     .run_if(resource_exists::<lod::Blocks>),

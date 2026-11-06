@@ -214,7 +214,7 @@ pub(crate) fn spawn_level(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let crate::lod::Detailed { mut terrain, mut solids, water, blocks } = crate::lod::detailed_meshes(&sim.0.level, atmosphere.bake, &detail);
+    let crate::lod::Detailed { mut terrain, mut solids, water, mut parts, blocks } = crate::lod::detailed_meshes(&sim.0.level, &detail);
     commands.insert_resource(blocks);
     let wet = materials.add(StandardMaterial {
         base_color: Color::srgba(1.0, 1.0, 1.0, WATER_ALPHA),
@@ -242,6 +242,9 @@ pub(crate) fn spawn_level(
     }
     crate::lod::spawn(&mut commands, &mut meshes, terrain, &ground);
     crate::lod::spawn(&mut commands, &mut meshes, solids, &painted);
+    parts.material = painted;
+    commands.insert_resource(parts);
+    commands.insert_resource(crate::lod::Resident::default());
     for (batch, piece) in water {
         let triangles = crate::Triangles(batch.indices.len() as u32 / 3);
         commands.spawn((Mesh3d(meshes.add(batch.mesh())), MeshMaterial3d(wet.clone()), bevy::light::NotShadowCaster, triangles, piece, Visibility::Hidden));

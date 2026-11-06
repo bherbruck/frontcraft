@@ -2,7 +2,8 @@
 //!
 //! `PRS_BENCH=1`, or `?bench=1` on the web, takes the camera off the player once the level is drawn: a
 //! slow turn at head height on the first team's spawn, a wide circle at helicopter height round the
-//! middle, then a low pass straight across. It prints one `BENCH` line with load time, frame times per
+//! middle, a fast low pass straight across, then a drive at car speed and a flight at helicopter speed
+//! from the spawn towards the middle, for the hitches of building detail on the move. It prints one `BENCH` line with load time, frame times per
 //! leg and what was drawn, and ends the program. On the web the line goes to the console and the title.
 //! `PRS_BENCH_SHOTS=folder` also saves a screenshot half way through each leg, to see what was drawn.
 
@@ -27,6 +28,12 @@ struct Route {
     orbit_radius: f32,
     pass_seconds: f32,
     pass_height: f32,
+    drive_seconds: f32,
+    drive_speed: f32,
+    drive_height: f32,
+    fly_seconds: f32,
+    fly_speed: f32,
+    fly_height: f32,
 }
 
 impl Default for Route {
@@ -41,6 +48,12 @@ impl Default for Route {
             orbit_radius: 0.35,
             pass_seconds: 14.0,
             pass_height: 60.0,
+            drive_seconds: 20.0,
+            drive_speed: 25.0,
+            drive_height: 2.5,
+            fly_seconds: 20.0,
+            fly_speed: 70.0,
+            fly_height: 100.0,
         }
     }
 }
@@ -50,9 +63,11 @@ enum Leg {
     Turn,
     Orbit,
     Pass,
+    Drive,
+    Fly,
 }
 
-const LEGS: [Leg; 3] = [Leg::Turn, Leg::Orbit, Leg::Pass];
+const LEGS: [Leg; 5] = [Leg::Turn, Leg::Orbit, Leg::Pass, Leg::Drive, Leg::Fly];
 
 #[derive(Default)]
 struct LegStats {
@@ -67,8 +82,10 @@ struct Bench {
     loaded_at: Option<f32>,
     frames_since_load: u32,
     flight_started: Option<Instant>,
-    legs: [LegStats; 3],
-    shots_taken: [bool; 3],
+    legs: [LegStats; 5],
+    shots_taken: [bool; 5],
+    /// The most triangles the level had stored at once, since full detail comes and goes.
+    peak_stored: u64,
     done: bool,
 }
 
@@ -94,7 +111,8 @@ impl Plugin for BenchPlugin {
                 frames_since_load: 0,
                 flight_started: None,
                 legs: Default::default(),
-                shots_taken: [false; 3],
+                shots_taken: [false; 5],
+                peak_stored: 0,
                 done: false,
             })
             .add_systems(Update, (time_load, record).chain().run_if(resource_exists::<LevelReady>))
@@ -135,7 +153,7 @@ fn time_load(mut bench: ResMut<Bench>, meshes: Query<(), With<Mesh3d>>) {
 /// Which leg the flight is on and how far through it, or `None` while settling or once it is over.
 fn leg_at(bench: &Bench, route: &Route) -> Option<(Leg, f32)> {
     let elapsed = bench.flight_started?.elapsed().as_secs_f32();
-    let lengths = [route.turn_seconds, route.orbit_seconds, route.pass_seconds];
+    let lengths = [route.turn_seconds, route.orbit_seconds, route.pass_seconds, route.drive_seconds, route.fly_seconds];
     let mut from = 0.0;
     for (leg, length) in LEGS.into_iter().zip(lengths) {
         if elapsed < from + length {
@@ -155,6 +173,7 @@ fn record(
     sim: Res<SimResource>,
     drawn: Query<(&ViewVisibility, Option<&prs_scene::Triangles>), With<Mesh3d>>,
     all: Query<&prs_scene::Triangles>,
+    detail: Res<prs_scene::DetailStats>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if bench.done || bench.loaded_at.is_none() {
@@ -170,7 +189,7 @@ fn record(
     }
     let Some((leg, through)) = leg_at(&bench, &route) else {
         bench.done = true;
-        report(&bench, &sim, all.iter().map(|t| t.0 as u64).sum());
+        report(&bench, &sim, bench.peak_stored.max(all.iter().map(|t| t.0 as u64).sum()), *detail);
         exit.write(AppExit::Success);
         return;
     };
@@ -193,6 +212,8 @@ fn record(
         }
         stats.meshes.push(count);
         stats.triangles.push(triangles);
+        let stored = all.iter().map(|t| t.0 as u64).sum::<u64>();
+        bench.peak_stored = bench.peak_stored.max(stored);
     }
 }
 
@@ -243,6 +264,17 @@ fn fly(
             let eye = Vec3::new(at.x, ground(at) + route.orbit_height, at.z);
             Transform::from_translation(eye).looking_at(Vec3::new(0.0, ground(Vec3::ZERO), 0.0), Vec3::Y)
         }
+        Leg::Drive | Leg::Fly => {
+            let (seconds, speed, height) = if leg == Leg::Drive {
+                (route.drive_seconds, route.drive_speed, route.drive_height)
+            } else {
+                (route.fly_seconds, route.fly_speed, route.fly_height)
+            };
+            let towards = Vec3::new(-spawn.x, 0.0, -spawn.z).normalize_or(Vec3::NEG_Z);
+            let at = spawn + towards * (t * seconds * speed);
+            let eye = Vec3::new(at.x, ground(at) + height, at.z);
+            Transform::from_translation(eye).looking_to(towards - Vec3::Y * 0.05, Vec3::Y)
+        }
         Leg::Pass => {
             let half = size * 0.45;
             let at = Vec3::new(-half + t * 2.0 * half, 0.0, half * 0.2);
@@ -280,7 +312,7 @@ fn percentile(sorted: &[f32], p: f32) -> f32 {
     sorted[((sorted.len() - 1) as f32 * p).round() as usize]
 }
 
-fn report(bench: &Bench, sim: &SimResource, stored: u64) {
+fn report(bench: &Bench, sim: &SimResource, stored: u64, detail: prs_scene::DetailStats) {
     let level = &sim.0.level;
     let mut legs = Vec::new();
     for (leg, stats) in LEGS.iter().zip(&bench.legs) {
@@ -299,8 +331,12 @@ fn report(bench: &Bench, sim: &SimResource, stored: u64) {
         ));
     }
     let line = format!(
-        "BENCH {{\"map_size\":{},\"stored_triangles\":{stored},\"terrain_triangles\":{},\"solids\":{},\"trees\":{},\"load_s\":{:.2},{}}}",
+        "BENCH {{\"map_size\":{},\"peak_stored_triangles\":{stored},\"detail\":{{\"built\":{},\"dropped\":{},\"first_fill_ms\":{:.1},\"worst_frame_ms\":{:.2}}},\"terrain_triangles\":{},\"solids\":{},\"trees\":{},\"load_s\":{:.2},{}}}",
         level.terrain.size,
+        detail.built,
+        detail.dropped,
+        detail.first_fill_ms,
+        detail.worst_frame_ms,
         level.terrain.indices.len(),
         level.solids.len(),
         level.trees.len(),
