@@ -40,7 +40,7 @@ pub(crate) struct EngineVoice {
 #[derive(Default)]
 pub(crate) struct Occlusion {
     wait: f32,
-    muffled: Vec<Option<crate::hearing::MuffleLevel>>,
+    heard: Vec<crate::Heard>,
 }
 
 pub(crate) fn run_engines(
@@ -50,6 +50,7 @@ pub(crate) fn run_engines(
     sim: Res<SimResource>,
     view: Res<LocalView>,
     acoustics: Res<Acoustics>,
+    mut propagator: ResMut<crate::Propagator>,
     loops: Option<Res<EngineLoops>>,
     mut occlusion: Local<Occlusion>,
     mut voices: Query<(Entity, &mut EngineVoice, &mut Transform, Option<&mut SpatialAudioSink>)>,
@@ -62,17 +63,16 @@ pub(crate) fn run_engines(
     let ear = ear_position(&view);
     let dt = time.delta_secs();
 
-    occlusion.muffled.resize(sim.vehicles.len(), None);
+    occlusion.heard.resize(sim.vehicles.len(), crate::Heard::CLEAR);
     occlusion.wait -= dt;
     if occlusion.wait <= 0.0 {
         occlusion.wait = e.occlusion_every;
-        let world = &sim.world;
-        let blocked = |from: Vec3, to: Vec3| {
-            let path = to - from;
-            world.raycast(from, path.normalize_or(Vec3::Y), path.length()).is_some()
-        };
         for (v, vehicle) in sim.vehicles.iter().enumerate() {
-            occlusion.muffled[v] = if vehicle.engine.running { acoustics.muffling(vehicle.pos, ear, blocked) } else { None };
+            occlusion.heard[v] = if vehicle.engine.running {
+                propagator.heard(&acoustics.propagation, &sim.level, &sim.world, vehicle.pos, ear, time.elapsed_secs())
+            } else {
+                crate::Heard::CLEAR
+            };
         }
     }
 
@@ -92,7 +92,7 @@ pub(crate) fn run_engines(
         }
         sounding[voice.vehicle][voice.clear as usize] = true;
         let rpm = vehicle.engine.rpm;
-        let mix = e.mix(rpm, vehicle.engine.load, distance, inside == Some(voice.vehicle), occlusion.muffled[voice.vehicle]);
+        let mix = e.mix(rpm, vehicle.engine.load, distance, inside == Some(voice.vehicle), occlusion.heard[voice.vehicle], acoustics.propagation.clarity_hz);
         let wanted = if !heard { 0.0 } else if voice.clear { mix.clear } else { mix.dull };
         voice.volume += (wanted - voice.volume) * fade;
         transform.translation = (vehicle.pos - ear).normalize_or_zero() * EMITTER_RADIUS;

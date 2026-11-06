@@ -53,6 +53,7 @@ pub(crate) fn update_smoke_hiss(
     sim: Res<SimResource>,
     view: Res<LocalView>,
     acoustics: Res<Acoustics>,
+    mut propagator: ResMut<crate::Propagator>,
     mut sources: ResMut<Assets<AudioSource>>,
     mut hisses: Local<HashMap<u32, Hiss>>,
     mut counter: Local<u32>,
@@ -63,6 +64,7 @@ pub(crate) fn update_smoke_hiss(
     let (sound, hearing) = (&acoustics.smoke, &acoustics.smoke_hearing);
     let ear = ear_position(&view);
     let dt = time.delta_secs();
+    let now = time.elapsed_secs();
     let ease = (hearing.ease_rate * dt).min(1.0);
 
     for (entity, mut voice, mut transform, sink) in &mut voices {
@@ -83,11 +85,6 @@ pub(crate) fn update_smoke_hiss(
     }
 
     hisses.retain(|id, _| sim.clouds.iter().any(|c| c.id == *id));
-    let world = &sim.world;
-    let blocked = |from: Vec3, to: Vec3| {
-        let path = to - from;
-        world.raycast(from, path.normalize_or(Vec3::Y), path.length()).is_some()
-    };
     for cloud in &sim.clouds {
         let source = sim.smoke_source(cloud);
         let distance = source.distance(ear);
@@ -100,10 +97,11 @@ pub(crate) fn update_smoke_hiss(
         let starting = hiss.stretches == 1 && cloud.age < sound.fizz_seconds;
         let mut samples = prs_synth::smoke_hiss(*counter ^ cloud.id, sound, starting);
         let mut gain = 1.0;
-        if let Some(muffle) = acoustics.muffling(source, ear, blocked) {
-            samples = synth::muffled(&samples, muffle.cutoff_hz);
-            gain *= muffle.gain;
+        let heard = propagator.heard(&acoustics.propagation, &sim.level, &sim.world, source, ear, now);
+        if heard.cuts(&acoustics.propagation) {
+            samples = synth::muffled(&samples, heard.cutoff_hz);
         }
+        gain *= heard.gain;
         if let Some((cutoff, dulled)) = acoustics.suppressed.at(view.blended.suppression) {
             samples = synth::muffled(&samples, cutoff);
             gain *= dulled;

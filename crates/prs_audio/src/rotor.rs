@@ -70,6 +70,7 @@ pub(crate) fn update_rotor_sounds(
     view: Res<LocalView>,
     local: Res<LocalSoldier>,
     acoustics: Res<Acoustics>,
+    mut propagator: ResMut<crate::Propagator>,
     mut muffles: Local<Muffles>,
     mut spawned: Local<usize>,
     mut playing: Local<Option<SoundSet>>,
@@ -115,10 +116,6 @@ pub(crate) fn update_rotor_sounds(
         muffles.since = 0.0;
     }
     muffles.of.resize(sim.helicopters.len(), (1.0, 1.0));
-    let blocked = |from: Vec3, to: Vec3| {
-        let path = to - from;
-        sim.world.raycast(from, path.normalize_or(Vec3::Y), path.length()).is_some()
-    };
     let aboard = sim.soldiers[local.0].seat.map(|at| at.carrier);
 
     for (_, mut sound, mut transform, sink) in &mut loops {
@@ -134,10 +131,8 @@ pub(crate) fn update_rotor_sounds(
         let source = if inside { ear + Vec3::Y } else { acoustics.heard_from(state.pos + state.up() * cfg.rotor.hub.y, state.vel, ear) };
         let distance = if inside { 0.0 } else { ear.distance(source) };
         if look_again && !inside && sound.which == Loop::Slap {
-            muffles.of[sound.heli] = match acoustics.muffling(source, ear, &blocked) {
-                Some(level) => (level.gain, 0.0),
-                None => (1.0, 1.0),
-            };
+            let heard = propagator.heard(&acoustics.propagation, &sim.level, &sim.world, source, ear, time.elapsed_secs());
+            muffles.of[sound.heli] = (heard.gain, heard.clarity(acoustics.propagation.clarity_hz));
         }
         let (gain, sharpness) = if inside { (1.0, 1.0) } else { muffles.of[sound.heli] };
         let turning = (state.rotor_speed / cfg.rotor.nominal_speed).clamp(0.0, 1.3);

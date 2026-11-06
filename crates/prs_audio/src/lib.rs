@@ -4,6 +4,7 @@
 
 mod engine;
 mod hearing;
+mod propagation;
 mod reload;
 mod rotor;
 mod smoke;
@@ -29,6 +30,7 @@ const EMITTER_RADIUS: f32 = 0.5;
 const EAR_GAP: f32 = 0.3;
 
 pub use hearing::{Acoustics, Carry};
+pub use propagation::{Heard, Propagation, Propagator};
 pub use prs_synth::SoundSet;
 pub use rotor::RotorLoop;
 pub use smoke::SmokeVoice;
@@ -41,6 +43,7 @@ impl Plugin for AudioPlugin {
         let levels = AudioLevels { unless_chosen: acoustics.sound_set, ..default() };
         app.insert_resource(acoustics)
             .insert_resource(levels)
+            .init_resource::<Propagator>()
             .add_systems(Update, apply_levels)
             .add_systems(Startup, (build_bank, spawn_ears, engine::build_engine_loops, rotor::build_rotor_bank))
             .add_systems(Update, (engine::run_engines, heartbeat, gun_on_wall))
@@ -422,16 +425,13 @@ fn play_delayed(
     view: Res<LocalView>,
     sim: Res<SimResource>,
     acoustics: Res<Acoustics>,
+    mut propagator: ResMut<Propagator>,
     mut sources: ResMut<Assets<AudioSource>>,
     mut delayed: Query<(Entity, &mut Delayed)>,
 ) {
     let set = levels.sound_set();
     let ear = ear_position(&view);
-    let world = &sim.0.world;
-    let blocked = |from: Vec3, to: Vec3| {
-        let path = to - from;
-        world.raycast(from, path.normalize_or(Vec3::Y), path.length()).is_some()
-    };
+    let now = time.elapsed_secs();
     for (entity, mut sound) in &mut delayed {
         sound.left -= time.delta_secs();
         if sound.left > 0.0 {
@@ -505,10 +505,11 @@ fn play_delayed(
                 acoustics.other_steps.volume(distance) * (acoustics.step_volume.0 + intensity * acoustics.step_volume.1),
             ),
         };
-        if let Some(muffle) = acoustics.muffling(sound.source, ear, blocked) {
-            samples = synth::muffled(&samples, muffle.cutoff_hz);
-            volume *= muffle.gain;
+        let heard = propagator.heard(&acoustics.propagation, &sim.0.level, &sim.0.world, sound.source, ear, now);
+        if heard.cuts(&acoustics.propagation) {
+            samples = synth::muffled(&samples, heard.cutoff_hz);
         }
+        volume *= heard.gain;
         // The bullet itself cuts through it. It is everything else that goes dull.
         if !matches!(sound.sound, FarSound::Passing { .. })
             && let Some((cutoff, gain)) = acoustics.suppressed.at(view.blended.suppression)

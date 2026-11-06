@@ -2,6 +2,8 @@
 //! and whatever walls and roofs stand in between. Knows nothing about Bevy's audio, only geometry.
 
 use bevy::prelude::*;
+
+use crate::propagation::{Heard, Propagation};
 use prs_runtime::prs_sim::Surface;
 use prs_synth::{ContactSound, ContactSounds, SlideSound, SlideSounds, SmokeSound, SoundSet, STEP_VOLUME, StepSound, StepSounds, StepVary};
 
@@ -35,14 +37,6 @@ impl SmokeHearing {
         let (from, to) = self.fades_out;
         self.carry.volume(distance) * ((to - distance) / (to - from).max(1e-3)).clamp(0.0, 1.0)
     }
-}
-
-/// One step of muffling, applied once a sound's obstruction score reaches `from_score`.
-#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
-pub struct MuffleLevel {
-    pub from_score: f32,
-    pub cutoff_hz: f32,
-    pub gain: f32,
 }
 
 /// Hearing dulled by being shot at, coming on from `from_level` and at its worst at full suppression.
@@ -116,18 +110,10 @@ pub struct Acoustics {
     pub smoke: SmokeSound,
     pub smoke_hearing: SmokeHearing,
     pub engine: EngineSound,
-    /// Sideways spread of the rays to a sound, so that muffling comes on gradually around a corner.
-    pub ray_spread: f32,
     /// Sounds often start touching a surface. They are heard from this far in front of it.
     pub source_clearance: f32,
-    pub roof_reach: f32,
-    pub wall_reach: f32,
-    /// How many of the eight rays around a point must hit a wall for it to count as indoors.
-    pub walls_for_indoors: usize,
-    /// Added to the obstruction score when only one of you and the sound is indoors.
-    pub indoor_penalty: f32,
-    /// In rising order of `from_score`.
-    pub muffle_levels: [MuffleLevel; 3],
+    /// What hills, buildings, rooms and the air do to a sound on its way. See [`Propagation`].
+    pub propagation: Propagation,
     /// A bullet going past, at the far edge of what counts and right by the ear.
     pub bullet_passing_volume: (f32, f32),
     /// Metres at which a bullet going past is no longer heard as close.
@@ -221,17 +207,8 @@ impl Default for Acoustics {
             smoke: SmokeSound::default(),
             smoke_hearing: SmokeHearing { carry: Carry { loudness: 1.0, reach: 8.0 }, fades_out: (14.0, 30.0), ease_rate: 6.0 },
             engine: EngineSound::default(),
-            ray_spread: 0.8,
             source_clearance: 0.3,
-            roof_reach: 12.0,
-            wall_reach: 15.0,
-            walls_for_indoors: 3,
-            indoor_penalty: 0.6,
-            muffle_levels: [
-                MuffleLevel { from_score: 0.25, cutoff_hz: 1800.0, gain: 0.6 },
-                MuffleLevel { from_score: 1.0, cutoff_hz: 600.0, gain: 0.35 },
-                MuffleLevel { from_score: 1.25, cutoff_hz: 260.0, gain: 0.2 },
-            ],
+            propagation: Propagation::default(),
             bullet_passing_volume: (0.3, 0.95),
             bullet_passing_reach: 6.0,
             suppressed: SuppressedHearing { from_level: 0.55, cutoff_hz: (7000.0, 1100.0), gain: 0.55 },
@@ -299,17 +276,14 @@ pub struct EngineMix {
 
 impl EngineSound {
     /// The mix for an engine at these revs and throttle, `distance` away or with you inside it, with
-    /// `muffle` applying if something stands in the way.
-    pub fn mix(&self, rpm: f32, load: f32, distance: f32, inside: bool, muffle: Option<MuffleLevel>) -> EngineMix {
+    /// `heard` being what the way to you does to it. Its clear copy is only as much as the top end that gets through.
+    pub fn mix(&self, rpm: f32, load: f32, distance: f32, inside: bool, heard: Heard, clarity_hz: (f32, f32)) -> EngineMix {
         let revs = (rpm / self.high_rpm).clamp(0.0, 1.0);
         let effort = (load.clamp(0.0, 1.0) * 0.7 + revs * 0.3).clamp(0.0, 1.0);
         let level = self.idle_share + (1.0 - self.idle_share) * effort;
         let near = if inside { self.inside } else { self.carry.volume(distance) };
         let clear_share = self.clear_idle + (self.clear_load - self.clear_idle) * effort;
-        let (clear_share, gain) = match muffle {
-            Some(m) if !inside => (0.0, m.gain),
-            _ => (clear_share, 1.0),
-        };
+        let (clear_share, gain) = if inside { (clear_share, 1.0) } else { (clear_share * heard.clarity(clarity_hz), heard.gain) };
         EngineMix {
             speed: (rpm / self.base_rpm).clamp(self.min_speed, self.max_speed),
             clear: near * level * gain * clear_share,
@@ -351,38 +325,6 @@ impl Acoustics {
     pub fn slap_share(&self, distance: f32) -> f32 {
         self.rotor_slap_reach / (self.rotor_slap_reach + distance)
     }
-
-    /// The muffling a sound picks up on its way to the ear, if any. `blocked` says whether anything
-    /// solid lies between two points.
-    pub fn muffling(&self, source: Vec3, ear: Vec3, blocked: impl Fn(Vec3, Vec3) -> bool) -> Option<MuffleLevel> {
-        let separated = self.indoors(source, &blocked) != self.indoors(ear, &blocked);
-        let score = self.occlusion(source, ear, &blocked) + if separated { self.indoor_penalty } else { 0.0 };
-        self.muffle_levels.iter().rev().find(|level| score >= level.from_score).copied()
-    }
-
-    /// The share of paths from the sound to the ear that are blocked, from 0 to 1.
-    fn occlusion(&self, source: Vec3, ear: Vec3, blocked: &impl Fn(Vec3, Vec3) -> bool) -> f32 {
-        let to_ear = ear - source;
-        let toward_ear = to_ear.normalize_or_zero();
-        let source = source + toward_ear * self.source_clearance.min(to_ear.length() * 0.5);
-        let side = toward_ear.cross(Vec3::Y).normalize_or(Vec3::X) * self.ray_spread;
-        let offsets = [Vec3::ZERO, side, -side, Vec3::Y * self.ray_spread];
-        let hits = offsets.iter().filter(|&&offset| blocked(source + offset, ear)).count();
-        hits as f32 / offsets.len() as f32
-    }
-
-    fn indoors(&self, point: Vec3, blocked: &impl Fn(Vec3, Vec3) -> bool) -> bool {
-        if !blocked(point, point + Vec3::Y * self.roof_reach) {
-            return false;
-        }
-        let walls = (0..8)
-            .filter(|i| {
-                let angle = *i as f32 * std::f32::consts::FRAC_PI_4;
-                blocked(point, point + Vec3::new(angle.cos(), 0.0, angle.sin()) * self.wall_reach)
-            })
-            .count();
-        walls >= self.walls_for_indoors
-    }
 }
 
 #[cfg(test)]
@@ -411,11 +353,10 @@ mod tests {
     }
 
     use super::*;
+    use crate::propagation::Heard;
     use prs_runtime::prs_sim::Level;
 
-    fn open_air(_: Vec3, _: Vec3) -> bool {
-        false
-    }
+    const CLARITY: (f32, f32) = (500.0, 4000.0);
 
     #[test]
     fn nobody_elses_shot_is_louder_than_your_own() {
@@ -457,25 +398,26 @@ mod tests {
     #[test]
     fn an_engine_rises_in_pitch_and_weight_with_revs_and_load() {
         let e = EngineSound::default();
-        let idle = e.mix(800.0, 0.0, 10.0, false, None);
-        let working = e.mix(3500.0, 1.0, 10.0, false, None);
+        let idle = e.mix(800.0, 0.0, 10.0, false, Heard::CLEAR, CLARITY);
+        let working = e.mix(3500.0, 1.0, 10.0, false, Heard::CLEAR, CLARITY);
         assert!(working.speed > idle.speed * 2.0, "{idle:?} {working:?}");
         assert!(working.clear + working.dull > idle.clear + idle.dull);
         assert!(working.clear / working.dull > idle.clear / idle.dull);
-        assert!(e.mix(3500.0, 1.0, 200.0, false, None).clear < working.clear * 0.3, "further off is quieter");
+        assert!(e.mix(3500.0, 1.0, 200.0, false, Heard::CLEAR, CLARITY).clear < working.clear * 0.3, "further off is quieter");
     }
 
     #[test]
     fn an_engine_through_a_wall_is_only_its_low_end() {
         let a = Acoustics::default();
-        let wall = a.muffle_levels[1];
-        let open = a.engine.mix(3000.0, 1.0, 40.0, false, None);
-        let blocked = a.engine.mix(3000.0, 1.0, 40.0, false, Some(wall));
+        let p = &a.propagation;
+        let wall = p.heard(&[30.0, 35.0, 40.0, 45.0, 45.0, 45.0, 45.0]);
+        let open = a.engine.mix(3000.0, 1.0, 40.0, false, Heard::CLEAR, p.clarity_hz);
+        let blocked = a.engine.mix(3000.0, 1.0, 40.0, false, wall, p.clarity_hz);
         assert_eq!(blocked.clear, 0.0);
         assert!(blocked.dull < open.clear + open.dull);
         assert!(blocked.dull > 0.0);
         // In the seat nothing is between you and it.
-        assert!(a.engine.mix(3000.0, 1.0, 1.0, true, Some(wall)).clear > 0.0);
+        assert!(a.engine.mix(3000.0, 1.0, 1.0, true, wall, p.clarity_hz).clear > 0.0);
     }
 
     #[test]
@@ -508,54 +450,38 @@ mod tests {
         assert!((heard.z - 40.0).abs() < 1e-3, "{heard}");
     }
 
-    #[test]
-    fn nothing_is_muffled_in_the_open() {
-        let a = Acoustics::default();
-        assert!(a.muffling(Vec3::ZERO, Vec3::X * 50.0, open_air).is_none());
+    /// A room in the range's kill house with a door to the outside: where you stand in it, a place out in
+    /// front of that door, and the floor.
+    fn range() -> (Level, prs_runtime::prs_sim::CollisionWorld, Vec3, Vec3) {
+        let level = Level::named("range").unwrap();
+        let world = level.collision();
+        let spaces = crate::propagation::Spaces::new(&level, &Propagation::default());
+        let door = level
+            .doorways
+            .iter()
+            .find(|d| spaces.space_of(d.at + Vec3::Y - d.outward * 0.4).is_some() && spaces.space_of(d.at + Vec3::Y + d.outward * 0.4).is_none())
+            .expect("a door out of the kill house");
+        let inside = d_in(door.at, door.outward, 1.5) + Vec3::Y * 1.6;
+        let outside = d_in(door.at, door.outward, -12.0) + Vec3::Y * 1.6;
+        (level, world, inside, outside)
+    }
+
+    fn d_in(at: Vec3, outward: Vec3, metres: f32) -> Vec3 {
+        at - Vec3::new(outward.x, 0.0, outward.z).normalize() * metres
+    }
+
+    fn heard(level: &Level, world: &prs_runtime::prs_sim::CollisionWorld, source: Vec3, ear: Vec3) -> crate::propagation::Heard {
+        let p = Propagation::default();
+        p.heard(&crate::propagation::loss(&p, &crate::propagation::Spaces::new(level, &p), world, source, ear))
     }
 
     #[test]
-    fn muffling_comes_on_gradually_around_a_corner() {
-        let a = Acoustics::default();
-        let source = Vec3::new(0.0, 1.0, 0.0);
-        let ear = Vec3::new(20.0, 1.0, 0.0);
-        // Only the rays offset to one side reach past the end of a wall.
-        let corner = |from: Vec3, to: Vec3| from.distance(to) > 1.0 && from.z.abs() < 0.5 && to.y < 2.0 && from.y < 1.5;
-        let partly = a.muffling(source, ear, corner).expect("partly blocked");
-        let full = a.muffling(source, ear, |from: Vec3, to: Vec3| from.y < 5.0 && to.x > 10.0).expect("blocked");
-        assert!(full.cutoff_hz < partly.cutoff_hz);
-    }
-
-    /// In the training range's building, which has a doorway on its +Z side.
-    fn range() -> (impl Fn(Vec3, Vec3) -> bool, Vec3, f32) {
-        let world = Level::training_range().collision();
-        let (x, z) = (-34.0, -24.0);
-        let floor = 200.0 - world.raycast(Vec3::new(x + 12.0, 200.0, z), Vec3::NEG_Y, 400.0).unwrap().distance;
-        let blocked = move |from: Vec3, to: Vec3| {
-            let to_target = to - from;
-            world.raycast(from, to_target.normalize(), to_target.length()).is_some()
-        };
-        (blocked, Vec3::new(x, floor + 1.6, z), floor)
-    }
-
-    #[test]
-    fn the_building_on_the_range_counts_as_indoors_and_the_field_does_not() {
-        let a = Acoustics::default();
-        let (blocked, inside, floor) = range();
-        assert!(a.indoors(inside, &blocked));
-        assert!(!a.indoors(Vec3::new(-14.0, floor + 1.6, -24.0), &blocked));
-    }
-
-    #[test]
-    fn being_indoors_muffles_a_shot_outside_more_than_a_wall_alone() {
-        let a = Acoustics::default();
-        let (blocked, inside, floor) = range();
-        let outside = Vec3::new(-14.0, floor + 1.6, -24.0);
-        let sealed = a.muffling(outside, inside, &blocked).expect("muffled indoors");
-        // Same four blocked rays, but with both ends outdoors.
-        let wall_only = a.muffling(Vec3::ZERO, Vec3::X * 20.0, |from: Vec3, to: Vec3| from.distance(to) < 15.0 + 8.0 && from.x < 10.0 && to.x > 10.0).expect("muffled");
-        assert!(sealed.cutoff_hz < wall_only.cutoff_hz, "{} vs {}", sealed.cutoff_hz, wall_only.cutoff_hz);
-        assert!(sealed.gain < wall_only.gain);
+    fn a_shot_outside_is_duller_and_quieter_indoors_than_out_in_the_field() {
+        let (level, world, inside, outside) = range();
+        let indoors = heard(&level, &world, outside, inside);
+        let in_the_field = heard(&level, &world, outside, outside + (outside - inside).normalize() * 13.5);
+        assert!(indoors.gain <= in_the_field.gain, "{indoors:?} {in_the_field:?}");
+        assert!(indoors.gain > 0.3, "straight in through the open door: {indoors:?}");
     }
 
     #[test]
@@ -603,8 +529,9 @@ mod tests {
 
     #[test]
     fn two_people_in_the_same_room_hear_each_other_clearly() {
-        let a = Acoustics::default();
-        let (blocked, inside, _) = range();
-        assert!(a.muffling(inside + Vec3::X * 2.0, inside - Vec3::X * 2.0, &blocked).is_none());
+        let (level, world, inside, outside) = range();
+        let across = (inside - outside).normalize().cross(Vec3::Y) * 0.4;
+        let heard = heard(&level, &world, inside + across, inside - across);
+        assert!(heard.gain > 0.99 && heard.cutoff_hz > 15_000.0, "{heard:?}");
     }
 }

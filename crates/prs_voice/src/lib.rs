@@ -5,7 +5,7 @@
 mod backend;
 
 use bevy::prelude::*;
-use prs_audio::{Acoustics, AudioLevels, Carry, ear_position};
+use prs_audio::{Acoustics, AudioLevels, Carry, Propagator, ear_position};
 use prs_runtime::{GameMode, LocalView, SimResource, VoiceChannel, VoiceLink, VoiceUp};
 
 pub use backend::Mic;
@@ -388,27 +388,21 @@ fn shape_voices(
     acoustics: Res<Acoustics>,
     view: Res<LocalView>,
     sim: Res<SimResource>,
+    mut propagator: ResMut<Propagator>,
     mut voices: ResMut<Voices>,
 ) {
     let now = time.elapsed_secs();
     let ear = ear_position(&view);
     let right = Vec3::new(view.blended.gun_yaw.cos(), 0.0, -view.blended.gun_yaw.sin());
-    let world = &sim.0.world;
-    let blocked = |from: Vec3, to: Vec3| {
-        let path = to - from;
-        world.raycast(from, path.normalize_or(Vec3::Y), path.length()).is_some()
-    };
     for talker in &mut voices.talkers {
         let Some(at) = talker.at else { continue };
         if now < talker.next_shape || now - talker.heard_at > tuning.forget_stream_after {
             continue;
         }
         talker.next_shape = now + tuning.shape_every;
-        let (mut gain, mut cutoff) = (voice_volume(&tuning, ear.distance(at)), NOTHING_CUT_HZ);
-        if let Some(muffle) = acoustics.muffling(at, ear, blocked) {
-            gain *= muffle.gain;
-            cutoff = muffle.cutoff_hz;
-        }
+        let heard = propagator.heard(&acoustics.propagation, &sim.0.level, &sim.0.world, at, ear, now);
+        let gain = voice_volume(&tuning, ear.distance(at)) * heard.gain;
+        let cutoff = if heard.cuts(&acoustics.propagation) { heard.cutoff_hz } else { NOTHING_CUT_HZ };
         backend::shape(talker.player, gain, cutoff, (at - ear).normalize_or_zero().dot(right));
     }
 }
