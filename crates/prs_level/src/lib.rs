@@ -10,7 +10,7 @@ mod town;
 
 use glam::{Quat, Vec2, Vec3};
 use prs_collision::{CollisionWorld, Surface};
-pub use maps::{MapData, MapError, valid_name as valid_map_name};
+pub use maps::{MapData, MapError, MapLimits, valid_name as valid_map_name};
 pub use spec::{Ground, MapSpec};
 
 /// From the spawn on the range, beside the firing line.

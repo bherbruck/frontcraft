@@ -1,14 +1,21 @@
 //! Fetching a file from a server on a desktop, over the same plain or TLS connection a WebSocket to it would
-//! use. Blocking, so it belongs on a thread of its own.
+//! use. Blocking, so it belongs on a thread of its own. Whatever is at the other end is not trusted: the
+//! whole answer is held to a size, its head to a much smaller one, and the lot to a time.
 
 use std::io::{Read, Write};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::{Duration, Instant};
 
 use crate::ws_native::dial;
 
-/// A bare HTTP/1.0 GET of `url`, `http://` or `https://`, giving the status and the body. Stops past
-/// `max_bytes`, and counts what has come so far in `received`, for a loading screen.
-pub fn fetch(url: &str, max_bytes: usize, received: &AtomicUsize) -> Result<(u16, Vec<u8>), String> {
+/// The status line and headers of an answer never need more than this.
+const MAX_HEAD_BYTES: usize = 16 * 1024;
+
+/// A bare HTTP/1.0 GET of `url`, `http://` or `https://`, giving the status and the body. Gives up on a body
+/// past `max_bytes` or an answer that takes longer than `timeout` in all, and counts what of the body has
+/// come so far in `received`, for a loading screen.
+pub fn fetch(url: &str, max_bytes: usize, timeout: Duration, received: &AtomicUsize) -> Result<(u16, Vec<u8>), String> {
+    let deadline = Instant::now() + timeout;
     let (secure, rest) = match (url.strip_prefix("https://"), url.strip_prefix("http://")) {
         (Some(rest), _) => (true, rest),
         (None, Some(rest)) => (false, rest),
@@ -23,13 +30,28 @@ pub fn fetch(url: &str, max_bytes: usize, received: &AtomicUsize) -> Result<(u16
     let mut chunk = vec![0; 16 * 1024];
     let mut head_len = None;
     loop {
-        match stream.read(&mut chunk) {
+        let left = deadline.saturating_duration_since(Instant::now());
+        if left.is_zero() {
+            return Err(format!("no whole answer in {:.1} s", timeout.as_secs_f32()));
+        }
+        // No one read may wait past the deadline either.
+        stream.tcp().set_read_timeout(Some(left)).map_err(|e| e.to_string())?;
+        let read = match stream.read(&mut chunk) {
             // A server going away without saying goodbye over TLS has still said everything up to there.
             Ok(0) | Err(_) => break,
-            Ok(read) => response.extend_from_slice(&chunk[..read]),
-        }
-        if head_len.is_none() {
-            head_len = response.windows(4).position(|w| w == b"\r\n\r\n").map(|at| at + 4);
+            Ok(read) => read,
+        };
+        let searched = response.len().saturating_sub(3);
+        response.extend_from_slice(&chunk[..read]);
+        match head_len {
+            None => {
+                // Only what is new, and where it joins what came before.
+                head_len = response[searched..].windows(4).position(|w| w == b"\r\n\r\n").map(|at| searched + at + 4);
+                if head_len.is_none() && response.len() > MAX_HEAD_BYTES {
+                    return Err("an answer with no end to its head".into());
+                }
+            }
+            Some(_) => {}
         }
         let body = response.len() - head_len.unwrap_or(response.len());
         received.store(body, Ordering::Relaxed);
@@ -58,7 +80,10 @@ mod tests {
     use std::io::BufRead;
     use std::net::TcpListener;
 
-    fn serve_once(answer: Vec<u8>) -> String {
+    const PATIENCE: Duration = Duration::from_secs(10);
+
+    /// Answers one request with `answer`, then keeps the connection open for `linger`.
+    fn serve_once(answer: Vec<u8>, linger: Duration) -> String {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
         std::thread::spawn(move || {
@@ -68,7 +93,8 @@ mod tests {
             while reader.read_line(&mut line).is_ok_and(|n| n > 2) {
                 line.clear();
             }
-            stream.write_all(&answer).unwrap();
+            let _ = stream.write_all(&answer);
+            std::thread::sleep(linger);
         });
         format!("http://{address}/map/town.toml?v=1")
     }
@@ -79,7 +105,7 @@ mod tests {
         let mut answer = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n", body.len()).into_bytes();
         answer.extend_from_slice(&body);
         let received = AtomicUsize::new(0);
-        let (status, got) = fetch(&serve_once(answer), 1 << 20, &received).unwrap();
+        let (status, got) = fetch(&serve_once(answer, Duration::ZERO), 1 << 20, PATIENCE, &received).unwrap();
         assert_eq!((status, got.len()), (200, body.len()));
         assert_eq!(received.load(Ordering::Relaxed), body.len());
     }
@@ -88,10 +114,29 @@ mod tests {
     fn too_much_or_too_little_is_an_error() {
         let received = AtomicUsize::new(0);
         let big = format!("HTTP/1.1 200 OK\r\n\r\n{}", "y".repeat(5000)).into_bytes();
-        assert!(fetch(&serve_once(big), 1000, &received).is_err());
+        assert!(fetch(&serve_once(big, Duration::ZERO), 1000, PATIENCE, &received).is_err());
         let short = b"HTTP/1.1 200 OK\r\nContent-Length: 50\r\n\r\nabc".to_vec();
-        assert!(fetch(&serve_once(short), 1000, &received).is_err());
+        assert!(fetch(&serve_once(short, Duration::ZERO), 1000, PATIENCE, &received).is_err());
         let missing = b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n".to_vec();
-        assert_eq!(fetch(&serve_once(missing), 1000, &received).unwrap().0, 404);
+        assert_eq!(fetch(&serve_once(missing, Duration::ZERO), 1000, PATIENCE, &received).unwrap().0, 404);
+    }
+
+    /// A server that never ends its head cannot make the client hold on to it for ever.
+    #[test]
+    fn a_head_that_never_ends_is_given_up_on() {
+        let received = AtomicUsize::new(0);
+        let endless = format!("HTTP/1.1 200 OK\r\n{}", "X-Junk: a\r\n".repeat(100_000)).into_bytes();
+        let error = fetch(&serve_once(endless, Duration::ZERO), 1 << 30, PATIENCE, &received).unwrap_err();
+        assert!(error.contains("head"), "{error}");
+    }
+
+    /// One that says nothing, and does not hang up, is given up on in time.
+    #[test]
+    fn a_server_that_stalls_is_given_up_on() {
+        let received = AtomicUsize::new(0);
+        let start = Instant::now();
+        let stalled = b"HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\nabc".to_vec();
+        assert!(fetch(&serve_once(stalled, Duration::from_secs(8)), 1000, Duration::from_millis(300), &received).is_err());
+        assert!(start.elapsed() < Duration::from_secs(2), "{:?}", start.elapsed());
     }
 }

@@ -123,7 +123,7 @@ pub(crate) fn placeholder_sim() -> Sim {
 /// moves into [`SimResource`] on joining, and the game holds the placeholder in return.
 fn make_game(map: Arc<Mutex<Option<MapData>>>) -> impl FnOnce(&str, &str) -> Option<SimClient> {
     move |_, mode| {
-        let level = map.lock().ok()?.take()?.level().ok()?;
+        let level = map.lock().ok()?.take()?.level_within(&prs_net_sim::limits().map).ok()?;
         Some(SimClient::with_sim(Sim::new(level), Mode::named(mode)?))
     }
 }
@@ -131,18 +131,18 @@ fn make_game(map: Arc<Mutex<Option<MapData>>>) -> impl FnOnce(&str, &str) -> Opt
 /// Finds the map the server is playing, here or by fetching it, and lets the session go on once it has it.
 fn get_map(link: &mut NetLink) {
     let Some(offer) = link.session.map_wanted().cloned() else { return };
-    let max_bytes = prs_net_sim::limits().max_map_bytes;
+    let limits = prs_net_sim::limits();
     if link.fetching.is_none()
-        && let Some(why) = map_fetch::refuse(&offer, max_bytes)
+        && let Some(why) = map_fetch::refuse(&offer, limits.max_map_bytes)
     {
         link.session.map_unavailable(why);
         return;
     }
     let found = match &link.fetching {
-        None => match map_fetch::find_local(&offer) {
+        None => match map_fetch::find_local(&offer, &limits) {
             Some(data) => Some(Ok(data)),
             None => {
-                link.fetching = Some(Fetch::start(&link.server, &offer, max_bytes));
+                link.fetching = Some(Fetch::start(&link.server, &offer, limits));
                 None
             }
         },

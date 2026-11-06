@@ -27,7 +27,7 @@ pub(crate) enum Stream {
 }
 
 impl Stream {
-    fn tcp(&self) -> &TcpStream {
+    pub(crate) fn tcp(&self) -> &TcpStream {
         match self {
             Stream::Plain(tcp) => tcp,
             Stream::Tls(tls) => tls.get_ref(),

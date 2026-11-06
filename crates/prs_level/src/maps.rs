@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::cell::Cell;
 use std::fmt;
 
+use crate::spec::WoodShape;
 use crate::{CapturePoint, Doorway, Level, MapSpec, Room, Solid, SpawnPoint, Staircase, Team, Terrain, Tree, VehicleSpawn, Window};
 
 /// What a file says it is written for. A file for a later one is refused, not misread.
@@ -18,6 +19,31 @@ pub const FORMAT: u32 = 1;
 
 /// The maps the game is built with, as their files.
 pub const BUILT_IN: &[(&str, &str)] = &[("range", include_str!("../../../maps/range.toml")), ("town", include_str!("../../../maps/town.toml"))];
+
+/// How big a map may make itself. A map can come from any server, so it is held to these before anything is
+/// built from it: nothing in it may ask for more memory or time than a real map would.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MapLimits {
+    /// Metres across.
+    pub max_size: f32,
+    /// The finest grid across the terrain: a height grid's cells, or a spec's coarsest cells split all the way.
+    pub max_cells: u32,
+    pub max_splits: u32,
+    /// Entries in all the lists in the file together.
+    pub max_items: usize,
+    /// Trees a spec's woods would plant, and pieces of rubble it would scatter.
+    pub max_trees: u64,
+    pub max_rubble: u64,
+    pub max_storeys: u32,
+}
+
+impl Default for MapLimits {
+    /// Several times the town in each, which is itself a kilometre across.
+    fn default() -> Self {
+        Self { max_size: 4096.0, max_cells: 2048, max_splits: 6, max_items: 200_000, max_trees: 50_000, max_rubble: 20_000, max_storeys: 16 }
+    }
+}
 
 /// A grid of ground heights, row by row from the north-west corner, `cells + 1` to a row.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -74,6 +100,7 @@ pub enum MapError {
     Format { name: String, format: u32 },
     Incomplete { name: String, missing: &'static str },
     Heights { name: String, expected: usize, found: usize },
+    TooBig { name: String, what: String },
 }
 
 impl fmt::Display for MapError {
@@ -85,6 +112,7 @@ impl fmt::Display for MapError {
             MapError::Format { name, format } => write!(f, "map {name} is format {format}, and this game reads up to {FORMAT}"),
             MapError::Incomplete { name, missing } => write!(f, "map {name} has no spec, so it needs {missing}"),
             MapError::Heights { name, expected, found } => write!(f, "map {name} needs {expected} heights for its grid and has {found}"),
+            MapError::TooBig { name, what } => write!(f, "map {name} is past what this game builds: {what}"),
         }
     }
 }
@@ -153,11 +181,85 @@ impl MapData {
         Self::built_in(name).ok_or_else(|| MapError::NotFound(name.to_owned()))
     }
 
+    /// The level, held to the usual limits.
     pub fn level(&self) -> Result<Level, MapError> {
-        let file: MapFile = toml::from_str(&self.text).map_err(|error| MapError::Syntax { name: self.name.clone(), message: error.to_string() })?;
+        self.level_within(&MapLimits::default())
+    }
+
+    pub fn level_within(&self, limits: &MapLimits) -> Result<Level, MapError> {
+        let syntax = |error: toml::de::Error| MapError::Syntax { name: self.name.clone(), message: error.to_string() };
+        let value: toml::Value = toml::from_str(&self.text).map_err(syntax)?;
+        let too_big = |what: String| MapError::TooBig { name: self.name.clone(), what };
+        let mut items = 0;
+        plain(&value, limits, &mut items).map_err(too_big)?;
+        let file = MapFile::deserialize(value).map_err(syntax)?;
+        file.within(limits).map_err(too_big)?;
         let mut level = file.into_level(&self.name)?;
         level.source = self.hash;
         Ok(level)
+    }
+}
+
+/// Every number is a number, and there are not more entries than a map has.
+fn plain(value: &toml::Value, limits: &MapLimits, items: &mut usize) -> Result<(), String> {
+    match value {
+        toml::Value::Float(f) if !f.is_finite() => Err(format!("a number that is not one: {f}")),
+        toml::Value::Array(list) => {
+            *items += list.len();
+            if *items > limits.max_items {
+                return Err(format!("more than {} entries", limits.max_items));
+            }
+            list.iter().try_for_each(|v| plain(v, limits, items))
+        }
+        toml::Value::Table(table) => table.iter().try_for_each(|(_, v)| plain(v, limits, items)),
+        _ => Ok(()),
+    }
+}
+
+impl MapFile {
+    /// Whether building this would stay inside the limits, worked out from the description alone.
+    fn within(&self, limits: &MapLimits) -> Result<(), String> {
+        let size = |size: f32| if size > 0.0 && size <= limits.max_size { Ok(()) } else { Err(format!("{size} m across")) };
+        if let Some(grid) = &self.terrain {
+            size(grid.size)?;
+            if grid.cells == 0 || grid.cells > limits.max_cells {
+                return Err(format!("a grid of {} cells", grid.cells));
+            }
+        }
+        let Some(spec) = &self.spec else { return Ok(()) };
+        let terrain = &spec.terrain;
+        size(terrain.size)?;
+        let splits = terrain.max_splits.max(terrain.paint_splits);
+        let finest = (terrain.base_cells as u64).checked_shl(splits.min(63)).unwrap_or(u64::MAX);
+        if terrain.base_cells == 0 || splits > limits.max_splits || finest > limits.max_cells as u64 {
+            return Err(format!("{} cells split {splits} times", terrain.base_cells));
+        }
+        let mut trees = 0.0_f64;
+        for wood in &spec.woods {
+            trees += match &wood.shape {
+                WoodShape::Line { points, spacing, .. } => {
+                    let length: f64 = points.windows(2).map(|p| p[0].distance(p[1]) as f64).sum();
+                    length / (*spacing as f64).max(1e-9) + points.len() as f64
+                }
+                WoodShape::Clump { count, .. } => *count as f64,
+                WoodShape::Rows { half, spacing, .. } => {
+                    let spacing = (*spacing as f64).max(1e-9);
+                    (half.x.abs() as f64 * 2.0 / spacing + 1.0) * (half.y.abs() as f64 * 2.0 / spacing + 1.0)
+                }
+            };
+        }
+        if trees > limits.max_trees as f64 {
+            return Err(format!("about {trees:.0} trees"));
+        }
+        let rubble: u64 = spec.rubble.iter().map(|r| r.count as u64).sum();
+        if rubble > limits.max_rubble {
+            return Err(format!("{rubble} pieces of rubble"));
+        }
+        let storeys = spec.compounds.iter().flat_map(|c| &c.buildings).map(|b| b.storeys).max().unwrap_or(0);
+        if storeys > limits.max_storeys {
+            return Err(format!("a building of {storeys} storeys"));
+        }
+        Ok(())
     }
 }
 
@@ -182,7 +284,8 @@ impl MapFile {
         let mut level = match (self.spec, self.terrain) {
             (Some(spec), _) => spec.build(),
             (None, Some(grid)) => {
-                let expected = ((grid.cells + 1) * (grid.cells + 1)) as usize;
+                let row = grid.cells as usize + 1;
+                let expected = row.checked_mul(row).ok_or_else(|| incomplete("a grid it can hold"))?;
                 if grid.heights.len() != expected {
                     return Err(MapError::Heights { name: name.to_owned(), expected, found: grid.heights.len() });
                 }
@@ -395,6 +498,29 @@ mod tests {
         );
         let flat = level("format = 1\nspawn = { pos = [0.0, 0.0, 0.0], yaw = 0.0 }\nsentry = { pos = [0.0, 0.0, 0.0], yaw = 0.0 }\n[terrain]\nsize = 10.0\ncells = 1\nheights = [0.0, 0.0, 0.0, 0.0]\n");
         assert_eq!(flat, Ok(()));
+    }
+
+    /// A map from a hostile server, asking for more than any map needs, is refused before it is built.
+    #[test]
+    fn a_map_that_asks_for_too_much_is_refused_before_anything_is_built() {
+        let level = |text: &str| MapData::new("big", text.to_owned()).level();
+        let grid = |cells: u64| format!("format = 1\nspawn = {{ pos = [0.0, 0.0, 0.0], yaw = 0.0 }}\nsentry = {{ pos = [0.0, 0.0, 0.0], yaw = 0.0 }}\n[terrain]\nsize = 10.0\ncells = {cells}\nheights = [0.0]\n");
+        assert!(matches!(level(&grid(4_294_967_295)), Err(MapError::TooBig { .. })), "cells that overflow");
+        assert!(matches!(level(&grid(100_000)), Err(MapError::TooBig { .. })));
+        assert!(matches!(level("format = 1\nspawn = { pos = [nan, 0.0, 0.0], yaw = 0.0 }\n"), Err(MapError::TooBig { .. })), "not a number");
+        let town = MapData::built_in("town").unwrap().text;
+        let swap = |from: &str, to: &str| {
+            assert!(town.contains(from), "{from}");
+            level(&town.replacen(from, to, 1))
+        };
+        assert!(matches!(swap("base_cells = 64", "base_cells = 4000000"), Err(MapError::TooBig { .. })));
+        assert!(matches!(swap("max_splits = 3", "max_splits = 40"), Err(MapError::TooBig { .. })));
+        assert!(matches!(swap("size = 1024.0", "size = 1e30"), Err(MapError::TooBig { .. })));
+        let rows = town.find("spacing = ").map(|at| &town[at..town[at..].find('\n').unwrap() + at]).unwrap().to_owned();
+        assert!(matches!(swap(&rows, "spacing = 0.000001"), Err(MapError::TooBig { .. })), "trees planted a micron apart");
+        let many = format!("format = 1\ntargets = [{}]\n", vec!["[0.0, 0.0, 0.0]"; 200_001].join(", "));
+        assert!(matches!(level(&many), Err(MapError::TooBig { .. })));
+        assert!(MapData::built_in("town").unwrap().level().is_ok() && MapData::built_in("range").unwrap().level().is_ok(), "the real maps fit");
     }
 
     #[test]

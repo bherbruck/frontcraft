@@ -4,6 +4,7 @@
 //! next time. A browser keeps it for itself: the address has the hash in it, so it is kept for good.
 
 use prs_net::client::MapOffer;
+use prs_net_sim::NetLimits;
 use prs_sim::{MapData, valid_map_name};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -33,8 +34,8 @@ pub(crate) fn refuse(offer: &MapOffer, max_bytes: usize) -> Option<String> {
     (offer.bytes as usize > max_bytes).then(|| format!("the server's map is {} KB, more than the {} KB this game takes", offer.bytes / 1000, max_bytes / 1000))
 }
 
-/// Whether what came is the map that was offered.
-pub(crate) fn check(offer: &MapOffer, bytes: Vec<u8>) -> Result<MapData, String> {
+/// Whether what came is the map that was offered, and one this game will build.
+pub(crate) fn check(offer: &MapOffer, bytes: Vec<u8>, limits: &NetLimits) -> Result<MapData, String> {
     if offer.bytes != 0 && bytes.len() != offer.bytes as usize {
         return Err(format!("the map came as {} bytes, not {}", bytes.len(), offer.bytes));
     }
@@ -43,12 +44,12 @@ pub(crate) fn check(offer: &MapOffer, bytes: Vec<u8>) -> Result<MapData, String>
     if offer.hash != 0 && data.hash != offer.hash {
         return Err("the map that came is not the one the server plays".into());
     }
-    data.level().map_err(|error| error.to_string())?;
+    data.level_within(&limits.map).map_err(|error| error.to_string())?;
     Ok(data)
 }
 
 /// A copy already here that is the one offered: built in, in the maps folder, or fetched before.
-pub(crate) fn find_local(offer: &MapOffer) -> Option<MapData> {
+pub(crate) fn find_local(offer: &MapOffer, limits: &NetLimits) -> Option<MapData> {
     if !valid_map_name(&offer.name) {
         return None;
     }
@@ -57,7 +58,7 @@ pub(crate) fn find_local(offer: &MapOffer) -> Option<MapData> {
         return Some(data);
     }
     let text = cache::read(offer)?;
-    check(offer, text.into_bytes()).ok()
+    check(offer, text.into_bytes(), limits).ok()
 }
 
 /// A download under way. What has come so far is counted as it comes.
@@ -67,10 +68,10 @@ pub(crate) struct Fetch {
 }
 
 impl Fetch {
-    pub(crate) fn start(server: &str, offer: &MapOffer, max_bytes: usize) -> Self {
+    pub(crate) fn start(server: &str, offer: &MapOffer, limits: NetLimits) -> Self {
         let fetch = Self { received: Arc::default(), result: Arc::default() };
         match map_url(server, &offer.name, offer.hash) {
-            Some(url) => download(url, offer.clone(), max_bytes, fetch.received.clone(), fetch.result.clone()),
+            Some(url) => download(url, offer.clone(), limits, fetch.received.clone(), fetch.result.clone()),
             None => *fetch.result.lock().unwrap() = Some(Err(format!("no way to fetch a map from {server}"))),
         }
         fetch
@@ -87,10 +88,11 @@ impl Fetch {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn download(url: String, offer: MapOffer, max_bytes: usize, received: Arc<AtomicUsize>, result: Arc<Mutex<Option<Result<MapData, String>>>>) {
+fn download(url: String, offer: MapOffer, limits: NetLimits, received: Arc<AtomicUsize>, result: Arc<Mutex<Option<Result<MapData, String>>>>) {
     std::thread::spawn(move || {
-        let fetched = match prs_net::http_native::fetch(&url, max_bytes, &received) {
-            Ok((200, bytes)) => check(&offer, bytes),
+        let timeout = std::time::Duration::from_secs_f32(limits.map_fetch_seconds.max(0.1));
+        let fetched = match prs_net::http_native::fetch(&url, limits.max_map_bytes, timeout, &received) {
+            Ok((200, bytes)) => check(&offer, bytes, &limits),
             Ok((status, _)) => Err(format!("the server would not give its map ({status})")),
             Err(error) => Err(format!("the map could not be fetched: {error}")),
         };
@@ -102,11 +104,11 @@ fn download(url: String, offer: MapOffer, max_bytes: usize, received: Arc<Atomic
 }
 
 #[cfg(target_arch = "wasm32")]
-fn download(url: String, offer: MapOffer, max_bytes: usize, received: Arc<AtomicUsize>, result: Arc<Mutex<Option<Result<MapData, String>>>>) {
+fn download(url: String, offer: MapOffer, limits: NetLimits, received: Arc<AtomicUsize>, result: Arc<Mutex<Option<Result<MapData, String>>>>) {
     use wasm_bindgen::JsCast;
     use wasm_bindgen_futures::JsFuture;
     wasm_bindgen_futures::spawn_local(async move {
-        let fetched = async {
+        let fetched: Result<MapData, String> = async {
             let window = web_sys::window().ok_or("no window")?;
             let response: web_sys::Response = JsFuture::from(window.fetch_with_str(&url))
                 .await
@@ -116,16 +118,38 @@ fn download(url: String, offer: MapOffer, max_bytes: usize, received: Arc<Atomic
             if !response.ok() {
                 return Err(format!("the server would not give its map ({})", response.status()));
             }
-            let buffer = JsFuture::from(response.array_buffer().map_err(|_| "no body")?).await.map_err(|_| "the map was cut short")?;
-            let bytes = js_sys::Uint8Array::new(&buffer).to_vec();
-            if bytes.len() > max_bytes {
-                return Err("the map is too big".into());
+            // Said to be too big, it is not read at all. Said or not, reading stops once it is.
+            let said = response.headers().get("content-length").ok().flatten().and_then(|v| v.trim().parse::<usize>().ok());
+            if said.is_some_and(|said| said > limits.max_map_bytes) {
+                return Err("the server's map is too big".into());
             }
-            received.store(bytes.len(), Ordering::Relaxed);
-            check(&offer, bytes)
+            let reader: web_sys::ReadableStreamDefaultReader =
+                response.body().ok_or("no body")?.get_reader().dyn_into().map_err(|_| "no way to read the map")?;
+            let mut bytes = Vec::new();
+            let started = js_sys::Date::now();
+            loop {
+                if js_sys::Date::now() - started > limits.map_fetch_seconds as f64 * 1000.0 {
+                    let _ = reader.cancel();
+                    return Err("the map took too long".into());
+                }
+                let next = JsFuture::from(reader.read()).await.map_err(|_| "the map was cut short")?;
+                let done = js_sys::Reflect::get(&next, &"done".into()).ok().and_then(|v| v.as_bool()).unwrap_or(true);
+                if done {
+                    break;
+                }
+                let value = js_sys::Reflect::get(&next, &"value".into()).map_err(|_| "the map was cut short")?;
+                let piece = js_sys::Uint8Array::new(&value);
+                if bytes.len() + piece.length() as usize > limits.max_map_bytes {
+                    let _ = reader.cancel();
+                    return Err("the server's map is too big".into());
+                }
+                bytes.extend_from_slice(&piece.to_vec());
+                received.store(bytes.len(), Ordering::Relaxed);
+            }
+            check(&offer, bytes, &limits)
         }
         .await;
-        *result.lock().unwrap() = Some(fetched.map_err(|error: String| error));
+        *result.lock().unwrap() = Some(fetched);
     });
 }
 
@@ -196,7 +220,7 @@ mod tests {
         let offer = |name: &str, bytes: u32| MapOffer { name: name.into(), hash: 7, bytes };
         for name in ["../../etc/passwd", "../town", "/etc/hosts", "C:\\Windows\\win.ini", "town.toml", "maps/town", "", "Town"] {
             assert!(refuse(&offer(name, 10), 1 << 20).is_some(), "{name}");
-            assert!(find_local(&offer(name, 10)).is_none(), "{name}");
+            assert!(find_local(&offer(name, 10), &NetLimits::default()).is_none(), "{name}");
             assert!(map_url("ws://host", name, 7).is_none(), "{name}");
         }
         assert!(refuse(&offer("town", 17 << 20), 16 << 20).is_some(), "too big to fetch");
@@ -210,23 +234,34 @@ mod tests {
         assert_eq!(path.file_name().unwrap().to_str(), Some("0000000000000abc.toml"));
     }
 
+    /// The right file can still be one this game will not build, by its own limits.
+    #[test]
+    fn a_map_past_this_games_limits_is_refused_even_when_it_is_the_one_offered() {
+        let town = MapData::built_in("town").unwrap();
+        let offer = MapOffer { name: "town".into(), hash: town.hash, bytes: town.text.len() as u32 };
+        let mut limits = NetLimits::default();
+        limits.map.max_items = 10;
+        let error = check(&offer, town.text.clone().into_bytes(), &limits).unwrap_err();
+        assert!(error.contains("past what this game builds"), "{error}");
+    }
+
     #[test]
     fn only_the_map_that_was_offered_is_taken() {
         let town = MapData::built_in("town").unwrap();
         let offer = MapOffer { name: "town".into(), hash: town.hash, bytes: town.text.len() as u32 };
-        assert_eq!(check(&offer, town.text.clone().into_bytes()).unwrap().hash, town.hash);
-        assert!(check(&offer, format!("{} ", town.text).into_bytes()).is_err(), "a byte more is another file");
+        assert_eq!(check(&offer, town.text.clone().into_bytes(), &NetLimits::default()).unwrap().hash, town.hash);
+        assert!(check(&offer, format!("{} ", town.text).into_bytes(), &NetLimits::default()).is_err(), "a byte more is another file");
         let wrong = MapOffer { hash: town.hash ^ 1, ..offer.clone() };
-        assert!(check(&wrong, town.text.clone().into_bytes()).is_err());
-        assert!(check(&MapOffer { bytes: 3, ..offer.clone() }, b"abc".to_vec()).is_err(), "not a map");
+        assert!(check(&wrong, town.text.clone().into_bytes(), &NetLimits::default()).is_err());
+        assert!(check(&MapOffer { bytes: 3, ..offer.clone() }, b"abc".to_vec(), &NetLimits::default()).is_err(), "not a map");
     }
 
     #[test]
     fn a_copy_built_in_does_when_it_is_the_same_and_not_when_it_is_not() {
         let town = MapData::built_in("town").unwrap();
         let offer = MapOffer { name: "town".into(), hash: town.hash, bytes: town.text.len() as u32 };
-        assert_eq!(find_local(&offer).map(|data| data.hash), Some(town.hash));
-        assert!(find_local(&MapOffer { hash: 12345, ..offer }).is_none());
-        assert!(find_local(&MapOffer { name: "nowhere".into(), hash: 1, bytes: 1 }).is_none());
+        assert_eq!(find_local(&offer, &NetLimits::default()).map(|data| data.hash), Some(town.hash));
+        assert!(find_local(&MapOffer { hash: 12345, ..offer }, &NetLimits::default()).is_none());
+        assert!(find_local(&MapOffer { name: "nowhere".into(), hash: 1, bytes: 1 }, &NetLimits::default()).is_none());
     }
 }

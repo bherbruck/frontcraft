@@ -36,6 +36,10 @@ use rides::{HeliPose, OwnState, VehiclePose};
 #[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub struct NetLimits {
+    /// What a map from a server may ask to be built.
+    pub map: prs_sim::MapLimits,
+    /// Seconds a map's download may take in all before it is given up on.
+    pub map_fetch_seconds: f32,
     /// Soldier numbers at or above this are refused, and the client never makes room for more. Well above
     /// the most players and bots a server runs. A mod changes it under `net_limits`.
     pub max_soldiers: usize,
@@ -46,7 +50,7 @@ pub struct NetLimits {
 
 impl Default for NetLimits {
     fn default() -> Self {
-        Self { max_soldiers: 512, max_map_bytes: 16 << 20 }
+        Self { map: prs_sim::MapLimits::default(), map_fetch_seconds: 60.0, max_soldiers: 512, max_map_bytes: 16 << 20 }
     }
 }
 
