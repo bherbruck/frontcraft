@@ -3,6 +3,7 @@
 //! stands between it and you. Other people's sounds also arrive late and from the side they came from.
 
 mod engine;
+mod bus;
 mod hearing;
 mod propagation;
 mod reload;
@@ -29,6 +30,7 @@ use std::sync::Arc;
 const EMITTER_RADIUS: f32 = 0.5;
 const EAR_GAP: f32 = 0.3;
 
+pub use bus::Limiter;
 pub use hearing::{Acoustics, Carry, FarFade};
 pub use propagation::{Heard, Propagation, Propagator};
 pub use prs_synth::SoundSet;
@@ -44,6 +46,7 @@ impl Plugin for AudioPlugin {
         app.insert_resource(acoustics)
             .insert_resource(levels)
             .init_resource::<Propagator>()
+            .init_resource::<bus::Bus>()
             .add_systems(Update, apply_levels)
             .add_systems(Startup, (build_bank, spawn_ears, engine::build_engine_loops, rotor::build_rotor_bank))
             .add_systems(Update, (engine::run_engines, heartbeat, gun_on_wall))
@@ -256,6 +259,8 @@ fn play_events(
     local: Res<LocalSoldier>,
     acoustics: Res<Acoustics>,
     sim: Res<SimResource>,
+    time: Res<Time>,
+    mut bus: ResMut<bus::Bus>,
     mut sources: ResMut<Assets<AudioSource>>,
     mut counter: Local<u32>,
     mut underfoot: Local<Surface>,
@@ -286,6 +291,7 @@ fn play_events(
                     samples = synth::muffled(&samples, cutoff);
                     volume *= gain;
                 }
+                bus.add(time.elapsed_secs_f64(), &samples, volume);
                 let shot = sources.add(rendered(&samples));
                 play(&mut commands, &shot, volume, wobble);
             }
@@ -426,6 +432,7 @@ fn play_delayed(
     sim: Res<SimResource>,
     acoustics: Res<Acoustics>,
     mut propagator: ResMut<Propagator>,
+    mut bus: ResMut<bus::Bus>,
     mut sources: ResMut<Assets<AudioSource>>,
     mut delayed: Query<(Entity, &mut Delayed)>,
 ) {
@@ -517,6 +524,7 @@ fn play_delayed(
             samples = synth::muffled(&samples, cutoff);
             volume *= gain;
         }
+        let volume = bus.admit(&acoustics.limiter, time.elapsed_secs_f64(), &samples, volume);
         commands.spawn((
             AudioPlayer(sources.add(rendered(&samples))),
             PlaybackSettings::DESPAWN

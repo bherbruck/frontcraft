@@ -137,6 +137,8 @@ pub struct Acoustics {
     pub source_clearance: f32,
     /// What hills, buildings, rooms and the air do to a sound on its way. See [`Propagation`].
     pub propagation: Propagation,
+    /// What keeps many sounds at once from adding up past full scale. See [`crate::bus`].
+    pub limiter: crate::bus::Limiter,
     /// A bullet going past, at the far edge of what counts and right by the ear.
     pub bullet_passing_volume: (f32, f32),
     /// Metres at which a bullet going past is no longer heard as close.
@@ -232,6 +234,7 @@ impl Default for Acoustics {
             engine: EngineSound::default(),
             source_clearance: 0.3,
             propagation: Propagation::default(),
+            limiter: crate::bus::Limiter::default(),
             bullet_passing_volume: (0.3, 0.95),
             bullet_passing_reach: 6.0,
             suppressed: SuppressedHearing { from_level: 0.55, cutoff_hz: (7000.0, 1100.0), gain: 0.55 },
