@@ -100,6 +100,21 @@ impl Budget {
         self.left -= 1;
         true
     }
+
+    /// `n` more steps at once, for a loop over things looked at rather than built.
+    pub fn take_many(&mut self, n: usize) -> bool {
+        match self.left.checked_sub(n as u64) {
+            Some(left) => {
+                self.left = left;
+                true
+            }
+            None => {
+                self.left = 0;
+                self.spent = true;
+                false
+            }
+        }
+    }
 }
 
 impl MapSpec {
@@ -260,6 +275,12 @@ impl Builder<'_> {
 
     fn quays(&mut self) {
         let spec = self.spec;
+        // What a quay is left open for: (from, to, width, whether it crosses the bank rather than being water).
+        let mut gaps: Vec<(usize, Vec2, Vec2, f32, bool)> = spec.bridges.iter().map(|b| (usize::MAX, b.from, b.to, b.width, true)).collect();
+        gaps.extend(spec.steps.iter().map(|s| (usize::MAX, s.from, s.to, s.width, true)));
+        for (index, ditch) in spec.ditches.iter().enumerate().filter(|(_, d)| d.cuts_roads) {
+            gaps.extend(ditch.points.windows(2).map(|w| (index, w[0], w[1], ditch.width, false)));
+        }
         for (index, ditch) in spec.ditches.iter().enumerate() {
             let Some(quay) = ditch.quay else {
                 continue;
@@ -280,8 +301,19 @@ impl Builder<'_> {
                 let blocks = (length / quay.length).ceil().max(1.0) as u32;
                 let block = length / blocks as f32;
                 let rotation = Quat::from_rotation_y((-dir.y).atan2(dir.x));
+                // Only what comes near this stretch, looked for once: a block and its run round a bend reach no
+                // further than this from the line.
+                if !self.mason.budget.take_many(gaps.len()) {
+                    return;
+                }
+                let margin = outer * 3.0 + quay.length + QUAY_GAP;
+                let (low, high) = (a.min(b) - Vec2::splat(margin), a.max(b) + Vec2::splat(margin));
+                let near: Vec<_> = gaps
+                    .iter()
+                    .filter(|&&(of, from, to, width, _)| of != index && from.min(to).cmple(high + width * 0.5).all() && from.max(to).cmpge(low - width * 0.5).all())
+                    .collect();
                 for i in 0..blocks {
-                    if !self.mason.budget.take() {
+                    if !self.mason.budget.take_many(1 + near.len() * 2) {
                         return;
                     }
                     for side in [-1.0, 1.0] {
@@ -291,11 +323,11 @@ impl Builder<'_> {
                         let mid = a + dir * ((start + end) * 0.5);
                         let across = dir.perp() * side;
                         let middle = mid + across * (inner + outer) * 0.5;
-                        let clear = |from: Vec2, to: Vec2, width: f32| near_segment(middle, from, to) > width * 0.5 + (end - start) * 0.5 + QUAY_GAP;
                         // Open to a bridge or steps, and not across any other water.
-                        let open = spec.bridges.iter().any(|b| !clear(b.from, b.to, b.width))
-                            || spec.steps.iter().any(|s| !clear(s.from, s.to, s.width))
-                            || spec.ditches.iter().enumerate().any(|(other, d)| other != index && d.cuts_roads && d.points.windows(2).any(|w| near_segment(middle, w[0], w[1]) < d.width * 0.5));
+                        let open = near.iter().any(|&&(_, from, to, width, crossing)| {
+                            let clearance = if crossing { width * 0.5 + (end - start) * 0.5 + QUAY_GAP } else { width * 0.5 };
+                            near_segment(middle, from, to) <= clearance
+                        });
                         if open {
                             continue;
                         }
