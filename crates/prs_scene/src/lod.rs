@@ -3,9 +3,10 @@
 //!
 //! Each 128 m chunk of the level is drawn several ways: the full terrain near you and a coarse grid
 //! beyond; every box with its baked light near you and plain boxes for the bigger ones beyond; whole
-//! trees near you and one cheap shape each beyond. Farther still, a whole 512 m block is one coarse
-//! terrain mesh and one mesh of plain boxes and tree shapes, which keeps the number of draw calls down
-//! on WebGL2. Past the view distance nothing is drawn.
+//! trees near you and one cheap shape each beyond. Farther still, a whole 512 m block's ground is one
+//! coarse mesh, which keeps the number of draw calls down on WebGL2. Past the view distance nothing is
+//! drawn. Each thing is kept at as few levels as it needs, since in a browser what is stored on the GPU
+//! runs out before what is drawn does: ground too rough for any coarse grid keeps only its full mesh.
 //!
 //! One system picks what shows, by distances measured from fixed middles: a chunk's choice from its
 //! own middle, and whether a block stands in for its chunks from the block's middle. So the pieces of
@@ -41,7 +42,7 @@ pub struct Detail {
     /// Nearer than this, whole trees. Beyond it, one simple shape each, until `trees_until`.
     pub trees_full_until: f32,
     pub trees_until: f32,
-    /// Beyond this, a whole block is drawn as one coarse mesh instead of its chunks.
+    /// Beyond this, a whole block's ground is one coarse mesh instead of its chunks'.
     pub far_from: f32,
     /// Side of a block, in metres: a whole number of chunks.
     pub far_block: f32,
@@ -76,6 +77,8 @@ impl Default for Detail {
 enum Role {
     TerrainFull,
     TerrainCoarse,
+    /// Ground no coarse grid can follow closely enough, kept at full detail at every distance.
+    TerrainKept,
     SolidsFull,
     SolidsPlain,
     TreesFull,
@@ -110,12 +113,17 @@ fn shows(role: Role, distance: f32, block_far: bool, detail: &Detail, view: f32)
     if role == Role::Block {
         return block_far;
     }
-    if block_far || distance > view + reach {
+    if distance > view + reach {
+        return false;
+    }
+    // A block stands in for its chunks' ground only. Plain boxes and far trees exist once, per chunk.
+    if block_far && matches!(role, Role::TerrainFull | Role::TerrainCoarse | Role::TerrainKept | Role::Water) {
         return false;
     }
     match role {
         Role::TerrainFull => distance < detail.terrain_full_until,
         Role::TerrainCoarse => distance >= detail.terrain_full_until,
+        Role::TerrainKept => true,
         Role::SolidsFull => distance < detail.solids_full_until,
         Role::SolidsPlain => distance >= detail.solids_full_until,
         Role::TreesFull => distance < detail.trees_full_until.min(detail.trees_until),
@@ -218,20 +226,20 @@ pub(crate) fn detailed_meshes(level: &Level, bake: Bake, detail: &Detail) -> Det
         block: index_of(block_of(k)),
     };
 
+    let coarse = coarse_terrain(&sampler, &detail.terrain_cells, detail.terrain_error, CHUNK, detail.skirt);
     for (k, batch) in full_terrain(&level.terrain, detail.skirt) {
-        terrain.push((batch, piece(Role::TerrainFull, k, &mut index_of)));
+        let role = if coarse.contains_key(&k) { Role::TerrainFull } else { Role::TerrainKept };
+        terrain.push((batch, piece(role, k, &mut index_of)));
     }
-    for (k, batch) in coarse_terrain(&sampler, &detail.terrain_cells, detail.terrain_error, CHUNK, detail.skirt) {
+    for (k, batch) in coarse {
         terrain.push((batch, piece(Role::TerrainCoarse, k, &mut index_of)));
     }
 
     let (mut full, mut plain) = (Chunks::new(), Chunks::new());
-    let mut block_plain: BTreeMap<Key, Batch> = BTreeMap::new();
     for solid in &level.solids {
         statics::add_solid(statics::chunk_of(&mut full, solid.center), solid, &light);
         if !is_small(solid, detail.small_solid) {
             add_plain_box(statics::chunk_of(&mut plain, solid.center), solid);
-            add_plain_box(block_plain.entry(block_of(chunk_key(solid.center))).or_default(), solid);
         }
     }
     let (mut trees_full, mut trees_far) = (Chunks::new(), Chunks::new());
@@ -240,10 +248,6 @@ pub(crate) fn detailed_meshes(level: &Level, bake: Bake, detail: &Detail) -> Det
         statics::add_trunk(batch, tree, &light);
         statics::add_canopy(batch, tree, &light);
         add_far_tree(statics::chunk_of(&mut trees_far, tree.base), tree);
-        // Trees go into the block only if they would still show from its nearest distance.
-        if detail.trees_until > detail.far_from {
-            add_far_tree(block_plain.entry(block_of(chunk_key(tree.base))).or_default(), tree);
-        }
     }
     for (chunks, role) in [(full, Role::SolidsFull), (plain, Role::SolidsPlain), (trees_full, Role::TreesFull), (trees_far, Role::TreesFar)] {
         for (k, batch) in chunks {
@@ -265,11 +269,6 @@ pub(crate) fn detailed_meshes(level: &Level, bake: Bake, detail: &Detail) -> Det
     for (b, batch) in coarse_terrain(&sampler, &detail.far_terrain_cells, detail.far_terrain_error, block, detail.skirt) {
         let block = (b.0.div_euclid(per_block), b.1.div_euclid(per_block));
         terrain.push((batch, middle_of_block(block, &mut index_of)));
-    }
-    for (b, batch) in block_plain {
-        if !batch.indices.is_empty() {
-            solids.push((batch, middle_of_block(b, &mut index_of)));
-        }
     }
     // A block's own pieces measure from its middle, which is only known once every block has one.
     for (_, piece) in terrain.iter_mut().chain(solids.iter_mut()) {
@@ -413,7 +412,8 @@ fn grid_lines(from: f32, to: f32, cell: f32) -> Vec<f32> {
 
 /// The terrain as one regular grid per square of `side`, keyed by which chunk its corner is in, each
 /// with a skirt round it. Each square takes the coarsest of `cells` whose surface stays within `error`
-/// of the full mesh's corners inside it, and if none does, the full mesh cut to the square.
+/// of the full mesh's corners inside it. If none does, a chunk-sized square is left out, for its full
+/// mesh to stand in, and a bigger one takes the finest.
 fn coarse_terrain(sampler: &TerrainSampler, cells: &[f32], error: f32, side: f32, skirt: f32) -> BTreeMap<Key, Batch> {
     let terrain = sampler.terrain;
     let half = terrain.size * 0.5;
@@ -426,7 +426,6 @@ fn coarse_terrain(sampler: &TerrainSampler, cells: &[f32], error: f32, side: f32
     }
     let mut cells: Vec<f32> = cells.iter().copied().filter(|c| *c >= 1.0).collect();
     cells.sort_by(|a, b| b.total_cmp(a));
-    let mut full: Option<BTreeMap<Key, Batch>> = None;
     let mut out = BTreeMap::new();
     for bx in first..last {
         for bz in first..last {
@@ -445,13 +444,8 @@ fn coarse_terrain(sampler: &TerrainSampler, cells: &[f32], error: f32, side: f32
                 Some(grid) => {
                     out.insert(key, grid.batch(skirt));
                 }
-                // Nothing coarser will do here. Only chunk-sized squares can borrow the full mesh.
-                None if (side - CHUNK).abs() < 0.5 => {
-                    let full = full.get_or_insert_with(|| full_terrain(terrain, skirt));
-                    if let Some(batch) = full.remove(&key) {
-                        out.insert(key, batch);
-                    }
-                }
+                // Nothing coarser will do here, and the chunk's full mesh is already stored.
+                None if (side - CHUNK).abs() < 0.5 => {}
                 None => {
                     let finest = cells.last().copied().unwrap_or(side);
                     out.insert(key, Grid::sample(sampler, x0, x1, z0, z1, finest).batch(skirt));
@@ -668,6 +662,9 @@ mod tests {
         let count = |k: Key| squares[&k].indices.len();
         // (-1, 0) is open ground; (0, 0) holds the ditch at x = 40.
         assert!(count((0, 0)) > count((-1, 0)) * 4, "{} vs {}", count((0, 0)), count((-1, 0)));
+        // Asked to follow the ditch to a centimetre, no grid will do, and the full mesh is left to stand in.
+        let strict = coarse_terrain(&sampler, &[32.0, 16.0], 0.01, 128.0, 6.0);
+        assert!(!strict.contains_key(&(0, 0)) && strict.contains_key(&(-1, 0)));
     }
 
     #[test]
@@ -705,12 +702,12 @@ mod tests {
             for offset in [-radius, -100.0, 0.0, 100.0, radius] {
                 let block_distance = (chunk_distance + offset).max(0.0);
                 let far = block_is_far(block_distance, radius, &detail, view);
-                let shown = [Role::TerrainFull, Role::TerrainCoarse, Role::Block]
-                    .into_iter()
-                    .filter(|&role| shows(role, chunk_distance, far, &detail, view))
-                    .count();
                 let past_view = chunk_distance > view + CHUNK * std::f32::consts::FRAC_1_SQRT_2 && !far;
-                assert_eq!(shown, usize::from(!past_view), "{chunk_distance} m, block at {block_distance} m");
+                // A chunk has either a full and a coarse mesh, or only its full mesh kept for every distance.
+                for set in [&[Role::TerrainFull, Role::TerrainCoarse, Role::Block][..], &[Role::TerrainKept, Role::Block][..]] {
+                    let shown = set.iter().filter(|&&role| shows(role, chunk_distance, far, &detail, view)).count();
+                    assert_eq!(shown, usize::from(!past_view), "{chunk_distance} m, block at {block_distance} m, {set:?}");
+                }
             }
         }
     }

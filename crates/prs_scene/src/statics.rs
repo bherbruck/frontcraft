@@ -121,11 +121,18 @@ impl Batch {
     }
 
     pub(crate) fn mesh(self) -> Mesh {
+        let small = self.positions.len() <= u16::MAX as usize;
         Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::RENDER_WORLD)
             .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, self.positions)
             .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, self.normals)
             .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, self.colors)
-            .with_inserted_indices(Indices::U32(self.indices))
+            // Two bytes an index where they fit, which most chunks do: the level's meshes are what fills a
+            // browser's graphics memory.
+            .with_inserted_indices(if small {
+                Indices::U16(self.indices.into_iter().map(|i| i as u16).collect())
+            } else {
+                Indices::U32(self.indices)
+            })
     }
 }
 

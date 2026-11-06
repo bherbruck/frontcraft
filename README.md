@@ -501,7 +501,7 @@ How far you see is `View distance` in the Esc menu, saved with the other setting
 (4 km on desktop for helicopters, 2.5 km on the web). It sets `ViewReach`, which the far plane, fog and sky follow.
 The level's detail falls off with distance and stops at it:
 each 128 m chunk shows its full terrain, boxes and trees near you, then a coarser grid, plain boxes and one shape
-per tree, and beyond `far_from` a whole 512 m block is one mesh. Only drawing changes; what stops a bullet is the
+per tree, and beyond `far_from` a whole 512 m block's ground is one mesh. Only drawing changes; what stops a bullet is the
 same everywhere. The distances are `view.detail` in a mod (`Detail` in `crates/prs_scene/src/lod.rs`).
 
 The game carries only the town and the range inside it, for playing alone. The bigger maps stay files in
