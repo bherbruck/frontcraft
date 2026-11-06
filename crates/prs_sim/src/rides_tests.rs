@@ -1040,7 +1040,7 @@ fn w_and_a_together_are_full_throttle_and_full_lock_and_space_is_the_handbrake()
 
 #[test]
 fn every_map_has_vehicles_that_start_clear_upright_and_able_to_drive_off() {
-    for name in ["town", "range"] {
+    for name in ["town", "range", "claudabad"] {
         let mut sim = Sim::new(Level::named(name).unwrap());
         assert!(sim.vehicles.len() >= 2, "{name}");
         for _ in 0..120 {
@@ -1144,6 +1144,27 @@ fn a_truck_can_drive_from_the_base_to_the_village_by_road() {
     assert_eq!(reached, route.len(), "got to {} at {} with {crashes} crashes", reached, sim.vehicles[0].pos);
     assert!(tilt < 0.6, "leaned {tilt}");
     assert!(!sim.vehicles[0].damage.wrecked);
+}
+
+/// On Claudabad, from each base out of its gate, over the ridge and across the canal by the bridge onto
+/// the island, to the square under the sunburst. The north drive is the south one turned round.
+#[test]
+fn a_jeep_can_drive_from_either_base_over_the_bridge_to_the_island() {
+    let south = [(54.0, 412.0), (55.0, 396.0), (55.0, 300.0), (30.0, 160.0), (-30.0, 80.0), (-30.0, 60.0), (-30.0, 40.0), (-30.0, 24.0), (-20.0, 10.0)];
+    for (carrier, turn) in [(0, 1.0), (1, -1.0)] {
+        let mut sim = Sim::new(Level::named("claudabad").unwrap());
+        for _ in 0..90 {
+            sim.step(&[]);
+        }
+        let id = sim.spawn_soldier(1);
+        sim.sit_in(id, SeatedAt { carrier, seat: 0 });
+        let route: Vec<Vec2> = south.iter().map(|&(x, z)| Vec2::new(x, z) * turn).collect();
+        let (reached, crashes, tilt) = drive_route(&mut sim, id, &route, 150.0);
+        let at = sim.vehicles[carrier as usize].pos;
+        assert_eq!(reached, route.len(), "from base {carrier}: got to point {reached} at {at} with {crashes} crashes");
+        assert!(tilt < 0.6, "leaned {tilt}");
+        assert!(at.y > -1.0, "in the canal at {at}");
+    }
 }
 
 /// How much a tick costs with vehicles moving, for keeping an eye on it.

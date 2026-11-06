@@ -113,6 +113,9 @@ impl MapSpec {
         let mason = Mason { style: &self.style, level: &mut level, budget: Budget::new(steps) };
         let mut builder = Builder { spec: self, relief: &relief, mason, scatter: Scatter(self.seed) };
         builder.compounds();
+        builder.bridges();
+        builder.steps();
+        builder.landmarks();
         builder.field_walls();
         builder.rubble();
         builder.props();
@@ -218,6 +221,113 @@ impl Builder<'_> {
                 );
                 let center = Vec3::new(p.x, self.relief.height(p) + half.y * 0.35, p.y);
                 self.mason.level.solids.push(Solid { center, half, rotation, paint: heap.paint });
+            }
+        }
+    }
+
+    fn bridges(&mut self) {
+        for bridge in &self.spec.bridges {
+            if !self.mason.budget.take() {
+                return;
+            }
+            let along = bridge.to - bridge.from;
+            let length = along.length();
+            if length < 0.1 || bridge.span <= 0.0 {
+                continue;
+            }
+            let dir = along / length;
+            let rotation = Quat::from_rotation_y((-dir.y).atan2(dir.x));
+            let (start, end) = (self.relief.height(bridge.from), self.relief.height(bridge.to));
+            let pieces = (length / bridge.span).ceil().max(1.0) as u32;
+            let piece = length / pieces as f32;
+            let (t, side) = (bridge.thickness, bridge.width * 0.5);
+            let rail = self.mason.style.partition;
+            for i in 0..pieces {
+                if !self.mason.budget.take() {
+                    return;
+                }
+                let share = (i as f32 + 0.5) / pieces as f32;
+                let mid = bridge.from + dir * (piece * (i as f32 + 0.5));
+                let top = start + (end - start) * share;
+                let at = |up: f32, out: f32| Vec3::new(mid.x, top + up, mid.y) + rotation * Vec3::new(0.0, 0.0, out);
+                let solid = |center: Vec3, half: Vec3| Solid { center, half, rotation, paint: bridge.paint };
+                self.mason.level.solids.push(solid(at(-t * 0.5, 0.0), Vec3::new(piece * 0.5 + 0.02, t * 0.5, side)));
+                if bridge.parapet > 0.0 {
+                    for out in [side - rail * 0.5, -side + rail * 0.5] {
+                        self.mason.level.solids.push(solid(at(bridge.parapet * 0.5, out), Vec3::new(piece * 0.5 + 0.02, bridge.parapet * 0.5, rail * 0.5)));
+                    }
+                }
+                // A pier under every join, down to whatever is below.
+                if i > 0 {
+                    let join = bridge.from + dir * (piece * i as f32);
+                    let below = self.relief.height(join) - self.mason.style.foot;
+                    let bottom = start + (end - start) * (i as f32 / pieces as f32) - t;
+                    if bottom - below > 0.3 {
+                        let center = Vec3::new(join.x, (bottom + below) * 0.5, join.y);
+                        self.mason.level.solids.push(solid(center, Vec3::new(t, (bottom - below) * 0.5, side * 0.85)));
+                    }
+                }
+            }
+        }
+    }
+
+    fn steps(&mut self) {
+        let style = *self.mason.style;
+        for (steps, &(start, end)) in self.spec.steps.iter().zip(&self.relief.step_ends) {
+            if !self.mason.budget.take() {
+                return;
+            }
+            let along = steps.to - steps.from;
+            let length = along.length();
+            if length < 0.1 || style.stair_rise <= 0.0 {
+                continue;
+            }
+            let dir = along / length;
+            let rotation = Quat::from_rotation_y((-dir.y).atan2(dir.x));
+            let count = ((end - start).abs() / style.stair_rise).ceil().max(1.0) as u32;
+            let tread = length / count as f32;
+            for i in 0..count {
+                if !self.mason.budget.take() {
+                    return;
+                }
+                let mid = steps.from + dir * (tread * (i as f32 + 0.5));
+                let top = start + (end - start) * (i as f32 + 0.5) / count as f32;
+                let bottom = self.relief.height(mid).min(top) - style.foot;
+                let center = Vec3::new(mid.x, (top + bottom) * 0.5, mid.y);
+                let half = Vec3::new(tread * 0.5 + 0.01, (top - bottom) * 0.5, steps.width * 0.5);
+                self.mason.level.solids.push(Solid { center, half, rotation, paint: steps.paint });
+            }
+        }
+    }
+
+    fn landmarks(&mut self) {
+        for mark in &self.spec.landmarks {
+            if !self.mason.budget.take() {
+                return;
+            }
+            let ground = self.relief.height(mark.at);
+            let turn = Quat::from_rotation_y(mark.yaw);
+            let base = Vec3::new(mark.at.x, ground, mark.at.y);
+            let foot = self.mason.style.foot;
+            let plinth = Vec3::new(mark.plinth.x, mark.plinth.y + foot * 0.5, mark.plinth.z);
+            let solid = |center: Vec3, half: Vec3, rotation: Quat, paint: Paint| Solid { center, half, rotation, paint };
+            self.mason.level.solids.push(solid(base + Vec3::Y * (plinth.y - foot), plinth, turn, mark.stone));
+            let column_base = mark.plinth.y * 2.0;
+            self.mason.level.solids.push(solid(base + Vec3::Y * (column_base + mark.column.y), mark.column, turn, mark.stone));
+            let hub = base + Vec3::Y * (column_base + mark.column.y * 2.0 + mark.hub);
+            let diamond = turn * Quat::from_rotation_z(std::f32::consts::FRAC_PI_4);
+            self.mason.level.solids.push(solid(hub, Vec3::new(mark.hub, mark.hub, mark.ray_depth * 0.6), diamond, mark.paint));
+            for k in 0..mark.rays {
+                if !self.mason.budget.take() {
+                    return;
+                }
+                let angle = k as f32 / mark.rays.max(1) as f32 * std::f32::consts::TAU;
+                let short = mark.short_every > 0 && k % mark.short_every == 0;
+                let length = mark.ray_length * if short { mark.short_share } else { 1.0 };
+                let out = turn * Vec3::new(angle.cos(), angle.sin(), 0.0);
+                let center = hub + out * (mark.hub + length * 0.5);
+                let half = Vec3::new(length * 0.5, mark.ray_width * 0.5, mark.ray_depth * 0.5);
+                self.mason.level.solids.push(solid(center, half, turn * Quat::from_rotation_z(angle), mark.paint));
             }
         }
     }

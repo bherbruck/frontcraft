@@ -21,6 +21,8 @@ const FOOT_MIN_HEIGHT: f32 = 1.0;
 const FOOT_MIN_WIDTH: f32 = 0.7;
 /// How near a room a box must be to count as part of its building.
 const BUILDING_REACH: f32 = 11.0;
+/// How many fronds a palm's crown has.
+const PALM_FRONDS: usize = 5;
 const CANOPY_SIDES: usize = 7;
 const FIR_CLEARANCE: f32 = 2.4;
 const LEAF_UNDER: Vec3 = Vec3::new(0.62, 0.72, 0.8);
@@ -149,7 +151,7 @@ pub(crate) fn static_meshes(level: &Level, bake: Bake) -> StaticMeshes {
     }
     for tree in &level.trees {
         add_trunk(chunk_of(&mut solids, tree.base), tree, &light);
-        add_canopy(chunk_of(&mut canopies, tree.base), tree);
+        add_canopy(chunk_of(&mut canopies, tree.base), tree, &light);
     }
     StaticMeshes { terrain: terrain_chunks(&level.terrain), solids, canopies }
 }
@@ -215,6 +217,7 @@ fn palette(paint: Paint) -> (Vec3, f32) {
         Paint::Hay => ([0.85, 0.7, 0.32], 0.03),
         Paint::Hedge => ([0.2, 0.37, 0.14], 0.14),
         Paint::Planks => ([0.5, 0.37, 0.23], 0.025),
+        Paint::Terracotta => ([0.8, 0.45, 0.3], 0.02),
     };
     (Vec3::from_array(rgb), vary)
 }
@@ -318,7 +321,7 @@ fn add_trunk(batch: &mut Batch, tree: &Tree, light: &RoomLight) {
     add_solid(batch, &solid, &RoomLight::outdoors(light));
 }
 
-fn add_canopy(batch: &mut Batch, tree: &Tree) {
+fn add_canopy(batch: &mut Batch, tree: &Tree, light: &RoomLight) {
     let vary = 0.88 + grain(tree.base) * 0.24;
     let tilt = Quat::from_rotation_y(grain(tree.base + Vec3::X) * std::f32::consts::TAU);
     let (h, r) = (tree.height, tree.radius);
@@ -348,6 +351,24 @@ fn add_canopy(batch: &mut Batch, tree: &Tree) {
         TreeKind::Fruit => {
             let color = Vec3::new(0.33, 0.45, 0.17) * vary;
             add_blob(batch, tree.base + Vec3::Y * (h * 0.66), Vec3::new(r, h * 0.36, r), tilt, color);
+        }
+        TreeKind::Palm => {
+            // The trunk above the part that stops bullets, then fronds drooping from the crown.
+            let low = h * prs_level::TRUNK_HALF_HEIGHT * 2.0;
+            let crown = h * 0.9;
+            let stem = Solid {
+                center: tree.base + Vec3::Y * ((low + crown) * 0.5),
+                half: Vec3::new(prs_level::TRUNK_HALF_WIDTH * 0.8, (crown - low) * 0.5, prs_level::TRUNK_HALF_WIDTH * 0.8),
+                rotation: Quat::IDENTITY,
+                paint: Paint::Trunk,
+            };
+            add_solid(batch, &stem, &RoomLight::outdoors(light));
+            let color = Vec3::new(0.3, 0.42, 0.16) * vary;
+            let top = tree.base + Vec3::Y * crown;
+            for k in 0..PALM_FRONDS {
+                let turn = tilt * Quat::from_rotation_y(k as f32 / PALM_FRONDS as f32 * std::f32::consts::TAU) * Quat::from_rotation_z(-0.35);
+                add_blob(batch, top + turn * Vec3::new(r * 0.5, 0.0, 0.0), Vec3::new(r * 0.55, h * 0.025, r * 0.16), turn, color);
+            }
         }
     }
 }
@@ -433,6 +454,7 @@ fn ground_color(ground: Ground, at: Vec3, height: f32, steep: f32, grain: f32) -
         Ground::DitchBed => Vec3::new(0.38, 0.31, 0.19) + tint,
         Ground::Shingle => Vec3::new(0.62, 0.58, 0.5).lerp(Vec3::new(0.56, 0.52, 0.44), drift) + tint * 0.6,
         Ground::Scrub => Vec3::new(0.5, 0.43, 0.24).lerp(Vec3::new(0.4, 0.42, 0.2), drift) + tint,
+        Ground::Water => Vec3::new(0.25, 0.35, 0.33).lerp(Vec3::new(0.22, 0.32, 0.31), drift) + tint * 0.3,
     };
     base.lerp(dirt, steep)
 }
@@ -493,6 +515,11 @@ mod tests {
         every_drawn_surface_has_a_collider(&Level::named("town").unwrap());
     }
 
+    #[test]
+    fn claudabad_is_drawn_as_it_collides() {
+        every_drawn_surface_has_a_collider(&Level::named("claudabad").unwrap());
+    }
+
     /// Every collider is drawn: boxes and trunks over their whole surface, however a face has been
     /// cut into tiles, and the land triangle for triangle.
     #[test]
@@ -518,9 +545,9 @@ mod tests {
     /// that spot, must name the surface a bullet coming straight down reports. Where a triangle
     /// blends grounds the colour is a mix, so it is only matched against the grounds being blended.
     fn ground_sounds_as_it_looks(level: &Level, expect: &[Surface]) {
-        const KINDS: [Ground; 15] = [
+        const KINDS: [Ground; 16] = [
             Ground::Natural, Ground::Meadow, Ground::Pasture, Ground::Wheat, Ground::Stubble, Ground::Plough, Ground::Orchard, Ground::Road,
-            Ground::Track, Ground::Dirt, Ground::Yard, Ground::Paving, Ground::DitchBed, Ground::Scrub, Ground::Shingle,
+            Ground::Track, Ground::Dirt, Ground::Yard, Ground::Paving, Ground::DitchBed, Ground::Scrub, Ground::Shingle, Ground::Water,
         ];
         let terrain = &level.terrain;
         let world = level.collision();
@@ -578,9 +605,14 @@ mod tests {
     }
 
     #[test]
+    fn claudabad_ground_sounds_as_it_looks() {
+        ground_sounds_as_it_looks(&Level::named("claudabad").unwrap(), &[Surface::Grass, Surface::Dirt, Surface::Gravel, Surface::Concrete]);
+    }
+
+    #[test]
     #[ignore]
     fn draw_report() {
-        for (name, level) in [("range", Level::training_range()), ("town", Level::named("town").unwrap())] {
+        for (name, level) in [("range", Level::training_range()), ("town", Level::named("town").unwrap()), ("claudabad", Level::named("claudabad").unwrap())] {
             let start = std::time::Instant::now();
             let meshes = static_meshes(&level, Bake::default());
             let elapsed = start.elapsed();

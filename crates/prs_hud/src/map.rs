@@ -183,6 +183,7 @@ fn ground_shade(ground: Ground) -> [f32; 3] {
         Ground::Road | Ground::Paving => [0.62, 0.6, 0.55],
         Ground::Track | Ground::Dirt | Ground::Yard => [0.6, 0.52, 0.38],
         Ground::DitchBed | Ground::Shingle | Ground::Scrub => [0.5, 0.47, 0.38],
+        Ground::Water => [0.32, 0.42, 0.42],
     }
 }
 

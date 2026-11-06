@@ -2,7 +2,7 @@
 //! this into a [`Level`](crate::Level). A mod adds a map by filling in one of these.
 
 use crate::Paint;
-use glam::Vec2;
+use glam::{Vec2, Vec3};
 use prs_collision::Surface;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -28,6 +28,57 @@ pub struct MapSpec {
     pub helipads: Vec<SpawnSpec>,
     /// Where vehicles start: a row of the game's table of vehicles, and where.
     pub vehicles: Vec<(u8, SpawnSpec)>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bridges: Vec<Bridge>,
+    /// Flights of steps laid down a slope, such as into a canal.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub steps: Vec<Steps>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub landmarks: Vec<Sunburst>,
+}
+
+/// A deck across a gap, from one end on the ground to the other, at the height of the ground at its ends,
+/// with a parapet down each side and piers down to the ground below every so often.
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+pub struct Bridge {
+    pub from: Vec2,
+    pub to: Vec2,
+    pub width: f32,
+    pub thickness: f32,
+    /// How high the parapets stand above the deck. Zero leaves the sides open.
+    pub parapet: f32,
+    /// Longest stretch of deck between piers.
+    pub span: f32,
+    pub paint: Paint,
+}
+
+/// Steps from `from`, at the height of the ground there, down or up to `to`, each no higher than the
+/// style's stair rise, standing on whatever the ground does below them.
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+pub struct Steps {
+    pub from: Vec2,
+    pub to: Vec2,
+    pub width: f32,
+    pub paint: Paint,
+}
+
+/// A landmark to steer by: a column, and rays fanned round a hub at its top in the plane facing `yaw`.
+/// Every `short_every`-th ray is shorter, so the burst does not read as a wheel.
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+pub struct Sunburst {
+    pub at: Vec2,
+    pub yaw: f32,
+    pub plinth: Vec3,
+    pub column: Vec3,
+    pub hub: f32,
+    pub rays: u32,
+    pub ray_length: f32,
+    pub ray_width: f32,
+    pub ray_depth: f32,
+    pub short_every: u32,
+    pub short_share: f32,
+    pub paint: Paint,
+    pub stone: Paint,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -192,6 +243,7 @@ pub enum Ground {
     DitchBed,
     Scrub,
     Shingle,
+    Water,
 }
 
 impl Ground {
@@ -201,7 +253,7 @@ impl Ground {
             Ground::Natural | Ground::Meadow | Ground::Pasture | Ground::Wheat | Ground::Stubble | Ground::Orchard => Surface::Grass,
             Ground::Road | Ground::Shingle => Surface::Gravel,
             Ground::Paving => Surface::Concrete,
-            Ground::Plough | Ground::Track | Ground::Dirt | Ground::Yard | Ground::DitchBed | Ground::Scrub => Surface::Dirt,
+            Ground::Plough | Ground::Track | Ground::Dirt | Ground::Yard | Ground::DitchBed | Ground::Scrub | Ground::Water => Surface::Dirt,
         }
     }
 
@@ -228,6 +280,9 @@ pub struct Ditch {
     pub bed_width: f32,
     pub depth: f32,
     pub ground: Ground,
+    /// Cut through any road that crosses it, as a canal is, rather than be filled in under the road.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub cuts_roads: bool,
 }
 
 /// A rotated rectangle of ground colour.
@@ -438,6 +493,10 @@ pub enum Prop {
     Hesco,
     Tank,
     Tomb,
+    Boxcar,
+    Kiln,
+    WaterTower,
+    Canopy,
 }
 
 /// One box of a prop: offset from the prop's origin on the ground, half size, yaw, paint.
@@ -484,7 +543,7 @@ pub struct CapturePointSpec {
 
 impl Prop {
     pub fn parts(self) -> &'static [Part] {
-        use Paint::{Canvas, Hay, Metal, Rock, Rust, Sandbag, Stone, Tin, Wood};
+        use Paint::{Brick, Canvas, Hay, Metal, Rock, Rust, Sandbag, Stone, Terracotta, Tin, Wood};
         match self {
             Prop::Crate => &[([0.0, 0.5, 0.0], [0.6, 0.5, 0.6], 0.0, Wood)],
             Prop::CrateStack => &[
@@ -552,6 +611,35 @@ impl Prop {
             Prop::Tomb => &[
                 ([0.0, 0.25, 0.0], [0.4, 0.25, 0.9], 0.0, Rock),
                 ([0.0, 0.75, -0.85], [0.36, 0.45, 0.07], 0.0, Stone),
+            ],
+            // A goods wagon on its wheels: hard cover a squad can work along, too high to see over.
+            Prop::Boxcar => &[
+                ([0.0, 0.45, 0.0], [1.2, 0.45, 6.4], 0.0, Metal),
+                ([0.0, 2.1, 0.0], [1.45, 1.2, 7.0], 0.0, Rust),
+                ([0.0, 3.34, 0.0], [1.3, 0.04, 6.9], 0.0, Tin),
+            ],
+            // A brick kiln with its chimney, the tallest thing for a long way.
+            Prop::Kiln => &[
+                ([0.0, 1.6, 0.0], [3.0, 1.6, 2.2], 0.0, Brick),
+                ([0.0, 3.4, 0.0], [2.6, 0.2, 1.8], 0.0, Brick),
+                ([2.2, 7.0, 1.2], [0.5, 7.0, 0.5], 0.0, Brick),
+            ],
+            Prop::WaterTower => &[
+                ([-1.4, 4.0, -1.4], [0.12, 4.0, 0.12], 0.0, Metal),
+                ([1.4, 4.0, -1.4], [0.12, 4.0, 0.12], 0.0, Metal),
+                ([-1.4, 4.0, 1.4], [0.12, 4.0, 0.12], 0.0, Metal),
+                ([1.4, 4.0, 1.4], [0.12, 4.0, 0.12], 0.0, Metal),
+                ([0.0, 9.4, 0.0], [1.9, 1.5, 1.9], 0.0, Terracotta),
+                ([0.0, 9.4, 0.0], [1.9, 1.5, 1.9], 0.785, Terracotta),
+                ([0.0, 11.0, 0.0], [1.4, 0.1, 1.4], 0.0, Terracotta),
+            ],
+            // A canvas roof on posts, over a market alley, high enough to walk under.
+            Prop::Canopy => &[
+                ([-2.2, 1.4, -3.0], [0.06, 1.4, 0.06], 0.0, Wood),
+                ([2.2, 1.4, -3.0], [0.06, 1.4, 0.06], 0.0, Wood),
+                ([-2.2, 1.4, 3.0], [0.06, 1.4, 0.06], 0.0, Wood),
+                ([2.2, 1.4, 3.0], [0.06, 1.4, 0.06], 0.0, Wood),
+                ([0.0, 2.84, 0.0], [2.4, 0.04, 3.2], 0.0, Canvas),
             ],
         }
     }

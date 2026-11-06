@@ -512,6 +512,17 @@ roofs, ditches and hedged fields to the west, a wash and an orchard to the east,
 Stairs, doors, walls, windows and cover heights are held to `MoveConfig` by tests
 that walk a soldier through them, in `crates/prs_level/src/town_tests.rs`.
 
+Claudabad (`PRS_MAP=claudabad`) is a dusty river town. A canal too deep to climb out of crosses it and
+parts round an island, where a terracotta sunburst stands over the square for everyone to steer by. Six
+bridges cross it, a road bridge at each end and two onto the island from each bank, with steps down to the
+water beside each. North of the canal is the old quarter, walled compounds packed round a covered bazaar,
+with a brickworks beyond; south of it is the newer town under a water tower, and a rail yard. Palm groves
+and fields line the canal outside, and a low ridge hides each base. Each side's half is the other's turned
+half way round, so the walks to the five flags match. It is written from `claudabad.rs`, and the bridges,
+steps, sunburst, canals that cut through roads, palms and new props it uses are general parts of a
+`MapSpec`. Its tests, in `claudabad_tests.rs`, walk the bridges and the steps out of the canal, check the
+whole map joins up on foot from each base, and a jeep drives from either base over the bridge to the square.
+
 The range looks down lanes with targets at 25, 50, 100, 200 and 300 m, marked by boards either side:
 a white stripe per 25 m, then a red board per 100 m. Along the firing line are sandbags, a bench to rest
 on standing, a box for kneeling and a low bag for lying behind, and a wall with openings to fire through

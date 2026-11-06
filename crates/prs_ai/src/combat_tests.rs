@@ -693,26 +693,41 @@ fn fight_cost() {
 /// Most the two sides' walks to their first and second points may differ, as a share of the longer.
 const FAIR_WALK: f32 = 0.10;
 
-/// Neither base gets to its first point or on to its second much sooner, measured along the ground.
-#[test]
-fn both_sides_have_as_far_to_walk_up_the_chain_of_the_town() {
-    let mut sim = Sim::new(Level::named("town").unwrap());
+/// Neither base gets to its first point or on to its second much sooner, measured along the ground, and
+/// every point in the chain can be walked to from the one before it.
+fn both_sides_have_as_far_to_walk_up_the_chain(map: &str) {
+    let mut sim = Sim::new(Level::named(map).unwrap());
     let game = Match::new(Mode::advance_and_secure(), &mut sim);
     let troops = Troops::new(&sim, TroopsConfig::default());
     let (flow, chain) = (&troops.flow, &game.state.chain);
     let flat = |p: glam::Vec3| Vec2::new(p.x, p.z);
     let points = &sim.level.capture_points;
-    let walk = |from: Vec2, to: usize| flow.grid.walk_length(&flow.fields[to], from).expect("a way there");
+    let walk = |from: Vec2, to: usize| flow.grid.walk_length(&flow.fields[to], from).unwrap_or_else(|| panic!("{map}: no way to {}", points[to].name));
+    for pair in chain.windows(2) {
+        walk(flat(points[pair[0]].center), pair[1]);
+        walk(flat(points[pair[1]].center), pair[0]);
+    }
     let walks = |team: usize, first: usize, second: usize| {
         let base = flat(sim.level.teams[team].spawns[0].pos);
         (walk(base, first), walk(flat(points[first].center), second))
     };
+    let last = chain.len() - 1;
     let south = walks(0, chain[1], chain[2]);
-    let north = walks(1, chain[4], chain[3]);
-    println!("south {south:.0?} north {north:.0?}, {:?}", chain.iter().map(|&i| &points[i].name).collect::<Vec<_>>());
+    let north = walks(1, chain[last - 1], chain[last - 2]);
+    println!("{map}: south {south:.0?} north {north:.0?}, {:?}", chain.iter().map(|&i| &points[i].name).collect::<Vec<_>>());
     for (name, a, b) in [("first", south.0, north.0), ("second", south.1, north.1), ("both", south.0 + south.1, north.0 + north.1)] {
-        assert!((a - b).abs() <= a.max(b) * FAIR_WALK, "{name} walk: south {a:.0} m, north {b:.0} m");
+        assert!((a - b).abs() <= a.max(b) * FAIR_WALK, "{map}, {name} walk: south {a:.0} m, north {b:.0} m");
     }
+}
+
+#[test]
+fn both_sides_have_as_far_to_walk_up_the_chain_of_the_town() {
+    both_sides_have_as_far_to_walk_up_the_chain("town");
+}
+
+#[test]
+fn both_sides_have_as_far_to_walk_up_the_chain_of_claudabad() {
+    both_sides_have_as_far_to_walk_up_the_chain("claudabad");
 }
 
 /// `cargo test -p prs_ai side_report -- --ignored --nocapture`. Who wins on `town` over ten seeds, and what

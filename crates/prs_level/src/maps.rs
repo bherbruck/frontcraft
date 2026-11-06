@@ -18,7 +18,11 @@ use crate::{CapturePoint, Doorway, Level, MapSpec, Room, Solid, SpawnPoint, Stai
 pub const FORMAT: u32 = 1;
 
 /// The maps the game is built with, as their files.
-pub const BUILT_IN: &[(&str, &str)] = &[("range", include_str!("../../../maps/range.toml")), ("town", include_str!("../../../maps/town.toml"))];
+pub const BUILT_IN: &[(&str, &str)] = &[
+    ("range", include_str!("../../../maps/range.toml")),
+    ("town", include_str!("../../../maps/town.toml")),
+    ("claudabad", include_str!("../../../maps/claudabad.toml")),
+];
 
 /// How big a map may make itself. A map can come from any server, so it is held to these before anything is
 /// built from it: nothing in it may ask for more memory or time than a real map would.
@@ -299,6 +303,16 @@ impl MapFile {
                 pieces += (climb / style.stair_rise as f64).ceil().max(0.0);
             }
         }
+        for bridge in &spec.bridges {
+            positive("bridge span", bridge.span)?;
+            // Deck, two parapets and a pier for each span.
+            pieces += (bridge.from.distance(bridge.to) / bridge.span) as f64 * 4.0 + 4.0;
+        }
+        for steps in &spec.steps {
+            positive("stair run", style.stair_run)?;
+            pieces += (steps.from.distance(steps.to) / style.stair_run) as f64 + 1.0;
+        }
+        pieces += spec.landmarks.iter().map(|l| l.rays as f64 + 3.0).sum::<f64>();
         if !(pieces <= limits.max_pieces as f64) {
             return Err(format!("about {pieces:.0} lengths of wall and steps of stairs"));
         }
@@ -477,6 +491,10 @@ mod tests {
         MapFile { format: FORMAT, spec: Some(MapSpec::town()), ..MapFile::default() }
     }
 
+    fn claudabad_file() -> MapFile {
+        MapFile { format: FORMAT, spec: Some(MapSpec::claudabad()), ..MapFile::default() }
+    }
+
     fn same(a: &Level, b: &Level) -> bool {
         format!("{a:?}") == format!("{b:?}")
     }
@@ -485,7 +503,11 @@ mod tests {
     #[test]
     fn the_map_files_are_exactly_the_maps_the_code_builds() {
         let folder = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../maps");
-        let maps = [("range", range_file(), Level::training_range()), ("town", town_file(), MapSpec::town().build())];
+        let maps = [
+            ("range", range_file(), Level::training_range()),
+            ("town", town_file(), MapSpec::town().build()),
+            ("claudabad", claudabad_file(), MapSpec::claudabad().build()),
+        ];
         if std::env::var("PRS_WRITE_MAPS").is_ok() {
             for (name, file, _) in &maps {
                 std::fs::write(folder.join(format!("{name}.toml")), write(file)).unwrap();

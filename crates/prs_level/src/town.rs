@@ -8,67 +8,67 @@ use crate::{Paint, TreeKind};
 use glam::Vec2;
 use std::f32::consts::{FRAC_PI_2, PI};
 
-fn line(points: &[(f32, f32)]) -> Vec<Vec2> {
+pub(crate) fn line(points: &[(f32, f32)]) -> Vec<Vec2> {
     points.iter().map(|&p| p.into()).collect()
 }
 
-fn road(points: &[(f32, f32)], width: f32, ground: Ground) -> Road {
+pub(crate) fn road(points: &[(f32, f32)], width: f32, ground: Ground) -> Road {
     Road { points: line(points), width, shoulder: 5.0, ground }
 }
 
-fn ditch(points: &[(f32, f32)]) -> Ditch {
-    Ditch { points: line(points), width: 5.2, bed_width: 1.4, depth: 1.35, ground: Ground::DitchBed }
+pub(crate) fn ditch(points: &[(f32, f32)]) -> Ditch {
+    Ditch { points: line(points), width: 5.2, bed_width: 1.4, depth: 1.35, ground: Ground::DitchBed, cuts_roads: false }
 }
 
-fn zone(at: (f32, f32), half: (f32, f32), yaw: f32, ground: Ground) -> Zone {
+pub(crate) fn zone(at: (f32, f32), half: (f32, f32), yaw: f32, ground: Ground) -> Zone {
     Zone { at: at.into(), half: half.into(), yaw, ground }
 }
 
-fn hill(at: (f32, f32), radius: (f32, f32), yaw: f32, height: f32) -> Hill {
+pub(crate) fn hill(at: (f32, f32), radius: (f32, f32), yaw: f32, height: f32) -> Hill {
     Hill { at: at.into(), radius: radius.into(), yaw, height }
 }
 
-fn wave(fx: f32, fz: f32, phase: f32, height: f32) -> Wave {
+pub(crate) fn wave(fx: f32, fz: f32, phase: f32, height: f32) -> Wave {
     Wave { frequency: Vec2::new(fx, fz), phase, height }
 }
 
-fn gate(side: Side, along: f32, width: f32) -> Gate {
+pub(crate) fn gate(side: Side, along: f32, width: f32) -> Gate {
     Gate { side, along, width }
 }
 
-fn placed(prop: Prop, at: (f32, f32), yaw: f32) -> Placed {
+pub(crate) fn placed(prop: Prop, at: (f32, f32), yaw: f32) -> Placed {
     Placed { prop, at: at.into(), yaw }
 }
 
-fn tall(paint: Paint, height: f32, gates: &[Gate]) -> Option<YardWall> {
+pub(crate) fn tall(paint: Paint, height: f32, gates: &[Gate]) -> Option<YardWall> {
     Some(YardWall { height, paint, gates: gates.to_vec() })
 }
 
 /// A compound that takes whatever the land gives it.
-fn compound(at: (f32, f32), yaw: f32, half: (f32, f32), wall: Option<YardWall>, buildings: Vec<Building>, props: Vec<Placed>) -> Compound {
+pub(crate) fn compound(at: (f32, f32), yaw: f32, half: (f32, f32), wall: Option<YardWall>, buildings: Vec<Building>, props: Vec<Placed>) -> Compound {
     Compound { at: at.into(), yaw, half: half.into(), lift: 0.0, ground: Ground::Yard, wall, buildings, props }
 }
 
-fn field_wall(points: &[(f32, f32)], height: f32, unevenness: f32, paint: Paint, gaps: &[(f32, f32)]) -> FieldWall {
+pub(crate) fn field_wall(points: &[(f32, f32)], height: f32, unevenness: f32, paint: Paint, gaps: &[(f32, f32)]) -> FieldWall {
     let s = BuildStyle::default();
     let (thickness, segment, wander) = if paint == Paint::Hedge { (s.hedge_thickness, s.hedge_segment, 0.22) } else { (s.field_wall, s.wall_segment, 0.0) };
     FieldWall { points: line(points), height, unevenness, thickness, segment, wander, paint, gaps: gaps.to_vec() }
 }
 
-fn rubble(at: (f32, f32), radius: f32, count: u32, paint: Paint) -> Rubble {
+pub(crate) fn rubble(at: (f32, f32), radius: f32, count: u32, paint: Paint) -> Rubble {
     Rubble { at: at.into(), radius, count, size: (0.3, 0.8), paint }
 }
 
-fn trees(points: &[(f32, f32)], spacing: f32, kind: TreeKind, height: (f32, f32), radius: (f32, f32)) -> Woodland {
+pub(crate) fn trees(points: &[(f32, f32)], spacing: f32, kind: TreeKind, height: (f32, f32), radius: (f32, f32)) -> Woodland {
     Woodland { kind, shape: WoodShape::Line { points: line(points), spacing, jitter: spacing * 0.2 }, height, radius }
 }
 
-fn clump(at: (f32, f32), half: (f32, f32), count: u32, kind: TreeKind, height: (f32, f32), radius: (f32, f32)) -> Woodland {
+pub(crate) fn clump(at: (f32, f32), half: (f32, f32), count: u32, kind: TreeKind, height: (f32, f32), radius: (f32, f32)) -> Woodland {
     Woodland { kind, shape: WoodShape::Clump { at: at.into(), half: half.into(), yaw: 0.3, count }, height, radius }
 }
 
 /// Twelve spawn places in two rows, looking the way the team has to go.
-fn spawn_rows(at: (f32, f32), yaw: f32) -> Vec<SpawnSpec> {
+pub(crate) fn spawn_rows(at: (f32, f32), yaw: f32) -> Vec<SpawnSpec> {
     let mut spawns = Vec::new();
     for row in 0..2 {
         for i in 0..6 {
@@ -139,6 +139,9 @@ impl MapSpec {
                 (2, SpawnSpec { at: Vec2::new(-10.0, -394.0), yaw: PI }),
                 (2, SpawnSpec { at: Vec2::new(-36.0, -394.0), yaw: PI }),
             ],
+            bridges: Vec::new(),
+            steps: Vec::new(),
+            landmarks: Vec::new(),
         }
     }
 }
@@ -226,6 +229,7 @@ fn ditches() -> Vec<Ditch> {
         bed_width: 7.0,
         depth: 3.4,
         ground: Ground::Shingle,
+        cuts_roads: false,
     });
     all
 }

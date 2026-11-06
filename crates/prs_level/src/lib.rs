@@ -3,6 +3,7 @@
 
 mod archetypes;
 mod build;
+mod claudabad;
 pub mod maps;
 mod range;
 mod relief;
@@ -47,6 +48,7 @@ pub enum Paint {
     Hay,
     Hedge,
     Planks,
+    Terracotta,
 }
 
 impl Paint {
@@ -62,7 +64,8 @@ impl Paint {
             | Paint::Stone
             | Paint::Plaster
             | Paint::FloorTile
-            | Paint::RoofTile => Surface::Concrete,
+            | Paint::RoofTile
+            | Paint::Terracotta => Surface::Concrete,
             Paint::Wood | Paint::Trunk | Paint::Planks => Surface::Wood,
             Paint::Hay | Paint::Hedge => Surface::Grass,
             Paint::Packed | Paint::Canvas | Paint::Sandbag => Surface::Dirt,
@@ -98,6 +101,7 @@ impl Tree {
             TreeKind::Broadleaf => (h * 0.68, Vec3::new(r, h * 0.33, r)),
             TreeKind::Poplar => (h * 0.62, Vec3::new(r, h * 0.42, r)),
             TreeKind::Fruit => (h * 0.66, Vec3::new(r, h * 0.36, r)),
+            TreeKind::Palm => (h * 0.9, Vec3::new(r, h * 0.1, r)),
         };
         (self.base + Vec3::Y * at, half)
     }
@@ -110,6 +114,7 @@ pub enum TreeKind {
     Broadleaf,
     Poplar,
     Fruit,
+    Palm,
 }
 
 #[derive(Clone, Debug)]
@@ -591,6 +596,8 @@ impl Scatter {
     }
 }
 
+#[cfg(test)]
+mod claudabad_tests;
 #[cfg(test)]
 mod range_tests;
 #[cfg(test)]

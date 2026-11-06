@@ -1,6 +1,6 @@
 //! The shape and colour of the land, worked out from a [`MapSpec`], and the mesh that follows it.
 
-use crate::spec::{Compound, Ground, Hill, MapSpec};
+use crate::spec::{Compound, Ditch, Ground, Hill, MapSpec};
 use crate::{Terrain, smoothstep};
 use glam::Vec2;
 
@@ -55,19 +55,26 @@ impl Pad {
     }
 }
 
+/// How far either side of a flight of steps, and how far below its line, the land is cut away for it.
+const STEP_CUT_MARGIN: f32 = 0.6;
+const STEP_CUT_DEPTH: f32 = 0.3;
+
 pub(crate) struct Relief<'a> {
     spec: &'a MapSpec,
     roads: Vec<Line<'a>>,
     ditches: Vec<Line<'a>>,
     pub pads: Vec<Pad>,
+    /// The height of the land at each end of each flight of steps, before the steps are cut into it.
+    pub step_ends: Vec<(f32, f32)>,
 }
 
 impl<'a> Relief<'a> {
     pub fn new(spec: &'a MapSpec) -> Self {
         let roads = spec.roads.iter().map(|r| Line::new(&r.points, r.width * 0.5 + r.shoulder)).collect();
         let ditches = spec.ditches.iter().map(|d| Line::new(&d.points, d.width * 0.5)).collect();
-        let mut relief = Self { spec, roads, ditches, pads: Vec::new() };
+        let mut relief = Self { spec, roads, ditches, pads: Vec::new(), step_ends: Vec::new() };
         relief.pads = spec.compounds.iter().map(|c| relief.pad(c)).collect();
+        relief.step_ends = spec.steps.iter().map(|s| (relief.uncut(s.from), relief.uncut(s.to))).collect();
         relief
     }
 
@@ -103,13 +110,35 @@ impl<'a> Relief<'a> {
     }
 
     pub fn height(&self, p: Vec2) -> f32 {
+        let mut h = self.uncut(p);
+        // Steps are let into a bank, so no tread is buried under a slope steeper than they are.
+        for (steps, &(start, end)) in self.spec.steps.iter().zip(&self.step_ends) {
+            let along = steps.to - steps.from;
+            let length = along.length();
+            if length < 0.1 {
+                continue;
+            }
+            let dir = along / length;
+            let d = p - steps.from;
+            let (t, across) = (d.dot(dir) / length, d.dot(dir.perp()).abs());
+            if (0.0..=1.0).contains(&t) && across < steps.width * 0.5 + STEP_CUT_MARGIN {
+                h = h.min(start + (end - start) * t - STEP_CUT_DEPTH);
+            }
+        }
+        h
+    }
+
+    fn uncut(&self, p: Vec2) -> f32 {
         let natural = self.natural(p);
         let mut h = natural;
-        for (spec, line) in self.spec.ditches.iter().zip(&self.ditches) {
+        let cut = |spec: &Ditch, d: f32| {
+            let bank = spec.width * 0.5;
+            let bed = spec.bed_width * 0.5;
+            spec.depth * (1.0 - ((d - bed) / (bank - bed)).clamp(0.0, 1.0))
+        };
+        for (spec, line) in self.spec.ditches.iter().zip(&self.ditches).filter(|(s, _)| !s.cuts_roads) {
             if let Some((_, d)) = line.nearest(p) {
-                let bank = spec.width * 0.5;
-                let bed = spec.bed_width * 0.5;
-                h -= spec.depth * (1.0 - ((d - bed) / (bank - bed)).clamp(0.0, 1.0));
+                h -= cut(spec, d);
             }
         }
         for (spec, line) in self.spec.roads.iter().zip(&self.roads) {
@@ -119,6 +148,12 @@ impl<'a> Relief<'a> {
                 if w > 0.0 {
                     h += (self.natural(on) - h) * w;
                 }
+            }
+        }
+        // A canal goes through roads, so a road over it needs a bridge.
+        for (spec, line) in self.spec.ditches.iter().zip(&self.ditches).filter(|(s, _)| s.cuts_roads) {
+            if let Some((_, d)) = line.nearest(p) {
+                h = h.min(natural - cut(spec, d));
             }
         }
         // Nearest pad last, so that a pad is level right up to its edge whatever is next door.
@@ -139,6 +174,10 @@ impl<'a> Relief<'a> {
             if pad.outside(p) < 0.5 {
                 return pad.ground;
             }
+        }
+        let in_ditch = |(spec, line): &(&Ditch, &Line)| line.nearest(p).is_some_and(|(_, d)| d < spec.width * 0.5);
+        if let Some((spec, _)) = self.spec.ditches.iter().zip(&self.ditches).filter(|(s, _)| s.cuts_roads).find(in_ditch) {
+            return spec.ground;
         }
         for (spec, line) in self.spec.roads.iter().zip(&self.roads) {
             if line.nearest(p).is_some_and(|(_, d)| d < spec.width * 0.5) {
