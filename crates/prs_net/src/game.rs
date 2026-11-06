@@ -107,6 +107,10 @@ pub trait ServerGame {
     fn rules_hash(&self) -> u64;
     /// What is being played, for a client to set up the same.
     fn map_name(&self) -> String;
+    /// The hash and length of the map's file, for a client to check its copy against or fetch it by.
+    fn map_file(&self) -> (u64, u32) {
+        (0, 0)
+    }
     fn mode_name(&self) -> String;
     fn tick(&self) -> u32;
     /// A new player, held exactly as they are until [`Self::start`].

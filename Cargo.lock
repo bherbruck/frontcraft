@@ -4792,6 +4792,8 @@ dependencies = [
  "glam",
  "prs_collision",
  "prs_movement",
+ "serde",
+ "toml 0.9.12+spec-1.1.0",
 ]
 
 [[package]]
@@ -4876,12 +4878,15 @@ name = "prs_runtime"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "js-sys",
  "prs_ai",
  "prs_mode",
  "prs_net",
  "prs_net_sim",
  "prs_protocol",
  "prs_sim",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 

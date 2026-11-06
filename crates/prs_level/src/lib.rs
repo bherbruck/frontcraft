@@ -3,12 +3,14 @@
 
 mod archetypes;
 mod build;
+pub mod maps;
 mod relief;
 pub mod spec;
 mod town;
 
 use glam::{Quat, Vec2, Vec3};
 use prs_collision::{CollisionWorld, Surface};
+pub use maps::{MapData, MapError, valid_name as valid_map_name};
 pub use spec::{Ground, MapSpec};
 
 /// From the spawn on the range, beside the firing line.
@@ -20,7 +22,7 @@ const RANGE_HELIPAD: (f32, f32) = (-42.0, 14.0);
 pub const TRUNK_HALF_WIDTH: f32 = 0.22;
 pub const TRUNK_HALF_HEIGHT: f32 = 0.25;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Paint {
     Concrete,
     Wood,
@@ -68,7 +70,7 @@ impl Paint {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Solid {
     pub center: Vec3,
     pub half: Vec3,
@@ -77,7 +79,7 @@ pub struct Solid {
 }
 
 /// Canopy with no collision. Bullets and players pass through it.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Tree {
     pub base: Vec3,
     pub height: f32,
@@ -100,7 +102,7 @@ impl Tree {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum TreeKind {
     #[default]
     Fir,
@@ -120,7 +122,7 @@ pub struct Terrain {
 }
 
 /// Where one team starts from.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Team {
     pub name: String,
     pub spawns: Vec<SpawnPoint>,
@@ -136,14 +138,14 @@ impl Team {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct SpawnPoint {
     pub pos: Vec3,
     pub yaw: f32,
 }
 
 /// Where a vehicle starts, on the ground and facing `yaw`. `kind` is a row in the game's table of vehicles.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct VehicleSpawn {
     pub kind: u8,
     pub pos: Vec3,
@@ -151,7 +153,7 @@ pub struct VehicleSpawn {
 }
 
 /// A place worth holding. What it means to hold it is up to the game mode.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct CapturePoint {
     pub name: String,
     pub center: Vec3,
@@ -159,7 +161,7 @@ pub struct CapturePoint {
 }
 
 /// The inside of one storey of a building.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Room {
     pub center: Vec3,
     pub half: Vec3,
@@ -174,7 +176,7 @@ impl Room {
 }
 
 /// An opening to walk through, at floor level in the middle of the wall.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Doorway {
     pub at: Vec3,
     pub outward: Vec3,
@@ -182,7 +184,7 @@ pub struct Doorway {
 }
 
 /// An opening to shoot through, at its centre in the middle of the wall.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Window {
     pub at: Vec3,
     pub outward: Vec3,
@@ -191,7 +193,7 @@ pub struct Window {
 }
 
 /// A way up: where to stand at the bottom, then the points to walk through to get to the top.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Staircase {
     pub path: Vec<Vec3>,
 }
@@ -215,16 +217,14 @@ pub struct Level {
     /// Clear flat places for a helicopter, on the ground and facing `yaw`.
     pub helipads: Vec<SpawnPoint>,
     pub vehicles: Vec<VehicleSpawn>,
+    /// The hash of the map file it came from, which the rules hash covers, or 0 for one built in code.
+    pub source: u64,
 }
 
 impl Level {
-    /// The map with this name, if there is one.
+    /// The map with this name, if there is one, from the maps folder or else built in. See [`MapData`].
     pub fn named(name: &str) -> Option<Self> {
-        match name {
-            "range" => Some(Self::training_range()),
-            "town" => Some(MapSpec::town().build()),
-            _ => None,
-        }
+        MapData::find(name).ok()?.level().ok()
     }
 
     /// Flat open ground and nothing else, `size` metres across.
@@ -245,6 +245,7 @@ impl Level {
             sentry: SpawnPoint { pos: Vec3::new(0.0, 0.1, 0.0), yaw: 0.0 },
             helipads: Vec::new(),
             vehicles: Vec::new(),
+            source: 0,
         }
     }
 
@@ -293,6 +294,7 @@ impl Level {
             sentry: SpawnPoint { pos: spawn + RANGE_SENTRY, yaw: 0.05 },
             helipads: Vec::new(),
             vehicles: Vec::new(),
+            source: 0,
         };
         for (kind, x, z) in [(0, 14.0, 7.0), (0, -14.0, 7.0), (1, -22.0, 7.0)] {
             level.vehicles.push(VehicleSpawn { kind, pos: Vec3::new(x, level.ground(x, z), z), yaw: 0.0 });

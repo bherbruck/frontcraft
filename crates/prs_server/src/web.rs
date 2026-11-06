@@ -111,7 +111,7 @@ fn parse(request: &str) -> Option<Request<'_>> {
     Some(Request { head_only, address, versioned: query.split('&').any(|q| q.starts_with(VERSIONED_QUERY)), accepts })
 }
 
-fn answer_status(stream: &mut TcpStream, status: &str) -> io::Result<()> {
+pub fn answer_status(stream: &mut TcpStream, status: &str) -> io::Result<()> {
     let body = format!("{status}\n");
     write!(stream, "HTTP/1.1 {status}\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len())
 }
@@ -182,6 +182,35 @@ impl WebRoot {
             }
             stream.write_all(&piece[..read])?;
         }
+    }
+}
+
+/// The map this server plays, at `/map/<name>.toml`, with or without a page, for clients that do not have it.
+/// The same bytes it hashed, so whatever fetches it gets what it was told the hash of.
+pub struct MapFile {
+    address: String,
+    text: Vec<u8>,
+}
+
+impl MapFile {
+    pub fn new(name: &str, text: &str) -> Self {
+        Self { address: format!("/map/{name}.toml"), text: text.as_bytes().to_vec() }
+    }
+
+    /// Answers if this asks for the map, and leaves anything else for whatever serves the page.
+    pub fn respond(&self, stream: &mut TcpStream, request: &str) -> Option<io::Result<()>> {
+        let asked = parse(request)?;
+        if asked.address != self.address {
+            return None;
+        }
+        // Asked for by its hash, it can be kept for good. A page from anywhere may fetch it: it is no secret.
+        let cache = if asked.versioned { "public, max-age=31536000, immutable" } else { "no-cache" };
+        let head = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nCache-Control: {cache}\r\nAccess-Control-Allow-Origin: *\r\nX-Content-Type-Options: nosniff\r\nConnection: close\r\n\r\n",
+            self.text.len()
+        );
+        let sent = stream.write_all(head.as_bytes()).and_then(|()| if asked.head_only { Ok(()) } else { stream.write_all(&self.text) });
+        Some(sent)
     }
 }
 

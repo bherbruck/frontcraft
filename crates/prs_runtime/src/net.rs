@@ -16,7 +16,10 @@ use prs_mode::{Match, Mode};
 use prs_net_sim::mode::encode_cmd;
 use prs_net_sim::{SimClient, WireEvent};
 use prs_sim::protocol::{Buttons, PlayerCmd, TICK_DT};
-use prs_sim::{Level, Sim};
+use prs_sim::{Level, MapData, Sim};
+use std::sync::{Arc, Mutex};
+
+use crate::map_fetch::{self, Fetch};
 
 use crate::{
     GameMode, LevelReady, LocalSoldier, LocalState, LocalView, ModeMessage, PendingInput, PendingModeCmds, SimMessage, SimResource,
@@ -30,6 +33,12 @@ pub enum NetStatus {
     Offline,
     Connecting {
         server: String,
+    },
+    /// Fetching the map the server plays, which this game does not have.
+    LoadingMap {
+        name: String,
+        received: usize,
+        total: usize,
     },
     Playing {
         rtt_ms: f32,
@@ -52,6 +61,9 @@ impl NetStatus {
         match self {
             Self::Offline | Self::Playing { .. } => None,
             Self::Connecting { server } => Some(format!("Connecting to {server}")),
+            Self::LoadingMap { name, received, total } => {
+                Some(format!("Loading the map {name}: {} of {} KB", received.div_ceil(1000), total.div_ceil(1000)))
+            }
             Self::Refused { reason } => Some(format!("The server refused: {reason}")),
             Self::Lost => Some("Connection lost. Reload the page to try again.".into()),
         }
@@ -94,6 +106,9 @@ struct NetLink {
     server: String,
     /// Whether what is in [`SimResource`] is the real level yet.
     joined: bool,
+    /// The map once it is here, for the game to be built on.
+    map: Arc<Mutex<Option<MapData>>>,
+    fetching: Option<Fetch>,
     gave_up: bool,
 }
 
@@ -104,16 +119,48 @@ pub(crate) fn placeholder_sim() -> Sim {
     sim
 }
 
-/// The client's copy of the game once the server has said what it is playing. Its sim moves into
-/// [`SimResource`] on joining, and the game holds the placeholder in return.
-fn make_game(map: &str, mode: &str) -> Option<SimClient> {
-    SimClient::setup(map, mode)
+/// The client's copy of the game once the server has said what it is playing and its map is here. Its sim
+/// moves into [`SimResource`] on joining, and the game holds the placeholder in return.
+fn make_game(map: Arc<Mutex<Option<MapData>>>) -> impl FnOnce(&str, &str) -> Option<SimClient> {
+    move |_, mode| {
+        let level = map.lock().ok()?.take()?.level().ok()?;
+        Some(SimClient::with_sim(Sim::new(level), Mode::named(mode)?))
+    }
+}
+
+/// Finds the map the server is playing, here or by fetching it, and lets the session go on once it has it.
+fn get_map(link: &mut NetLink) {
+    let Some(offer) = link.session.map_wanted().cloned() else { return };
+    let found = match &link.fetching {
+        None => match map_fetch::find_local(&offer) {
+            Some(data) => Some(Ok(data)),
+            None => {
+                link.fetching = Some(Fetch::start(&link.server, &offer));
+                None
+            }
+        },
+        Some(fetch) => fetch.take(),
+    };
+    match found {
+        Some(Ok(data)) => {
+            *link.map.lock().unwrap() = Some(data);
+            link.fetching = None;
+            link.session.map_ready();
+        }
+        Some(Err(why)) => {
+            link.fetching = None;
+            link.session.map_unavailable(why);
+        }
+        None => {}
+    }
 }
 
 pub(crate) fn build(app: &mut App, server: String, name: String) {
     // Anything longer than Bevy will catch up on is an absence.
     let cfg = ClientConfig { name, away_after_s: MAX_FRAME_TIME.as_secs_f32(), ..default() };
-    let session = ClientSession::new(Box::new(make_game), cfg);
+    let map = Arc::new(Mutex::new(None));
+    let mut session = ClientSession::new(Box::new(make_game(map.clone())), cfg);
+    session.wait_for_map();
     let socket = connect(&server);
     let mut virtual_time = Time::<Virtual>::default();
     // The server does not wait, so a slow machine has to run every tick it can't draw rather than fall
@@ -122,7 +169,7 @@ pub(crate) fn build(app: &mut App, server: String, name: String) {
     app.insert_resource(virtual_time)
         .insert_resource(NetStatus::Connecting { server: server.clone() })
         .init_resource::<VoiceLink>()
-        .insert_non_send(NetLink { session, socket, server, joined: false, gave_up: false })
+        .insert_non_send(NetLink { session, socket, server, joined: false, map, fetching: None, gave_up: false })
         .add_systems(FixedUpdate, tick_online)
         .add_systems(RunFixedMainLoop, start_frame.in_set(RunFixedMainLoopSystems::BeforeFixedMainLoop))
         .add_systems(
@@ -228,6 +275,7 @@ fn tick_online(
         link.swap_sim(&mut shown.0);
     }
     pump(&mut link.session, &mut link.socket);
+    get_map(link);
     let intent = &mut *input;
     link.session.update(TICK_DT, |tick| {
         let cmd = PlayerCmd {
@@ -348,9 +396,15 @@ fn status_of(link: &mut NetLink, sim: &Sim) -> NetStatus {
             let server = if note.is_empty() { String::new() } else { format!(" The server runs {note}.") };
             NetStatus::Refused { reason: format!("{}. You run {you}.{server}", refused(RejectReason::Rules)) }
         }
+        ClientState::Rejected(RejectReason::UnknownMap) if !link.session.reject_note().is_empty() => {
+            NetStatus::Refused { reason: link.session.reject_note().to_owned() }
+        }
         ClientState::Rejected(reason) => NetStatus::Refused { reason: refused(reason).into() },
         _ if link.socket.state() == TransportState::Closed => NetStatus::Lost,
-        ClientState::Joining => NetStatus::Connecting { server: link.server.clone() },
+        ClientState::Joining => match (link.session.map_wanted(), &link.fetching) {
+            (Some(offer), Some(fetch)) => NetStatus::LoadingMap { name: offer.name.clone(), received: fetch.received(), total: offer.bytes as usize },
+            _ => NetStatus::Connecting { server: link.server.clone() },
+        },
         ClientState::Playing => NetStatus::Playing {
             rtt_ms: link.session.clock().map_or(0.0, |c| c.rtt_ms()),
             lead_ticks: link
@@ -433,5 +487,57 @@ mod tests {
             locals.push(app.world().resource::<LocalSoldier>().0);
         }
         assert_ne!(locals[0], locals[1], "each is their own soldier");
+    }
+
+    /// A server playing a map no client was built with: the first fetches it from the server, checks it and
+    /// keeps it, and the second finds it kept.
+    #[test]
+    fn a_client_fetches_a_map_it_has_never_seen_from_the_server_and_keeps_it() {
+        let cache = std::env::temp_dir().join(format!("prs-map-cache-{}", std::process::id()));
+        // SAFETY: no other test here reads this, and it is set before anything is fetched.
+        unsafe { std::env::set_var("PRS_CACHE_DIR", &cache) };
+        let range = MapData::built_in("range").unwrap();
+        let text = range.text.replacen("\ntargets = [\n", "\ntargets = [\n  [3.0, 0.5, -40.0],\n", 1);
+        let outpost = MapData::new("outpost", text);
+        let served = outpost.text.clone();
+        let cfg = HostConfig {
+            bind: SocketAddr::from(([127, 0, 0, 1], 0)),
+            status_every: None,
+            run_for: Some(Duration::from_secs(10)),
+            plain_http: Some(prs_net::ws_host::PlainHttp(std::sync::Arc::new(move |mut stream, request| {
+                use std::io::Write;
+                let answer = if request.starts_with("GET /map/outpost.toml") {
+                    format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{served}", served.len())
+                } else {
+                    "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n".to_owned()
+                };
+                let _ = stream.write_all(answer.as_bytes());
+            }))),
+            ..Default::default()
+        };
+        let host = WsHost::bind(cfg).unwrap();
+        let url = format!("ws://{}", host.local_addr().unwrap());
+        let map = outpost.clone();
+        std::thread::spawn(move || {
+            let game = SimServer::with_map(&map, "practice", SimServerConfig::default()).unwrap();
+            host.run(GameServer::new(game, ServerConfig::default()));
+        });
+
+        for which in ["fetched", "kept"] {
+            let mut app = client(&url);
+            let start = Instant::now();
+            while start.elapsed() < Duration::from_secs(4) && app.world().get_resource::<LevelReady>().is_none() {
+                app.update();
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            let status = app.world().resource::<NetStatus>().clone();
+            assert!(matches!(status, NetStatus::Playing { .. }), "{which}: {status:?}");
+            let sim = &app.world().resource::<SimResource>().0;
+            assert_eq!(sim.level.source, outpost.hash, "{which}: on the server's map");
+            assert_eq!(sim.level.targets.len(), range.level().unwrap().targets.len() + 1, "{which}");
+        }
+        let kept = std::fs::read_dir(cache.join("prs").join("maps")).unwrap().count();
+        let _ = std::fs::remove_dir_all(&cache);
+        assert_eq!(kept, 1);
     }
 }

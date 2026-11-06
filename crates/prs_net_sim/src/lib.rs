@@ -77,13 +77,14 @@ pub enum AnyPose {
 /// Hashes everything both sides must share and neither sends: rules, guns and the map. Prediction by
 /// other rules than the server's would be wrong on every tick, so a client that differs is refused.
 ///
-/// The map goes in by its shape and not its numbers. Terrain and buildings come out of `sin` and `cos`,
-/// and those differ in the last bits between native and wasm (see [`fingerprint`]), so hashing the
-/// numbers would refuse every browser. The configs are plain constants, and those do agree.
+/// The map goes in by its shape and the hash of its file, and not its numbers. Terrain and buildings come
+/// out of `sin` and `cos`, and those differ in the last bits between native and wasm (see [`fingerprint`]),
+/// so hashing the numbers would refuse every browser. The same file on both sides is the same map. The
+/// configs are plain constants, and those do agree.
 pub fn rules_hash(sim: &Sim, mode: &Mode) -> u64 {
     let level = &sim.level;
     prs_net::hash_text(&format!(
-        "{:?}{:?}{:?}{:?}{:?}{:?}{:?}{:?}{:?}{:?}{:?}{:?} {} {} {} {} {} {} {} {}",
+        "{:?}{:?}{:?}{:?}{:?}{:?}{:?}{:?}{:?}{:?}{:?}{:?} {} {} {} {} {} {} {} {} {:016x}",
         mode,
         sim.vehicle_cfgs,
         sim.heli_cfg,
@@ -104,6 +105,7 @@ pub fn rules_hash(sim: &Sim, mode: &Mode) -> u64 {
         level.rooms.len(),
         sim.vehicles.len(),
         sim.helicopters.len(),
+        level.source,
     ))
 }
 

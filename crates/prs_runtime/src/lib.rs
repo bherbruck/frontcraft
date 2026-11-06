@@ -5,6 +5,7 @@
 //! this runs here in `tick_sim`. With one, [`net`] runs it instead and leaves those three alone.
 
 mod bleed;
+mod map_fetch;
 mod net;
 
 use bevy::prelude::*;

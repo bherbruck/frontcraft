@@ -12,7 +12,7 @@ use crate::entity::{MAX_FIELDS, NetEntity, read_count, read_update, write_update
 use crate::game::Schema;
 
 /// Bumped on any change to this file. A game's own format is covered by its rules hash.
-pub const PROTOCOL_VERSION: u16 = 6;
+pub const PROTOCOL_VERSION: u16 = 7;
 
 /// What the host's frames must not exceed. Set well above a full 64 player snapshot.
 pub const MAX_FRAME_BYTES: usize = 64 * 1024;
@@ -507,8 +507,9 @@ pub struct Welcome<S: Schema> {
 
 pub enum ServerMsg<S: Schema> {
     /// What is being played, so a client can set up the same before asking to join, and whether this
-    /// server carries voice.
-    Info { map: String, mode: String, voice: bool },
+    /// server carries voice. The map comes with the hash and length of its file, so a client can tell
+    /// whether the copy it has is the same one, or fetch it from the server.
+    Info { map: String, mode: String, voice: bool, map_hash: u64, map_bytes: u32 },
     Welcome(Welcome<S>),
     /// Why, and for different rules a note from the server saying what it is running.
     Reject(RejectReason, String),
@@ -632,12 +633,14 @@ pub fn read_text(r: &mut Reader) -> Result<String, WireError> {
     Ok(String::from_utf8_lossy(r.bytes(len)?).into_owned())
 }
 
-pub fn encode_info(map: &str, mode: &str, voice: bool) -> Vec<u8> {
+pub fn encode_info(map: &str, mode: &str, voice: bool, map_hash: u64, map_bytes: u32) -> Vec<u8> {
     let mut w = Writer::default();
     w.u8(TAG_INFO);
     write_text(map, &mut w);
     write_text(mode, &mut w);
     w.u8(u8::from(voice));
+    w.u64(map_hash);
+    w.varu(map_bytes as u64);
     w.buf
 }
 
@@ -664,7 +667,13 @@ impl<S: Schema> ServerMsg<S> {
     pub fn decode(bytes: &[u8], baselines: &dyn Baselines<S>) -> Result<Self, WireError> {
         let mut r = Reader::new(bytes);
         match r.u8()? {
-            TAG_INFO => Ok(Self::Info { map: read_text(&mut r)?, mode: read_text(&mut r)?, voice: r.u8()? != 0 }),
+            TAG_INFO => Ok(Self::Info {
+                map: read_text(&mut r)?,
+                mode: read_text(&mut r)?,
+                voice: r.u8()? != 0,
+                map_hash: r.u64()?,
+                map_bytes: r.varu32()?,
+            }),
             TAG_VOICE => Ok(Self::Voice(read_voice(&mut r)?)),
             TAG_WELCOME => Ok(Self::Welcome(Welcome {
                 soldier: r.u16()?,

@@ -7,6 +7,10 @@ license.workspace = true
 [dependencies]
 glam.workspace = true
 prs_collision.workspace = true
+serde.workspace = true
+toml.workspace = true
 
 [dev-dependencies]
 prs_movement.workspace = true
+# Only to write the map files from the code that used to build them.
+toml = { workspace = true, features = ["display"] }

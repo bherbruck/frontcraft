@@ -7,7 +7,7 @@ use prs_net::wire::VoiceChannel;
 use prs_ai::Troops;
 use prs_mode::{Deployment, Match, Mode, ModeCmd};
 use prs_sim::protocol::PlayerCmd;
-use prs_sim::{Level, Sim, SimEvent, SoldierId};
+use prs_sim::{MapData, Sim, SimEvent, SoldierId};
 
 use crate::rides::OwnState;
 use crate::{SimSchema, WireEvent, goes_on_wire, mode, remote, rides, rules_hash, shared};
@@ -76,6 +76,8 @@ pub struct SimServer {
     bots: Option<Troops>,
     cfg: SimServerConfig,
     map: String,
+    /// The length of the map's file, when it came from one.
+    map_bytes: u32,
     mode: String,
     rules: u64,
     free: Vec<SoldierId>,
@@ -91,7 +93,16 @@ pub struct SimServer {
 impl SimServer {
     /// `None` if there is no map or mode by that name.
     pub fn new(map: &str, mode: &str, cfg: SimServerConfig) -> Option<Self> {
-        Some(Self::with_sim(Sim::new(Level::named(map)?), map, mode, Mode::named(mode)?, cfg))
+        Self::with_map(&MapData::find(map).ok()?, mode, cfg).ok()
+    }
+
+    /// For a map file, which clients are told the hash and length of so they can fetch it if theirs differs.
+    pub fn with_map(map: &MapData, mode: &str, cfg: SimServerConfig) -> Result<Self, String> {
+        let level = map.level().map_err(|error| error.to_string())?;
+        let found = Mode::named(mode).ok_or_else(|| format!("no mode called {mode}"))?;
+        let mut server = Self::with_sim(Sim::new(level), &map.name, mode, found, cfg);
+        server.map_bytes = map.text.len() as u32;
+        Ok(server)
     }
 
     /// For a sim set up differently, as a mod would. Clients must set theirs up the same.
@@ -114,6 +125,7 @@ impl SimServer {
             bots,
             cfg,
             map: map.to_owned(),
+            map_bytes: 0,
             mode: mode_name.to_owned(),
             free: Vec::new(),
             parked: Vec::new(),
@@ -151,6 +163,10 @@ impl ServerGame for SimServer {
 
     fn map_name(&self) -> String {
         self.map.clone()
+    }
+
+    fn map_file(&self) -> (u64, u32) {
+        (self.sim.level.source, self.map_bytes)
     }
 
     fn mode_name(&self) -> String {

@@ -30,6 +30,8 @@ pub mod wt_host;
 #[cfg(not(target_arch = "wasm32"))]
 mod ws_native;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod http_native;
+#[cfg(not(target_arch = "wasm32"))]
 mod wt_native;
 #[cfg(target_arch = "wasm32")]
 mod ws_wasm;

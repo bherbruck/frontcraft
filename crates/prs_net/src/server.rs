@@ -384,7 +384,8 @@ impl<G: ServerGame> GameServer<G> {
         if protocol != PROTOCOL_VERSION {
             self.refuse(id, RejectReason::Protocol);
         } else {
-            self.outgoing.push((id, encode_info(&self.game.map_name(), &self.game.mode_name(), self.cfg.voice.enabled)));
+            let (map_hash, map_bytes) = self.game.map_file();
+            self.outgoing.push((id, encode_info(&self.game.map_name(), &self.game.mode_name(), self.cfg.voice.enabled, map_hash, map_bytes)));
         }
     }
 

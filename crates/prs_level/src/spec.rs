@@ -5,7 +5,7 @@ use crate::Paint;
 use glam::Vec2;
 use prs_collision::Surface;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct MapSpec {
     /// Where the scatter of trees and rubble starts from.
     pub seed: u32,
@@ -30,7 +30,7 @@ pub struct MapSpec {
     pub vehicles: Vec<(u8, SpawnSpec)>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct TerrainSpec {
     pub size: f32,
     /// Coarsest grid across the map. Cells split where the ground needs it.
@@ -48,7 +48,7 @@ pub struct TerrainSpec {
 }
 
 /// A long sine swell across the land.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Wave {
     pub frequency: Vec2,
     pub phase: f32,
@@ -56,7 +56,7 @@ pub struct Wave {
 }
 
 /// A smooth elliptical rise, or a dip if `height` is negative.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Hill {
     pub at: Vec2,
     pub radius: Vec2,
@@ -66,7 +66,7 @@ pub struct Hill {
 
 /// Quiets waves and hills within `radius`, fading back to full by `fade`, so a town can sit on
 /// gentle ground. `keep` is how much of them is left at the middle.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Calm {
     pub at: Vec2,
     pub radius: f32,
@@ -75,7 +75,7 @@ pub struct Calm {
 }
 
 /// High ground around the edge. Its outer face is too steep to climb, which is what ends the map.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Rim {
     /// Distance from the map edge where the ground starts to rise.
     pub inset: f32,
@@ -89,7 +89,7 @@ pub struct Rim {
 
 /// How buildings are dimensioned. Fitted to `MoveConfig`: a test holds the cover heights to its eye
 /// heights, and others walk the stairs and doorways.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct BuildStyle {
     pub wall: f32,
     pub partition: f32,
@@ -173,7 +173,7 @@ impl Default for BuildStyle {
 }
 
 /// What the ground is, which only sets its colour. The land is one surface whatever it looks like.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Ground {
     /// Coloured by height and slope, as on the training range.
     #[default]
@@ -210,7 +210,7 @@ impl Ground {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Road {
     pub points: Vec<Vec2>,
     pub width: f32,
@@ -220,7 +220,7 @@ pub struct Road {
 }
 
 /// A trench cut into the land.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Ditch {
     pub points: Vec<Vec2>,
     /// Across the top, bank to bank.
@@ -231,7 +231,7 @@ pub struct Ditch {
 }
 
 /// A rotated rectangle of ground colour.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Zone {
     pub at: Vec2,
     pub half: Vec2,
@@ -241,7 +241,7 @@ pub struct Zone {
 
 /// Walls and buildings on one level pad of ground. Everything inside is in its local frame, with
 /// x to the right and z towards the viewer at yaw zero. The side that faces +z is [`Side::S`].
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Compound {
     pub at: Vec2,
     pub yaw: f32,
@@ -254,14 +254,14 @@ pub struct Compound {
     pub props: Vec<Placed>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct YardWall {
     pub height: f32,
     pub paint: Paint,
     pub gates: Vec<Gate>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Gate {
     pub side: Side,
     /// Along the wall from its middle.
@@ -269,7 +269,7 @@ pub struct Gate {
     pub width: f32,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Side {
     /// Faces -z.
     N,
@@ -301,7 +301,7 @@ impl Side {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Building {
     pub at: Vec2,
     pub yaw: f32,
@@ -321,7 +321,7 @@ pub struct Building {
     pub fixtures: Vec<Part>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub enum Roof {
     /// Walkable behind a parapet.
     Flat { paint: Paint },
@@ -329,7 +329,7 @@ pub enum Roof {
     Gable { paint: Paint, pitch: f32 },
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Opening {
     pub side: Side,
     pub storey: u32,
@@ -338,7 +338,7 @@ pub struct Opening {
     pub kind: OpeningKind,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum OpeningKind {
     Door,
     WideDoor,
@@ -346,7 +346,7 @@ pub enum OpeningKind {
 }
 
 /// An inside wall along one axis, with doors at distances along it from `from`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Partition {
     pub storey: u32,
     pub from: Vec2,
@@ -355,7 +355,7 @@ pub struct Partition {
 }
 
 /// A straight run of stairs.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Flight {
     /// Middle of the front edge of the first tread, in the building's frame.
     pub foot: Vec2,
@@ -368,7 +368,7 @@ pub struct Flight {
     pub finish: FlightFinish,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub enum FlightFinish {
     /// Comes up through a hole in the floor it reaches, with a rail on its open sides. `open_right`
     /// and `open_left` are as seen climbing.
@@ -378,7 +378,7 @@ pub enum FlightFinish {
 }
 
 /// A wall across open land that follows the ground, in short straight lengths.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct FieldWall {
     pub points: Vec<Vec2>,
     pub height: f32,
@@ -394,7 +394,7 @@ pub struct FieldWall {
     pub gaps: Vec<(f32, f32)>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Rubble {
     pub at: Vec2,
     pub radius: f32,
@@ -403,7 +403,7 @@ pub struct Rubble {
     pub paint: Paint,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Placed {
     pub prop: Prop,
     pub at: Vec2,
@@ -411,7 +411,7 @@ pub struct Placed {
 }
 
 /// Small solid things. [`Prop::parts`] says what each is made of.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Prop {
     Crate,
     CrateStack,
@@ -431,7 +431,7 @@ pub enum Prop {
 /// One box of a prop: offset from the prop's origin on the ground, half size, yaw, paint.
 pub type Part = ([f32; 3], [f32; 3], f32, Paint);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Woodland {
     pub kind: crate::TreeKind,
     pub shape: WoodShape,
@@ -439,7 +439,7 @@ pub struct Woodland {
     pub radius: (f32, f32),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub enum WoodShape {
     /// Trees along a line, about `spacing` apart.
     Line { points: Vec<Vec2>, spacing: f32, jitter: f32 },
@@ -449,7 +449,7 @@ pub enum WoodShape {
     Rows { at: Vec2, half: Vec2, yaw: f32, spacing: f32 },
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct TeamSpec {
     pub name: String,
     pub spawns: Vec<SpawnSpec>,
@@ -457,13 +457,13 @@ pub struct TeamSpec {
     pub base_radius: f32,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct SpawnSpec {
     pub at: Vec2,
     pub yaw: f32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct CapturePointSpec {
     pub name: String,
     pub at: Vec2,

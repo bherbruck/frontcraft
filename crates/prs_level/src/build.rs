@@ -78,6 +78,7 @@ impl MapSpec {
             sentry: SpawnPoint { pos: Vec3::ZERO, yaw: 0.0 },
             helipads: Vec::new(),
             vehicles: Vec::new(),
+            source: 0,
         };
         let mut builder = Builder { spec: self, style: &self.style, relief: &relief, level: &mut level, scatter: Scatter(self.seed) };
         builder.compounds();

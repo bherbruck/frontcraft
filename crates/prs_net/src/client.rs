@@ -166,9 +166,20 @@ struct Joined<G: PredictedGame> {
 /// Builds the game once the server has said which map and mode, or says it does not have them.
 pub type GameFactory<G> = Box<dyn FnOnce(&str, &str) -> Option<G>>;
 
+/// Which map a server is playing, and the hash and length of its file.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MapOffer {
+    pub name: String,
+    pub hash: u64,
+    pub bytes: u32,
+}
+
 pub struct ClientSession<G: PredictedGame> {
     cfg: ClientConfig,
     factory: Option<GameFactory<G>>,
+    /// Whether to wait to be told the map is here before setting up the game.
+    map_gate: bool,
+    held_info: Option<(MapOffer, String)>,
     /// Built, and held until `Welcome` says who we are.
     waiting: Option<G>,
     state: ClientState,
@@ -215,6 +226,8 @@ impl<G: PredictedGame> ClientSession<G> {
         Self {
             cfg,
             factory: Some(factory),
+            map_gate: false,
+            held_info: None,
             waiting: None,
             state: ClientState::Joining,
             reject_note: String::new(),
@@ -368,9 +381,15 @@ impl<G: PredictedGame> ClientSession<G> {
         self.stats.frames_down += 1;
         let lookup = Lookup::<G> { store: &self.baselines, interp: self.joined.as_ref().map(|j| &j.interp) };
         match ServerMsg::<G::S>::decode(frame, &lookup) {
-            Ok(ServerMsg::Info { map, mode, voice }) => {
+            Ok(ServerMsg::Info { map, mode, voice, map_hash, map_bytes }) => {
                 self.voice_allowed = voice;
-                self.on_info(&map, mode);
+                let offer = MapOffer { name: map, hash: map_hash, bytes: map_bytes };
+                if self.map_gate && self.factory.is_some() {
+                    // Held until whoever is getting the map says it is here. Asking again brings this again.
+                    self.held_info = Some((offer, mode));
+                } else {
+                    self.on_info(&offer.name, mode);
+                }
             }
             Ok(ServerMsg::Voice(frame)) => {
                 if self.voice_in.len() < VOICE_IN_FRAMES {
@@ -387,6 +406,33 @@ impl<G: PredictedGame> ClientSession<G> {
             Err(WireError::MissingBaseline) => self.stats.missing_baselines += 1,
             Err(_) => self.stats.bad_frames += 1,
         }
+    }
+
+    /// Have the game wait, once the server has said which map, until [`Self::map_ready`]: the map may have to
+    /// be fetched first. Without this the factory is called straight away.
+    pub fn wait_for_map(&mut self) {
+        self.map_gate = true;
+    }
+
+    /// The map the server is playing, while this is waiting for it.
+    pub fn map_wanted(&self) -> Option<&MapOffer> {
+        self.held_info.as_ref().map(|(offer, _)| offer)
+    }
+
+    /// The map is here: set up the game and ask to join.
+    pub fn map_ready(&mut self) {
+        if let Some((offer, mode)) = self.held_info.take() {
+            self.map_gate = false;
+            self.on_info(&offer.name, mode);
+        }
+    }
+
+    /// The map could not be had, so there is no joining.
+    pub fn map_unavailable(&mut self, why: String) {
+        self.held_info = None;
+        self.factory = None;
+        self.state = ClientState::Rejected(RejectReason::UnknownMap);
+        self.reject_note = why;
     }
 
     fn on_info(&mut self, map: &str, mode: String) {

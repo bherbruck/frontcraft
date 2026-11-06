@@ -3,7 +3,8 @@
 //! A host sets these through the environment instead: `PORT`, `PRS_MAP`, `PRS_MODE`, `PRS_MOD`, `PRS_BOTS`,
 //! `PRS_MAX_PLAYERS`, `PRS_ALLOWED_ORIGINS` (comma separated), `PRS_WEB_DIR`, `PRS_VOICE=off`, `PRS_WT_PORT`
 //! (`off` for none), `PRS_WT_CERT` and `PRS_WT_KEY`. Arguments win. WebSockets, the page out of the web
-//! folder, `GET /health` and `GET /webtransport` all come in on one TCP port.
+//! folder, `GET /health`, `GET /webtransport` and the map at `GET /map/<name>.toml` all come in on one TCP
+//! port. `--map` is a name, from `PRS_MAPS_DIR` or `maps` here or else built in, or a path to a `.toml`.
 //!
 //! WebTransport is on a UDP port of its own, 4433 unless told otherwise. Without a certificate it makes
 //! one for itself, which browsers accept only from a page that names it, as this server's pages do: fine
@@ -14,7 +15,8 @@ use prs_net::server::{GameServer, ServerConfig, VoiceConfig};
 use prs_net::ws_host::{HostConfig, PlainHttp, WsHost};
 use prs_net::wt_host::{WtCertificate, WtConfig};
 use prs_net_sim::{SimServer, SimServerConfig};
-use prs_server::web::{WebConfig, WebRoot};
+use prs_sim::MapData;
+use prs_server::web::{MapFile, WebConfig, WebRoot, answer_status};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -69,20 +71,31 @@ fn main() -> std::io::Result<()> {
             _ => usage(&arg),
         }
     }
+    // A name from the maps folder or built in, or a path to a file.
+    let data = MapData::find(&map).unwrap_or_else(|error| {
+        eprintln!("{error}");
+        std::process::exit(2);
+    });
+    let map = data.name.clone();
     // A range is for practising. Anywhere else there is a match to play, unless told otherwise.
     let mode = mode.unwrap_or_else(|| if map == "range" { "practice" } else { "aas" }.to_owned());
     let bots_per_team = bots.map(|total: usize| total.div_ceil(2));
-    let game = SimServer::new(&map, &mode, sim_config(bots_per_team, voice.heard_metres)).unwrap_or_else(|| {
-        eprintln!("no map called {map} or no mode called {mode}");
+    let game = SimServer::with_map(&data, &mode, sim_config(bots_per_team, voice.heard_metres)).unwrap_or_else(|error| {
+        eprintln!("{error}");
         std::process::exit(2);
     });
-    if let Some(folder) = web_dir {
-        let site = Arc::new(WebRoot::new(folder.as_ref(), WebConfig::default())?);
-        host.plain_http = Some(PlainHttp(Arc::new(move |stream, request| {
-            // Whoever asked has gone or asked for nonsense, and either way the game carries on.
-            let _ = site.respond(stream, request);
-        })));
-    }
+    let site = web_dir.map(|folder| WebRoot::new(folder.as_ref(), WebConfig::default())).transpose()?;
+    let map_file = MapFile::new(&data.name, &data.text);
+    host.plain_http = Some(PlainHttp(Arc::new(move |mut stream, request| {
+        // Whoever asked has gone or asked for nonsense, and either way the game carries on.
+        if map_file.respond(&mut stream, request).is_some() {
+            return;
+        }
+        let _ = match &site {
+            Some(site) => site.respond(stream, request),
+            None => answer_status(&mut stream, "404 Not Found"),
+        };
+    })));
     host.webtransport = webtransport(host.bind, wt_port, wt_cert, wt_key);
     let listening = WsHost::bind(host)?;
     println!("prs_server playing {mode} on {map} at ws://{}", listening.local_addr()?);

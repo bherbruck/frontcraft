@@ -48,7 +48,7 @@ pub use prs_mods;
 pub use prs_suppression as suppression;
 pub use prs_throwables as throwables;
 pub use prs_inventory as inventory;
-pub use prs_level::{CapturePoint, Level, Paint, Solid, SpawnPoint, TRUNK_HALF_HEIGHT, TRUNK_HALF_WIDTH, Team, VehicleSpawn};
+pub use prs_level::{CapturePoint, Level, MapData, MapError, valid_map_name, Paint, Solid, SpawnPoint, TRUNK_HALF_HEIGHT, TRUNK_HALF_WIDTH, Team, VehicleSpawn};
 pub use prs_collision::{CollisionWorld, Surface};
 pub use prs_movement as movement;
 pub use prs_protocol as protocol;

@@ -489,11 +489,22 @@ PRS_MAP=range PRS_SHOT=out.png PRS_SCENE=heli:cruise cargo run
 
 ## Maps
 
-A map is data. `MapSpec` in `crates/prs_level/src/spec.rs` describes the land, what stands on it and
-where the teams fight, and `MapSpec::build` turns that into the `Level` that collision and rendering
-both read, so what you see is what stops you. To add one, fill in a `MapSpec` (`town.rs` is the
-example, with kinds of building in `archetypes.rs`) and name it in `Level::named`. `PRS_MAP` chooses
-the map, and `DEFAULT_MAP` in `crates/prs_runtime/src/lib.rs` says which one you get without it.
+A map is a file, `maps/<name>.toml`, read when the game runs. It is a `[spec]`, a `MapSpec` from
+`crates/prs_level/src/spec.rs` that describes the land, what stands on it and where the teams fight, as the
+town is, or a `[terrain]` of heights with everything on it listed, as the range is, and either way pieces
+placed by hand on top, one to a line (`MapFile` in `crates/prs_level/src/maps.rs`). Building it gives the
+`Level` that collision and rendering both read, so what you see is what stops you. `PRS_MAP` (or `--map`)
+chooses the map by name or path, `PRS_MAPS_DIR` is where names are looked for, `maps` by default, and
+`DEFAULT_MAP` in `crates/prs_runtime/src/lib.rs` says which one you get without it.
+
+The game carries `maps/*.toml` inside it, for playing alone and for tests. A server sends the name of its map
+with the hash and length of its file, and serves the file at `/map/<name>.toml` under its own address, so
+`wss://host/range` serves `https://host/range/map/range.toml`. A client with a different copy, or none,
+fetches it from there, checks the hash and keeps it in `prs/maps` in its cache folder, or the browser's
+cache, before joining. The rules hash covers the file, so a client on another copy is refused as on
+another map. The town and range files are written from the code that used to build them, `town.rs` and
+`range.rs`: after changing that code, run `PRS_WRITE_MAPS=1 cargo test -p prs_level maps`, and a test holds
+the files to it otherwise.
 
 The town is a kilometre square with a ridge across each approach, so neither base sees the other or
 the village. Between them are walled compounds, streets of houses and shops, enterable floors and
