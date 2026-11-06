@@ -209,8 +209,11 @@ impl MapData {
 /// has. Every length, spacing and coordinate in a map is one of these, so nothing worked out from them can
 /// come to infinity or not a number.
 fn plain(value: &toml::Value, limits: &MapLimits, items: &mut usize) -> Result<(), String> {
+    let past = |n: f64| !(n.abs() <= limits.max_size as f64);
     match value {
-        toml::Value::Float(f) if !(f.abs() <= limits.max_size as f64) => Err(format!("a number past the size of a map: {f}")),
+        toml::Value::Float(f) if past(*f) => Err(format!("a number past the size of a map: {f}")),
+        // A whole number goes into a length as readily as any other.
+        toml::Value::Integer(i) if past(*i as f64) => Err(format!("a number past the size of a map: {i}")),
         toml::Value::Array(list) => {
             *items += list.len();
             if *items > limits.max_items {
@@ -218,7 +221,8 @@ fn plain(value: &toml::Value, limits: &MapLimits, items: &mut usize) -> Result<(
             }
             list.iter().try_for_each(|v| plain(v, limits, items))
         }
-        toml::Value::Table(table) => table.iter().try_for_each(|(_, v)| plain(v, limits, items)),
+        // Only the seed is a number that is no size of anything.
+        toml::Value::Table(table) => table.iter().filter(|(key, _)| key.as_str() != "seed").try_for_each(|(_, v)| plain(v, limits, items)),
         _ => Ok(()),
     }
 }
@@ -274,16 +278,23 @@ impl MapFile {
         }
         let style = &spec.style;
         positive("stair rise", style.stair_rise)?;
+        if !(style.plinth >= 0.0) {
+            return Err(format!("a plinth of {}", style.plinth));
+        }
         for building in spec.compounds.iter().flat_map(|c| &c.buildings) {
             if building.storeys > limits.max_storeys {
                 return Err(format!("a building of {} storeys", building.storeys));
             }
-            let storey = building.storey_height.unwrap_or(style.storey) as f64;
+            let storey = building.storey_height.unwrap_or(style.storey);
+            positive("storey height", storey)?;
             for flight in &building.flights {
                 if flight.to > building.storeys || flight.from.is_some_and(|from| from > flight.to) {
                     return Err(format!("stairs to storey {} of a building of {}", flight.to, building.storeys));
                 }
-                pieces += (storey * flight.to as f64 + style.plinth as f64).abs() / style.stair_rise as f64 + 1.0;
+                // As the builder climbs it: from the floor it starts on, or the ground, to the floor it reaches.
+                let floor = |level: u32| style.plinth as f64 + storey as f64 * level as f64;
+                let climb = floor(flight.to) - flight.from.map_or(0.0, floor);
+                pieces += (climb / style.stair_rise as f64).ceil().max(0.0);
             }
         }
         if !(pieces <= limits.max_pieces as f64) {
@@ -566,6 +577,18 @@ mod tests {
         assert!(matches!(swap(&line_of("\nto = "), "\nto = 1000000000"), Err(MapError::TooBig { .. })), "stairs to storey 1e9");
         assert!(matches!(swap(&line_of("\nstoreys = "), "\nstoreys = 1000000"), Err(MapError::TooBig { .. })));
         assert!(matches!(swap("seed = 1307", "seed = 1307\nignored = 1e300"), Err(MapError::TooBig { .. })), "a number past any map");
+        assert!(matches!(swap(&line_of("\nplinth = "), "\nplinth = -1.0"), Err(MapError::TooBig { .. })), "a plinth below ground");
+        let style = town.find("[spec.style]").unwrap();
+        let storey = style + town[style..].find("\nstorey = ").unwrap();
+        let end = storey + 1 + town[storey + 1..].find('\n').unwrap();
+        let flat = format!("{}\nstorey = 0.0{}", &town[..storey], &town[end..]);
+        assert!(matches!(level(&flat), Err(MapError::TooBig { .. })), "storeys of no height");
+        let half = town.find("half = [").unwrap();
+        let first = half + "half = [".len();
+        let comma = first + town[first..].find(',').unwrap();
+        let whole = format!("{}99999999999{}", &town[..first], &town[comma..]);
+        assert!(matches!(level(&whole), Err(MapError::TooBig { .. })), "a whole number past any map");
+        assert!(swap("seed = 1307", "seed = 4000000000").is_ok(), "a seed can be any u32");
         let many = format!("format = 1\ntargets = [{}]\n", vec!["[0.0, 0.0, 0.0]"; 200_001].join(", "));
         assert!(matches!(level(&many), Err(MapError::TooBig { .. })));
         assert!(MapData::built_in("town").unwrap().level().is_ok() && MapData::built_in("range").unwrap().level().is_ok(), "the real maps fit");
