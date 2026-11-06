@@ -114,8 +114,8 @@ pub fn voice_volume(cfg: &VoiceTuning, distance: f32) -> f32 {
     cfg.carry.volume(distance) * ((to - distance) / (to - from).max(1e-3)).clamp(0.0, 1.0)
 }
 
-/// What a player has chosen, kept with their other settings. The microphone starts off, and nothing
-/// is captured until they turn it on and press to talk.
+/// What a player has chosen, kept with their other settings. The microphone starts on, but nothing is
+/// captured until they press to talk, and the browser asks them before the first time.
 #[derive(Resource, Clone, Copy, Debug, PartialEq)]
 pub struct VoiceSettings {
     mic_on: bool,
@@ -124,7 +124,7 @@ pub struct VoiceSettings {
 
 impl Default for VoiceSettings {
     fn default() -> Self {
-        Self { mic_on: false, volume: 1.0 }
+        Self { mic_on: true, volume: 1.0 }
     }
 }
 
@@ -463,9 +463,9 @@ mod tests {
     }
 
     #[test]
-    fn the_microphone_starts_off_and_the_volume_stays_in_range() {
+    fn the_microphone_starts_on_and_the_volume_stays_in_range() {
         let mut settings = VoiceSettings::default();
-        assert!(!settings.mic_on());
+        assert!(settings.mic_on());
         settings.set_volume(5.0);
         assert_eq!(settings.volume(), 1.0);
         settings.set_volume(-1.0);

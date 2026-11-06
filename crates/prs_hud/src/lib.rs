@@ -122,7 +122,7 @@ const INTRO: &str = "CLICK TO PLAY\n\n\
     1 2 guns   3 4 bandage, medkit: hold LEFT to treat an ally in front of you or yourself\n\
     F use what you face: a kit, a door or hatch, and get out of a seat   1 2 3 4 in a seat change seat\n\
     B hold to bandage yourself, anywhere   I what you carry   M map   hold TAB scoreboard   ENTER squad and kit   T place rally point (squad leader)\n\
-    Hold CAPS LOCK, H or MOUSE 4 talk out loud   Y or MOUSE 5 squad radio: turn the microphone on below\n\
+    Hold CAPS LOCK, H or MOUSE 4 talk out loud   Y or MOUSE 5 squad radio\n\
     C rest the gun   ALT free look   [ ] sensitivity   F3 tuning overlay   F4 view from outside   ESC pause\n\n\
     Stop. Get low. Let it settle. One shot.";
 

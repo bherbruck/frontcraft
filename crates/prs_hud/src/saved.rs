@@ -53,7 +53,8 @@ impl Saved {
                 "master_volume" => out.master_volume = value,
                 "effects_volume" => out.effects_volume = value,
                 "rest_stops_at_arc" => out.rest_stops_at_arc = value != 0.0,
-                "mic_on" => out.mic_on = value != 0.0,
+                // Not "mic_on": that was saved as off for everyone before the microphone started on.
+                "microphone" => out.mic_on = value != 0.0,
                 "voice_volume" => out.voice_volume = value,
                 "hud_size" => out.hud_size = value,
                 "sound_set" if value == 0.0 => out.sound_set = Some(SoundSet::New),
@@ -71,7 +72,7 @@ impl Saved {
             None => "",
         };
         format!(
-            "fov = {}\nzoom_fov = {}\nsensitivity = {}\nmaster_volume = {}\neffects_volume = {}\nrest_stops_at_arc = {}\nmic_on = {}\nvoice_volume = {}\nhud_size = {}\n{sound_set}",
+            "fov = {}\nzoom_fov = {}\nsensitivity = {}\nmaster_volume = {}\neffects_volume = {}\nrest_stops_at_arc = {}\nmicrophone = {}\nvoice_volume = {}\nhud_size = {}\n{sound_set}",
             self.fov,
             self.zoom_fov,
             self.sensitivity,
