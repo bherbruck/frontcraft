@@ -499,7 +499,8 @@ chooses the map by name or path, `PRS_MAPS_DIR` is where names are looked for, `
 
 The game carries only the town and the range inside it, for playing alone. The bigger maps stay files in
 `maps/`: a server plays them from its maps folder (`PRS_MAPS_DIR`, or `maps` beside it), and a program run
-from a checkout, and every test, finds them in the source tree's `maps/`. A server sends the name of its map
+from a checkout in a debug build, and every test, finds them in the source tree's `maps/`. So a server playing
+claudabad, muttrah or fallujah has to be deployed with `maps/` beside it, or `PRS_MAPS_DIR` pointing at one. A server sends the name of its map
 with the hash and length of its file, and serves the file at `/map/<name>.toml` under its own address, so
 `wss://host/range` serves `https://host/range/map/range.toml`. A client with a different copy, or none,
 fetches it from there, checks the hash and keeps it in `prs/maps` in its cache folder, or the browser's

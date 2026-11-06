@@ -25,8 +25,9 @@ pub const FORMAT: u32 = 1;
 pub const BUILT_IN: &[(&str, &str)] = &[("range", include_str!("../../../maps/range.toml")), ("town", include_str!("../../../maps/town.toml"))];
 
 /// The maps folder of the source tree this was built from, so a program run from a checkout, and every test,
-/// finds the maps that are not built in.
-#[cfg(not(target_arch = "wasm32"))]
+/// finds the maps that are not built in. Only in a debug build: a release build carries neither the path of the
+/// machine it was built on nor a way to read maps from wherever that path happens to be where it runs.
+#[cfg(all(not(target_arch = "wasm32"), debug_assertions))]
 const SOURCE_MAPS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../maps");
 
 /// How big a map may make itself. A map can come from any server, so it is held to these before anything is
@@ -208,8 +209,8 @@ impl MapData {
     }
 
     /// A map by name from the maps folder, `PRS_MAPS_DIR` or `maps` where the program runs, or else one built
-    /// in, or else from the source tree's. Only ever a plain name, so whatever a server says, nothing outside
-    /// those folders is read.
+    /// in, or else, in a debug build, from the source tree's. Only ever a plain name, so whatever a server says,
+    /// nothing outside those folders is read.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn find(name: &str) -> Result<Self, MapError> {
         if !valid_name(name) {
@@ -218,10 +219,18 @@ impl MapData {
         let folder = std::env::var("PRS_MAPS_DIR").unwrap_or_else(|_| "maps".into());
         match std::fs::read_to_string(std::path::Path::new(&folder).join(format!("{name}.toml"))) {
             Ok(text) => Ok(Self::new(name, text)),
-            Err(_) => Self::built_in(name)
-                .or_else(|| std::fs::read_to_string(std::path::Path::new(SOURCE_MAPS).join(format!("{name}.toml"))).ok().map(|text| Self::new(name, text)))
-                .ok_or_else(|| MapError::NotFound(name.to_owned())),
+            Err(_) => Self::built_in(name).or_else(|| Self::from_source_tree(name)).ok_or_else(|| MapError::NotFound(name.to_owned())),
         }
+    }
+
+    #[cfg(all(not(target_arch = "wasm32"), debug_assertions))]
+    fn from_source_tree(name: &str) -> Option<Self> {
+        std::fs::read_to_string(std::path::Path::new(SOURCE_MAPS).join(format!("{name}.toml"))).ok().map(|text| Self::new(name, text))
+    }
+
+    #[cfg(all(not(target_arch = "wasm32"), not(debug_assertions)))]
+    fn from_source_tree(_: &str) -> Option<Self> {
+        None
     }
 
     /// A browser has no folder of its own, so only what is built in, and whatever a server sends.
