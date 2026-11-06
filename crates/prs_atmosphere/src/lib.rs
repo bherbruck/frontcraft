@@ -206,7 +206,7 @@ impl Default for Atmosphere {
                 Fill { towards: (Vec3::NEG_Y * 0.8 - away * 0.6).normalize(), color: Color::srgb(1.0, 0.76, 0.5), illuminance: 800.0 },
             ],
             haze: Color::srgb(0.78, 0.76, 0.76),
-            fog_visibility: 1500.0,
+            fog_visibility: if ONE_DIRECTIONAL_LIGHT { 2000.0 } else { 2800.0 },
             fog_within_view: 0.9,
             haze_glow: Color::srgb(0.2, 0.135, 0.08),
             haze_glow_exponent: 5.0,
@@ -451,8 +451,8 @@ mod tests {
             let left = (-(reach * density).powi(2)).exp();
             assert!(left < 0.03, "{left} of the far plane still shows at {reach} m");
         }
-        let FogFalloff::ExponentialSquared { density } = a.fog(4000.0).falloff else { panic!() };
-        let FogFalloff::ExponentialSquared { density: near } = a.fog(2500.0).falloff else { panic!() };
+        let FogFalloff::ExponentialSquared { density } = a.fog(6000.0).falloff else { panic!() };
+        let FogFalloff::ExponentialSquared { density: near } = a.fog(4000.0).falloff else { panic!() };
         assert_eq!(density, near, "a longer view than the air's own visibility leaves the air as it is");
     }
 
