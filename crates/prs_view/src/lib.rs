@@ -233,17 +233,17 @@ impl Default for Rig {
     }
 }
 
-fn spawn_camera(mut commands: Commands, atmosphere: Res<Atmosphere>, settings: Res<ViewSettings>) {
+fn spawn_camera(mut commands: Commands, atmosphere: Res<Atmosphere>, settings: Res<ViewSettings>, reach: Res<prs_atmosphere::ViewReach>) {
     commands.spawn((
         WorldCamera,
         Camera3d::default(),
         Projection::from(PerspectiveProjection {
             fov: settings.fov().to_radians(),
             near: 0.05,
-            far: 1500.0,
+            far: reach.0,
             ..default()
         }),
-        atmosphere.camera(),
+        atmosphere.camera(reach.0),
         Transform::default(),
     ));
 }

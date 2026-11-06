@@ -2,7 +2,7 @@
 //! gradient that lands on the fog's colour at the horizon, a sun, hazy ridges beyond the map, and
 //! faceted clouds. None of it is lit or fogged: its colours are worked out here, once.
 
-use crate::{Atmosphere, linear};
+use crate::{Atmosphere, ViewReach, linear};
 use bevy::asset::RenderAssetUsages;
 use bevy::camera::visibility::NoFrustumCulling;
 use bevy::light::{NotShadowCaster, NotShadowReceiver};
@@ -11,6 +11,8 @@ use bevy::prelude::*;
 use std::f32::consts::TAU;
 
 const DOME_RADIUS: f32 = 1300.0;
+/// The dome's size as a share of how far the camera sees.
+const DOME_IN_VIEW: f32 = 0.87;
 const DOME_SIDES: usize = 96;
 /// Elevations of the dome's rings in degrees, tightest where colour changes fastest.
 const DOME_RINGS: [f32; 18] = [-90.0, -30.0, -6.0, -1.0, 0.0, 0.8, 2.0, 4.0, 7.0, 11.0, 16.0, 22.0, 30.0, 40.0, 52.0, 65.0, 78.0, 90.0];
@@ -258,13 +260,16 @@ pub(crate) fn spawn_sky(
     ));
 }
 
-/// Kept on the camera, so you never get any closer to the sky.
+/// Kept on the camera, so you never get any closer to the sky, and just inside the far plane, so it is
+/// behind everything that is drawn.
 pub(crate) fn follow_camera(
+    reach: Res<ViewReach>,
     camera: Query<&Transform, (With<Camera3d>, Without<SkyDome>)>,
     mut dome: Query<&mut Transform, With<SkyDome>>,
 ) {
     if let (Ok(camera), Ok(mut dome)) = (camera.single(), dome.single_mut()) {
         dome.translation = camera.translation;
+        dome.scale = Vec3::splat(reach.0 * DOME_IN_VIEW / DOME_RADIUS);
     }
 }
 

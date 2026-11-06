@@ -169,6 +169,9 @@ pub struct Atmosphere {
     /// Metres at which the air hides things. The falloff is squared, so a long shot across a field
     /// stays clear and the far hills still go.
     pub fog_visibility: f32,
+    /// The most of the view distance the fog's visibility may take, so that whatever is about to be cut
+    /// off at the far plane has gone into the haze first.
+    pub fog_within_view: f32,
     /// How much of the lights' colour the haze picks up looking towards them, and how tightly.
     #[serde(with = "srgb")]
     pub haze_glow: Color,
@@ -204,6 +207,7 @@ impl Default for Atmosphere {
             ],
             haze: Color::srgb(0.78, 0.76, 0.76),
             fog_visibility: 1500.0,
+            fog_within_view: 0.9,
             haze_glow: Color::srgb(0.2, 0.135, 0.08),
             haze_glow_exponent: 5.0,
             sky: Sky {
@@ -282,16 +286,21 @@ impl Atmosphere {
         })
     }
 
+    /// Fog for a camera that sees this far: the air's own visibility, or less if the view ends sooner.
+    pub fn fog(&self, view_distance: f32) -> DistanceFog {
+        DistanceFog {
+            color: self.haze,
+            directional_light_color: self.haze_glow,
+            directional_light_exponent: self.haze_glow_exponent,
+            falloff: FogFalloff::from_visibility_squared(self.fog_visibility.min(view_distance * self.fog_within_view)),
+        }
+    }
+
     /// What a camera in this world wears.
-    pub fn camera(&self) -> impl Bundle {
+    pub fn camera(&self, view_distance: f32) -> impl Bundle {
         let section = ColorGradingSection { contrast: self.contrast, ..default() };
         (
-            DistanceFog {
-                color: self.haze,
-                directional_light_color: self.haze_glow,
-                directional_light_exponent: self.haze_glow_exponent,
-                falloff: FogFalloff::from_visibility_squared(self.fog_visibility),
-            },
+            self.fog(view_distance),
             self.tonemapping,
             ColorGrading {
                 global: ColorGradingGlobal { post_saturation: self.saturation, ..default() },
@@ -308,13 +317,32 @@ pub(crate) fn linear(color: Color) -> Vec3 {
     Vec3::from_array(color.to_linear().to_f32_array_no_alpha())
 }
 
+/// How far the camera sees, in metres: its far plane. Whoever sets the view distance writes this, and the
+/// fog and the sky follow it.
+#[derive(Resource, Clone, Copy, Debug, PartialEq)]
+pub struct ViewReach(pub f32);
+
+impl Default for ViewReach {
+    fn default() -> Self {
+        Self(1500.0)
+    }
+}
+
 pub struct AtmospherePlugin;
 
 impl Plugin for AtmospherePlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(prs_mods::tuned("atmosphere", Atmosphere::default()))
             .add_systems(Startup, (spawn_lights, sky::spawn_sky))
+            .init_resource::<ViewReach>()
+            .add_systems(Update, refog.run_if(resource_changed::<ViewReach>))
             .add_systems(PostUpdate, sky::follow_camera.before(TransformSystems::Propagate));
+    }
+}
+
+fn refog(atmosphere: Res<Atmosphere>, reach: Res<ViewReach>, mut fogs: Query<&mut DistanceFog>) {
+    for mut fog in &mut fogs {
+        *fog = atmosphere.fog(reach.0);
     }
 }
 
@@ -413,6 +441,19 @@ mod tests {
         let (up, down) = (a.face_tint(Vec3::Y), a.face_tint(Vec3::NEG_Y));
         assert!(up.z > down.z, "the sky is blue: {up} {down}");
         assert!(down.x / down.z > up.x / up.z, "the ground is warm: {up} {down}");
+    }
+
+    #[test]
+    fn everything_has_gone_into_the_haze_before_the_far_plane() {
+        let a = Atmosphere::default();
+        for reach in [600.0, 1500.0, 4000.0] {
+            let FogFalloff::ExponentialSquared { density } = a.fog(reach).falloff else { panic!() };
+            let left = (-(reach * density).powi(2)).exp();
+            assert!(left < 0.03, "{left} of the far plane still shows at {reach} m");
+        }
+        let FogFalloff::ExponentialSquared { density } = a.fog(4000.0).falloff else { panic!() };
+        let FogFalloff::ExponentialSquared { density: near } = a.fog(2500.0).falloff else { panic!() };
+        assert_eq!(density, near, "a longer view than the air's own visibility leaves the air as it is");
     }
 
     #[test]
