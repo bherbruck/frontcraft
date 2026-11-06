@@ -17461,6 +17461,12 @@ ground = "Water"
 points = [[-530.0, -34.0], [-380.0, -20.0], [-250.0, -8.0], [-150.0, 0.0], [-95.0, 0.0]]
 width = 16.0
 
+[spec.ditches.quay]
+beyond = 0.9
+length = 6.0
+over_bed = 2.0
+paint = "Stone"
+
 [[spec.ditches]]
 bed_width = 12.5
 cuts_roads = true
@@ -17468,6 +17474,12 @@ depth = 3.6
 ground = "Water"
 points = [[530.0, 34.0], [380.0, 20.0], [250.0, 8.0], [150.0, -0.0], [95.0, -0.0]]
 width = 16.0
+
+[spec.ditches.quay]
+beyond = 0.9
+length = 6.0
+over_bed = 2.0
+paint = "Stone"
 
 [[spec.ditches]]
 bed_width = 12.5
@@ -17477,6 +17489,12 @@ ground = "Water"
 points = [[-95.0, 0.0], [-60.0, -36.0], [0.0, -44.0], [60.0, -36.0], [95.0, 0.0]]
 width = 16.0
 
+[spec.ditches.quay]
+beyond = 0.9
+length = 6.0
+over_bed = 2.0
+paint = "Stone"
+
 [[spec.ditches]]
 bed_width = 12.5
 cuts_roads = true
@@ -17484,6 +17502,12 @@ depth = 3.6
 ground = "Water"
 points = [[95.0, -0.0], [60.0, 36.0], [-0.0, 44.0], [-60.0, 36.0], [-95.0, -0.0]]
 width = 16.0
+
+[spec.ditches.quay]
+beyond = 0.9
+length = 6.0
+over_bed = 2.0
+paint = "Stone"
 
 [[spec.ditches]]
 bed_width = 22.0
@@ -17493,6 +17517,12 @@ ground = "Water"
 points = [[-520.0, -34.0], [-900.0, -60.0], [-1400.0, -20.0], [-1800.0, 30.0], [-2100.0, 40.0]]
 width = 30.0
 
+[spec.ditches.quay]
+beyond = 0.9
+length = 6.0
+over_bed = 2.0
+paint = "Mudbrick"
+
 [[spec.ditches]]
 bed_width = 22.0
 cuts_roads = true
@@ -17500,6 +17530,12 @@ depth = 4.2
 ground = "Water"
 points = [[520.0, 34.0], [900.0, 60.0], [1400.0, 20.0], [1800.0, -30.0], [2100.0, -40.0]]
 width = 30.0
+
+[spec.ditches.quay]
+beyond = 0.9
+length = 6.0
+over_bed = 2.0
+paint = "Mudbrick"
 
 [[spec.ditches]]
 bed_width = 1.4

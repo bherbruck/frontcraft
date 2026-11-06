@@ -322,6 +322,14 @@ impl MapFile {
                 pieces += (climb / style.stair_rise as f64).ceil().max(0.0);
             }
         }
+        for (ditch, quay) in spec.ditches.iter().filter_map(|d| d.quay.map(|q| (d, q))) {
+            positive("quay length", quay.length)?;
+            if !(quay.beyond >= 0.0 && quay.beyond <= limits.max_size && quay.over_bed >= 0.0 && quay.over_bed < ditch.bed_width * 0.5) {
+                return Err(format!("a quay {} past its bank and {} over its bed", quay.beyond, quay.over_bed));
+            }
+            // Both banks, and a block more at every bend.
+            pieces += (length(&ditch.points) / quay.length as f64 + ditch.points.len() as f64) * 2.0;
+        }
         for bridge in &spec.bridges {
             positive("bridge span", bridge.span)?;
             // Deck, two parapets and a pier for each span.

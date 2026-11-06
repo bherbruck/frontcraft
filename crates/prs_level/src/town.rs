@@ -17,7 +17,7 @@ pub(crate) fn road(points: &[(f32, f32)], width: f32, ground: Ground) -> Road {
 }
 
 pub(crate) fn ditch(points: &[(f32, f32)]) -> Ditch {
-    Ditch { points: line(points), width: 5.2, bed_width: 1.4, depth: 1.35, ground: Ground::DitchBed, cuts_roads: false }
+    Ditch { points: line(points), width: 5.2, bed_width: 1.4, depth: 1.35, ground: Ground::DitchBed, cuts_roads: false, quay: None }
 }
 
 pub(crate) fn zone(at: (f32, f32), half: (f32, f32), yaw: f32, ground: Ground) -> Zone {
@@ -233,6 +233,7 @@ fn ditches() -> Vec<Ditch> {
         depth: 3.4,
         ground: Ground::Shingle,
         cuts_roads: false,
+        quay: None,
     });
     all
 }

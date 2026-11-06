@@ -363,8 +363,15 @@ impl<'a> Relief<'a> {
     pub fn terrain(&self, max_cells: u64) -> Result<Terrain, String> {
         let t = &self.spec.terrain;
         let detail = |p: Vec2| {
-            // Past the limit, everywhere is detailed: the strict tolerance, and no more looking.
-            let open = self.spend(t.detail.len()) && !t.detail.iter().any(|(at, radius)| at.distance(p) < *radius);
+            // Past the limit, everywhere is detailed: the strict tolerance, and no more looking. A canal's banks are
+            // always detailed, so that they run straight wherever it goes.
+            let near = self.near.at(p);
+            let open = self.spend(t.detail.len() + near.ditches.len())
+                && !t.detail.iter().any(|(at, radius)| at.distance(p) < *radius)
+                && !by_line(&near.ditches).any(|(i, run)| {
+                    let ditch = &self.spec.ditches[i];
+                    ditch.cuts_roads && nearest(&ditch.points, run, p).is_some_and(|(_, d)| d < ditch.width * 0.5)
+                });
             match (open, t.open_tolerance) {
                 (true, Some(tolerance)) => (tolerance, t.open_paint_splits.unwrap_or(t.paint_splits).min(t.paint_splits)),
                 _ => (t.tolerance, t.paint_splits),

@@ -36,6 +36,13 @@ const FOOT_BRIDGE: (f32, f32) = (3.2, 1.0);
 const BRIDGE_THICKNESS: f32 = 0.6;
 const BRIDGE_SPAN: f32 = 12.0;
 
+/// The canal's stone banks: how far past the top each block reaches (short of the parapet), how far over the
+/// bed (a cell of the finest ground, which is as far as the bank's slope can show past the bed's edge), and how
+/// long each block is.
+const QUAY_BEYOND: f32 = 0.9;
+const QUAY_OVER_BED: f32 = 2.0;
+const QUAY_LENGTH: f32 = 6.0;
+
 /// More steps out of the canal, between the bridges, so nobody who falls in has far to walk.
 const STEPS_EVERY: f32 = 120.0;
 /// A low wall along both banks through the town, so nothing drives in by accident, open at each bridge and
@@ -200,6 +207,7 @@ fn canal() -> Vec<Ditch> {
         depth: CANAL_DEPTH,
         ground: Ground::Water,
         cuts_roads: true,
+        quay: Some(Quay { beyond: QUAY_BEYOND, over_bed: QUAY_OVER_BED, length: QUAY_LENGTH, paint: Paint::Stone }),
     };
     let west = [(-530.0, -34.0), (-380.0, -20.0), (-250.0, -8.0), (-150.0, 0.0), (-95.0, 0.0)];
     let north_arm = [(-95.0, 0.0), (-60.0, -36.0), (0.0, -44.0), (60.0, -36.0), (95.0, 0.0)];
@@ -212,7 +220,9 @@ fn canal() -> Vec<Ditch> {
     let river = [(-520.0, -34.0), (-900.0, -60.0), (-1400.0, -20.0), (-1800.0, 30.0), (-2100.0, 40.0)];
     for points in both(&river) {
         let (width, bed_width, depth) = RIVER;
-        all.push(Ditch { points: line(&points), width, bed_width, depth, ground: Ground::Water, cuts_roads: true });
+        // Banked up in mud brick, the colour of the land.
+        let quay = Quay { beyond: QUAY_BEYOND, over_bed: QUAY_OVER_BED, length: QUAY_LENGTH, paint: Paint::Mudbrick };
+        all.push(Ditch { points: line(&points), width, bed_width, depth, ground: Ground::Water, cuts_roads: true, quay: Some(quay) });
     }
     all
 }
@@ -220,7 +230,7 @@ fn canal() -> Vec<Ditch> {
 /// Dry wadis across the open ground on each flank, deep enough to drive along out of sight, with sides
 /// gentle enough to get in and out of anywhere.
 fn wadis() -> Vec<Ditch> {
-    let wadi = |points: &[(f32, f32)]| Ditch { points: line(points), width: 24.0, bed_width: 8.0, depth: 4.0, ground: Ground::Shingle, cuts_roads: false };
+    let wadi = |points: &[(f32, f32)]| Ditch { points: line(points), width: 24.0, bed_width: 8.0, depth: 4.0, ground: Ground::Shingle, cuts_roads: false, quay: None };
     let mut all = Vec::new();
     for points in [
         vec![(-1900.0, 1450.0), (-1500.0, 1150.0), (-1100.0, 900.0), (-800.0, 520.0), (-600.0, 180.0), (-580.0, 10.0)],
@@ -248,7 +258,7 @@ fn highway_bridges() -> Vec<Bridge> {
 
 /// Ditches feeding the fields off the canal, on both sides of it at each end of the town.
 fn irrigation() -> Vec<Ditch> {
-    let ditch = |points: &[(f32, f32)]| Ditch { points: line(points), width: 4.8, bed_width: 1.4, depth: 1.25, ground: Ground::DitchBed, cuts_roads: false };
+    let ditch = |points: &[(f32, f32)]| Ditch { points: line(points), width: 4.8, bed_width: 1.4, depth: 1.25, ground: Ground::DitchBed, cuts_roads: false, quay: None };
     let mut all = Vec::new();
     for points in [
         vec![(-420.0, -38.0), (-430.0, -150.0), (-470.0, -260.0)],

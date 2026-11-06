@@ -61,6 +61,19 @@ struct Rect {
 
 /// How far a bridge's deck stands over the ground at its ends.
 const DECK_LIP: f32 = 0.12;
+/// How far a quay's top stands over the ground beside it, how far it stays from a bridge or steps, and the
+/// sharpest bend its blocks run on round.
+const QUAY_LIP: f32 = 0.05;
+const QUAY_GAP: f32 = 0.5;
+const QUAY_BEND: f32 = 2.0;
+
+/// How far `p` is from the segment `a` to `b`.
+fn near_segment(p: Vec2, a: Vec2, b: Vec2) -> f32 {
+    let along = b - a;
+    let t = ((p - a).dot(along) / along.length_squared().max(1e-6)).clamp(0.0, 1.0);
+    (a + along * t).distance(p)
+}
+
 /// The most one flat length of a bridge's deck stands above or below the next.
 const DECK_STEP: f32 = 0.15;
 
@@ -128,6 +141,7 @@ impl MapSpec {
         let mut builder = Builder { spec: self, relief: &relief, mason, scatter: Scatter(self.seed) };
         builder.compounds();
         builder.bridges();
+        builder.quays();
         builder.steps();
         builder.landmarks();
         builder.field_walls();
@@ -238,6 +252,58 @@ impl Builder<'_> {
                 );
                 let center = Vec3::new(p.x, self.relief.height(p) + half.y * 0.35, p.y);
                 self.mason.level.solids.push(Solid { center, half, rotation, paint: heap.paint });
+            }
+        }
+    }
+
+    fn quays(&mut self) {
+        let spec = self.spec;
+        for (index, ditch) in spec.ditches.iter().enumerate() {
+            let Some(quay) = ditch.quay else {
+                continue;
+            };
+            let (inner, outer) = (ditch.bed_width * 0.5 - quay.over_bed, ditch.width * 0.5 + quay.beyond);
+            let dirs: Vec<Vec2> = ditch.points.windows(2).map(|w| (w[1] - w[0]).normalize_or_zero()).collect();
+            // At a bend, the blocks on its outside run on past the corner far enough to meet.
+            let reach = |from: Vec2, to: Vec2, side: f32| {
+                let turn = from.perp_dot(to).atan2(from.dot(to));
+                if side * turn < 0.0 { outer * (turn.abs().min(QUAY_BEND) * 0.5).tan() } else { 0.0 }
+            };
+            for (k, pair) in ditch.points.windows(2).enumerate() {
+                let (a, b) = (pair[0], pair[1]);
+                let (length, dir) = (a.distance(b), dirs[k]);
+                if length < 0.1 {
+                    continue;
+                }
+                let blocks = (length / quay.length).ceil().max(1.0) as u32;
+                let block = length / blocks as f32;
+                let rotation = Quat::from_rotation_y((-dir.y).atan2(dir.x));
+                for i in 0..blocks {
+                    if !self.mason.budget.take() {
+                        return;
+                    }
+                    for side in [-1.0, 1.0] {
+                        let before = if i == 0 && k > 0 { reach(dirs[k - 1], dir, side) } else { 0.0 };
+                        let after = if i + 1 == blocks && k + 1 < dirs.len() { reach(dir, dirs[k + 1], side) } else { 0.0 };
+                        let (start, end) = (block * i as f32 - before, block * (i + 1) as f32 + after);
+                        let mid = a + dir * ((start + end) * 0.5);
+                        let across = dir.perp() * side;
+                        let middle = mid + across * (inner + outer) * 0.5;
+                        let clear = |from: Vec2, to: Vec2, width: f32| near_segment(middle, from, to) > width * 0.5 + (end - start) * 0.5 + QUAY_GAP;
+                        // Open to a bridge or steps, and not across any other water.
+                        let open = spec.bridges.iter().any(|b| !clear(b.from, b.to, b.width))
+                            || spec.steps.iter().any(|s| !clear(s.from, s.to, s.width))
+                            || spec.ditches.iter().enumerate().any(|(other, d)| other != index && d.cuts_roads && d.points.windows(2).any(|w| near_segment(middle, w[0], w[1]) < d.width * 0.5));
+                        if open {
+                            continue;
+                        }
+                        let top = self.relief.height(mid + across * outer) + QUAY_LIP;
+                        let bottom = self.relief.height(mid) - self.mason.style.foot;
+                        let center = Vec3::new(middle.x, (top + bottom) * 0.5, middle.y);
+                        let half = Vec3::new((end - start) * 0.5 + 0.02, (top - bottom).max(0.1) * 0.5, (outer - inner) * 0.5);
+                        self.mason.level.solids.push(Solid { center, half, rotation, paint: quay.paint });
+                    }
+                }
             }
         }
     }

@@ -46,7 +46,11 @@ pub(crate) struct Batch {
 impl Batch {
     fn triangle(&mut self, corners: [Vec3; 3], colors: [Vec3; 3]) {
         let [a, b, c] = corners;
-        let normal = (b - a).cross(c - a).normalize_or(Vec3::Y);
+        self.facing(corners, colors, (b - a).cross(c - a).normalize_or(Vec3::Y));
+    }
+
+    /// A triangle lit as if it faced `normal`, whichever way it really slopes.
+    fn facing(&mut self, corners: [Vec3; 3], colors: [Vec3; 3], normal: Vec3) {
         for (p, color) in corners.iter().zip(colors) {
             self.indices.push(self.positions.len() as u32);
             self.positions.push(p.to_array());
@@ -181,15 +185,18 @@ fn water_chunks(terrain: &Terrain) -> Chunks {
     let bed = |v: u32| water(v) && terrain.vertices[v as usize].y - lowest_beside[v as usize] <= WATER_FLAT;
     let mut chunks = Chunks::new();
     for tri in terrain.indices.iter().filter(|tri| wet(tri)) {
-        // Level with its lowest corner, if that is on the bed: where a bank rises through it the ground hides it.
+        // Only where its lowest corner is on the bed: where a bank rises through it the ground hides it.
         let low = *tri.iter().min_by(|a, b| terrain.vertices[**a as usize].y.total_cmp(&terrain.vertices[**b as usize].y)).expect("three corners");
         if !bed(low) {
             continue;
         }
-        let level = terrain.vertices[low as usize].y + WATER_DEPTH;
+        // Each corner at the bed beside it, so neighbouring triangles meet without a step.
+        let surface = tri.map(|v| {
+            let c = terrain.vertices[v as usize];
+            Vec3::new(c.x, lowest_beside[v as usize].min(c.y) + WATER_DEPTH, c.z)
+        });
         let corners = tri.map(|v| terrain.vertices[v as usize]);
-        let surface = corners.map(|c| Vec3::new(c.x, level, c.z));
-        chunk_of(&mut chunks, (corners[0] + corners[1] + corners[2]) / 3.0).triangle(surface, [WATER_COLOR; 3]);
+        chunk_of(&mut chunks, (corners[0] + corners[1] + corners[2]) / 3.0).facing(surface, [WATER_COLOR; 3], Vec3::Y);
     }
     chunks
 }

@@ -293,6 +293,21 @@ pub struct Ditch {
     /// Cut through any road that crosses it, as a canal is, rather than be filled in under the road.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub cuts_roads: bool,
+    /// Stone filling each bank, so the water meets a straight wall however coarse the ground beside it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quay: Option<Quay>,
+}
+
+/// A canal's banks built up in blocks from its bed to the ground beside it, each filling the bank from the edge
+/// of the bed to a little past its top. Left open wherever a bridge or a flight of steps meets the bank.
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+pub struct Quay {
+    /// How far past the top of the bank each block reaches, and how far out over the edge of the bed.
+    pub beyond: f32,
+    pub over_bed: f32,
+    /// How long each block is, at most.
+    pub length: f32,
+    pub paint: Paint,
 }
 
 /// A rotated rectangle of ground colour.
