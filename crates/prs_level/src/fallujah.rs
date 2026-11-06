@@ -26,7 +26,7 @@ const BRIDGE_Z: f32 = -700.0;
 
 /// Where the city is thickest, and how far out from there it has thinned to its outskirts.
 const HEART: (f32, f32) = (-100.0, 0.0);
-const HEART_REACH: f32 = 560.0;
+const HEART_REACH: f32 = 250.0;
 
 /// How much of each quarter is built, all together. The city's size against what the web build draws.
 const DENSITY: f32 = 1.0;
@@ -342,16 +342,16 @@ fn city(spec: &MapSpec) -> Vec<Compound> {
     // Each north quarter beside its southern mirror. The heart of the city round the square is packed, the
     // quarters out from it thin out towards the edge, and the farms to the north answer the depot to the south.
     let pairs = [
-        (quarter((300.0, -560.0), (130.0, 90.0), Kind::Souq, 0.95, homes), None),
+        (quarter((300.0, -560.0), (110.0, 70.0), Kind::Souq, 0.6, homes), None),
         // The city's half, packed round the square and along its roads, thinning out towards the fields.
-        (city(quarter((0.0, -590.0), (900.0, 560.0), Kind::Courtyard, 1.0, homes)), None),
-        (quarter((-600.0, -1060.0), (230.0, 80.0), Kind::Works, 0.9, works), None),
+        (city(quarter((-50.0, -560.0), (650.0, 520.0), Kind::Courtyard, 1.0, homes)), None),
+        (quarter((-600.0, -1060.0), (200.0, 70.0), Kind::Works, 0.6, works), None),
         (
-            quarter((900.0, -1220.0), (220.0, 120.0), Kind::Courtyard, 0.3, homes),
-            Some(quarter((900.0, 1200.0), (260.0, 150.0), Kind::Works, 0.7, works)),
+            quarter((900.0, -1220.0), (220.0, 120.0), Kind::Courtyard, 0.2, homes),
+            Some(quarter((900.0, 1200.0), (220.0, 130.0), Kind::Works, 0.5, works)),
         ),
         // A village on the west bank.
-        (quarter((-1550.0, -420.0), (150.0, 140.0), Kind::Courtyard, 0.4, homes), None),
+        (quarter((-1550.0, -420.0), (150.0, 140.0), Kind::Courtyard, 0.3, homes), None),
     ];
     for (north, southern) in pairs {
         built.extend(north.fill(s, &mut dice, &mut site));
